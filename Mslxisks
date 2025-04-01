@@ -1,55 +1,101 @@
-local player = game:GetService("Players").LocalPlayer
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local player = Players.LocalPlayer
 
--- Безопасная версия godMode
-local function safeGodMode(character)
-    local humanoid = character:WaitForChild("Humanoid", 5) -- Таймаут 5 сек
-    
-    if not humanoid then return end
-    
+-- Конфигурация
+local GOD_MODE_ENABLED = true
+local LOGS_ENABLED = true -- Показывать логи в консоли
+
+-- Безопасный логер
+local function log(message)
+    if LOGS_ENABLED then
+        print("[GODMODE] " .. message)
+    end
+end
+
+-- Улучшенный GodMode
+local function applyAdvancedGodMode(character)
+    if not character or not character.Parent then
+        log("Персонаж невалиден")
+        return
+    end
+
+    -- Ожидание Humanoid с защитой от таймаута
+    local humanoid
+    for _ = 1, 30 do -- 30 попыток с интервалом 0.1 сек
+        humanoid = character:FindFirstChildOfClass("Humanoid")
+        if humanoid then break end
+        task.wait(0.1)
+    end
+
+    if not humanoid then
+        log("Humanoid не найден!")
+        return
+    end
+
+    -- Основные настройки
     humanoid.MaxHealth = math.huge
     humanoid.Health = math.huge
-    
-    -- Более безопасный обработчик урона
-    local healthConnection
-    healthConnection = humanoid.HealthChanged:Connect(function()
+
+    -- Защита от урона с дросселированием
+    local lastHealthChange = os.clock()
+    humanoid.HealthChanged:Connect(function()
+        if os.clock() - lastHealthChange < 0.01 then return end -- Защита от спама
+        lastHealthChange = os.clock()
+
         if humanoid.Health < humanoid.MaxHealth then
-            healthConnection:Disconnect() -- Предотвращаем рекурсию
-            humanoid.Health = humanoid.MaxHealth
-            healthConnection = humanoid.HealthChanged:Connect(function() end) -- Новый обработчик
+            task.defer(function() -- Асинхронное обновление
+                humanoid.Health = humanoid.MaxHealth
+            end)
         end
     end)
-    
-    -- Защита от респавна
-    character:WaitForChild("HumanoidRootPart", 2).AncestryChanged:Connect(function()
-        task.defer(function()
-            if not character:IsDescendantOf(workspace) then
+
+    -- Защита от системного убийства
+    if not character:FindFirstChild("GodModeMark") then
+        Instance.new("BoolValue", character).Name = "GodModeMark"
+    end
+
+    -- Мониторинг состояния
+    character.AncestryChanged:Connect(function(_, parent)
+        if not parent then -- Персонаж удалён
+            log("Персонаж уничтожен, запуск респавна...")
+            task.delay(0.5, function()
+                player:LoadCharacter()
+            end)
+        end
+    end)
+
+    log("Активирован для " .. player.Name)
+end
+
+-- Инициализация с защитой от ошибок
+local function safeInit()
+    if not GOD_MODE_ENABLED then return end
+
+    xpcall(function()
+        -- Первый запуск
+        if player.Character then
+            applyAdvancedGodMode(player.Character)
+        end
+
+        -- На новые персонажи
+        player.CharacterAdded:Connect(applyAdvancedGodMode)
+
+        -- Автореспавн при ошибках
+        RunService.Heartbeat:Connect(function()
+            if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then
                 player:LoadCharacter()
             end
         end)
+    end, function(err)
+        log("Ошибка: " .. tostring(err))
     end)
 end
 
--- Альтернативный антибан без хук-функций
-local function safeAntiBan()
-    local function fakeReport()
-        return nil
-    end
-    
-    if not player:FindFirstChild("ReportPlayer") then
-        local fake = Instance.new("BindableFunction")
-        fake.Name = "ReportPlayer"
-        fake.OnInvoke = fakeReport
-        fake.Parent = player
-    end
+-- Запуск
+if RunService:IsStudio() then
+    safeInit() -- В Studio сразу
+else
+    game.Loaded:Wait() -- В игре ждём загрузки
+    safeInit()
 end
-
--- Запуск с защитой от ошибок
-task.spawn(function()
-    pcall(function()
-        if player.Character then
-            safeGodMode(player.Character)
-        end
-        player.CharacterAdded:Connect(safeGodMode)
-        safeAntiBan()
-    end)
-end)

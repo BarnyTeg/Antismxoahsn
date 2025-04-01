@@ -1,101 +1,31 @@
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 
--- Конфигурация
-local GOD_MODE_ENABLED = true
-local LOGS_ENABLED = true -- Показывать логи в консоли
-
--- Безопасный логер
-local function log(message)
-    if LOGS_ENABLED then
-        print("[GODMODE] " .. message)
-    end
-end
-
--- Улучшенный GodMode
-local function applyAdvancedGodMode(character)
-    if not character or not character.Parent then
-        log("Персонаж невалиден")
-        return
-    end
-
-    -- Ожидание Humanoid с защитой от таймаута
-    local humanoid
-    for _ = 1, 30 do -- 30 попыток с интервалом 0.1 сек
-        humanoid = character:FindFirstChildOfClass("Humanoid")
-        if humanoid then break end
-        task.wait(0.1)
-    end
-
-    if not humanoid then
-        log("Humanoid не найден!")
-        return
-    end
-
-    -- Основные настройки
+local function makeImmortal(character)
+    local humanoid = character:WaitForChild("Humanoid")
+    
+    -- 1. Делаем здоровье "бесконечным"
     humanoid.MaxHealth = math.huge
     humanoid.Health = math.huge
-
-    -- Защита от урона с дросселированием
-    local lastHealthChange = os.clock()
-    humanoid.HealthChanged:Connect(function()
-        if os.clock() - lastHealthChange < 0.01 then return end -- Защита от спама
-        lastHealthChange = os.clock()
-
-        if humanoid.Health < humanoid.MaxHealth then
-            task.defer(function() -- Асинхронное обновление
-                humanoid.Health = humanoid.MaxHealth
-            end)
-        end
-    end)
-
-    -- Защита от системного убийства
-    if not character:FindFirstChild("GodModeMark") then
-        Instance.new("BoolValue", character).Name = "GodModeMark"
-    end
-
-    -- Мониторинг состояния
-    character.AncestryChanged:Connect(function(_, parent)
-        if not parent then -- Персонаж удалён
-            log("Персонаж уничтожен, запуск респавна...")
-            task.delay(0.5, function()
-                player:LoadCharacter()
-            end)
-        end
-    end)
-
-    log("Активирован для " .. player.Name)
-end
-
--- Инициализация с защитой от ошибок
-local function safeInit()
-    if not GOD_MODE_ENABLED then return end
-
-    xpcall(function()
-        -- Первый запуск
-        if player.Character then
-            applyAdvancedGodMode(player.Character)
-        end
-
-        -- На новые персонажи
-        player.CharacterAdded:Connect(applyAdvancedGodMode)
-
-        -- Автореспавн при ошибках
-        RunService.Heartbeat:Connect(function()
-            if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then
-                player:LoadCharacter()
-            end
+    
+    -- 2. Блокируем ЛЮБОЙ входящий урон (даже от 1000 зомби)
+    if humanoid:FindFirstChild("TakeDamage") then
+        humanoid.TakeDamage:Connect(function()
+            return false -- Игнорируем урон
         end)
-    end, function(err)
-        log("Ошибка: " .. tostring(err))
+    end
+    
+    -- 3. Защита от принудительного убийства (если игра использует .Destroy)
+    character:GetPropertyChangedSignal("Parent"):Connect(function()
+        if not character.Parent then
+            task.wait(0.1)
+            player:LoadCharacter()
+        end
     end)
 end
 
--- Запуск
-if RunService:IsStudio() then
-    safeInit() -- В Studio сразу
-else
-    game.Loaded:Wait() -- В игре ждём загрузки
-    safeInit()
+-- Подключаемся к событию появления персонажа
+player.CharacterAdded:Connect(makeImmortal)
+if player.Character then
+    makeImmortal(player.Character)
 end

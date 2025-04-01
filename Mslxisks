@@ -1,43 +1,50 @@
+-- Ultra Mobile God Mode (для Android/iOS)
 local player = game:GetService("Players").LocalPlayer
 local RunService = game:GetService("RunService")
 
--- 1. Жёсткое восстановление здоровья (10000 HP/сек)
-RunService.Heartbeat:Connect(function()
-    pcall(function()
-        if player.Character and player.Character:FindFirstChild("Humanoid") then
-            local humanoid = player.Character.Humanoid
-            
-            -- Принудительное перезаполнение HP
-            humanoid.MaxHealth = math.huge
-            humanoid.Health = math.huge
-            
-            -- Блокировка состояния смерти
-            if humanoid.Health <= 0 then
-                humanoid:ChangeState(Enum.HumanoidStateType.Running)
+-- 1. Простейший, но эффективный God Mode
+local function mobileGodMode()
+    while task.wait(0.1) do
+        pcall(function()
+            if player.Character then
+                local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+                if humanoid then
+                    -- Жёсткий контроль здоровья
+                    humanoid.MaxHealth = 100
+                    humanoid.Health = 100
+                    
+                    -- Экстренное восстановление
+                    if humanoid.Health <= 0 then
+                        humanoid:ChangeState(Enum.HumanoidStateType.Running)
+                    end
+                end
             end
-        end
-    end)
-end)
-
--- 2. Экстренный респавн при проблемах
-player.CharacterAdded:Connect(function()
-    task.wait(0.5) -- Ждём загрузки
-    if player.Character and player.Character:FindFirstChild("Humanoid") then
-        player.Character.Humanoid.Health = math.huge
+        end)
     end
-end)
+end
 
--- 3. Анти-кик система (если вылетает)
-local mt = getrawmetatable(game)
-local oldNamecall = mt.__namecall
-setreadonly(mt, false)
-
-mt.__namecall = newcclosure(function(self, ...)
-    local method = getnamecallmethod()
-    if method == "Kick" or method == "Destroy" then
-        return nil
+-- 2. Базовый Kill Aura
+local function mobileKillAura()
+    while task.wait(0.3) do
+        pcall(function()
+            if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                local root = player.Character.HumanoidRootPart
+                
+                for _, npc in ipairs(workspace:GetDescendants()) do
+                    if npc:IsA("Model") and npc:FindFirstChildOfClass("Humanoid") then
+                        local npcRoot = npc:FindFirstChild("HumanoidRootPart")
+                        if npcRoot and (npcRoot.Position - root.Position).Magnitude < 20 then
+                            npc:Destroy()
+                        end
+                    end
+                end
+            end
+        end)
     end
-    return oldNamecall(self, ...)
-end)
+end
 
-print("💉 ЗДОРОВЬЕ ЗАЛИВАЕТСЯ! Сервер не успеет вас убить")
+-- Запуск
+coroutine.wrap(mobileGodMode)()
+coroutine.wrap(mobileKillAura)()
+
+print("📱 MOBILE GOD MODE АКТИВИРОВАН")

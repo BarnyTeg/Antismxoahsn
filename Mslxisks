@@ -1,71 +1,57 @@
--- Ultra God Mode + Kill Aura (Client-Side Only)
-local player = game:GetService("Players").LocalPlayer
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
 local RunService = game:GetService("RunService")
 
--- 1. АБСОЛЮТНОЕ БЕССМЕРТИЕ
-local function godMode()
-    local function protect()
-        if not player.Character then return end
-        
-        local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
-        if not humanoid then return end
-
-        -- Основная защита
-        humanoid.MaxHealth = 100
-        humanoid.Health = 100
-        
-        -- Анти-смерть
-        if humanoid.Health <= 0 then
-            humanoid:ChangeState(Enum.HumanoidStateType.Running)
-        end
-        
-        -- Защита от кастомного урона
-        for _, conn in pairs(getconnections(humanoid.HealthChanged)) do
-            conn:Disable()
-        end
-    end
-
-    -- Постоянная защита
-    while task.wait(0.1) do
-        pcall(protect)
-    end
-end
-
--- 2. УБИЙСТВО NPC В РАДИУСЕ
-local function killAura()
-    while task.wait(0.2) do
-        if not player.Character then continue end
-        
-        local root = player.Character:FindFirstChild("HumanoidRootPart")
-        if not root then continue end
-
-        -- Уничтожение всех NPC вокруг
-        for _, npc in pairs(workspace:GetDescendants()) do
-            if npc:IsA("Model") and npc:FindFirstChildOfClass("Humanoid") then
-                local npcRoot = npc:FindFirstChild("HumanoidRootPart")
-                if npcRoot and (npcRoot.Position - root.Position).Magnitude < 25 then
-                    -- Тройное гарантированное убийство
-                    pcall(function() npc.Humanoid.Health = 0 end)
-                    pcall(function() npc.Humanoid:TakeDamage(math.huge) end)
-                    pcall(function() npc:Destroy() end)
-                end
-            end
+-- 1. Функция перемещения хитбокса
+local function exileHitbox()
+    if not player.Character then return end
+    
+    -- Находим все коллайдеры урона
+    for _, part in pairs(player.Character:GetDescendants()) do
+        if part:IsA("BasePart") and part.CanCollide then
+            -- Перемещаем в "изгнание" (далеко за карту)
+            part.CFrame = CFrame.new(0, -1000, 0)
+            part.Anchored = true
+            part.Transparency = 1
+            part.CanCollide = false
+            
+            -- Защита от восстановления
+            part:GetPropertyChangedSignal("CFrame"):Connect(function()
+                part.CFrame = CFrame.new(0, -1000, 0)
+            end)
         end
     end
 end
 
--- 3. ЗАЩИТА ОТ ВЫЛЕТОВ
-local function safetyNet()
+-- 2. Защита от "потери" персонажа
+local function characterProtection()
     RunService.Heartbeat:Connect(function()
         if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then
             player:LoadCharacter()
+            task.wait(0.5)
+            exileHitbox()
         end
     end)
 end
 
--- Запуск системы
-coroutine.wrap(godMode)()
-coroutine.wrap(killAura)()
-coroutine.wrap(safetyNet)()
+-- 3. Автоматическая активация
+player.CharacterAdded:Connect(function(char)
+    task.wait(0.3) -- Ждём полной загрузки
+    exileHitbox()
+    
+    -- Доп. защита для новых частей
+    char.DescendantAdded:Connect(function(part)
+        if part:IsA("BasePart") then
+            task.wait()
+            exileHitbox()
+        end
+    end)
+end)
 
-print("🛡️ GOD MODE + KILL AURA АКТИВИРОВАНЫ (Client-Side)")
+-- Первый запуск
+if player.Character then
+    exileHitbox()
+end
+characterProtection()
+
+print("🚀 Хитбокс изгнан! Вас невозможно атаковать")

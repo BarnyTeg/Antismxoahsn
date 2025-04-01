@@ -1,50 +1,73 @@
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
+local RunService = game:GetService("RunService")
 
--- 1. БЕСКОНЕЧНОЕ ЗДОРОВЬЕ (1000 HP/0.1 сек)
-local function hyperHeal()
-    while task.wait(0.1) do
-        if player.Character then
-            local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
-            if humanoid then
-                humanoid.MaxHealth = math.huge
-                humanoid.Health += 1000 -- Жёсткое добавление HP
-                
-                -- Анти-смерть на всех уровнях
-                humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
-                if humanoid.Health <= 0 then
-                    humanoid:ChangeState(Enum.HumanoidStateType.Running)
-                end
-            end
+-- 1. REAL GOD MODE (из популярного чит-меню)
+local function realGodMode()
+    local function protect()
+        if not player.Character then return end
+        local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+        if not humanoid then return end
+
+        -- Основная защита
+        humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+        
+        -- Анти-баг система
+        if humanoid.Health <= 0 then
+            player:LoadCharacter()
         end
+        
+        -- Обход кастомного урона
+        for _, v in pairs(getconnections(humanoid.HealthChanged)) do
+            v:Disable()
+        end
+    end
+
+    -- Постоянная защита
+    while task.wait(0.1) do
+        pcall(protect)
     end
 end
 
--- 2. УБИЙСТВО NPC ЧЕРЕЗ СПАМ УРОНОМ (1000 DPS)
-local function npcAnnihilator()
-    while task.wait(0.1) do
-        if not player.Character then continue end
-        local root = player.Character:FindFirstChild("HumanoidRootPart")
-        if not root then continue end
-
-        for _, npc in ipairs(workspace:GetDescendants()) do
-            if npc:IsA("Model") and npc:FindFirstChild("Humanoid") and not Players:GetPlayerFromCharacter(npc) then
-                local npcRoot = npc:FindFirstChild("HumanoidRootPart")
-                if npcRoot and (npcRoot.Position - root.Position).Magnitude < 15 then
-                    -- Жёсткий спам урона
-                    for _ = 1, 10 do
-                        npc.Humanoid:TakeDamage(100)
-                        task.wait()
+-- 2. NPC TERMINATOR (из скриптов 2024)
+local function killNPC()
+    while task.wait(0.2) do
+        pcall(function()
+            for _, npc in pairs(workspace:GetDescendants()) do
+                if npc:IsA("Model") and npc:FindFirstChildOfClass("Humanoid") then
+                    if not Players:GetPlayerFromCharacter(npc) then
+                        -- Жёсткое удаление
+                        for _, part in pairs(npc:GetDescendants()) do
+                            if part:IsA("BasePart") then
+                                part:Destroy()
+                            end
+                        end
+                        npc:Destroy()
                     end
-                    npc:Destroy() -- Физическое удаление
                 end
             end
-        end
+        end)
     end
+end
+
+-- 3. ANTI-ANTICHEAT (обход защиты)
+local function bypassAC()
+    if not hookfunction then return end
+    
+    -- Подмена ключевых функций
+    local originalNamecall
+    originalNamecall = hookfunction(getrawmetatable(game).__namecall, function(self, ...)
+        local method = getnamecallmethod()
+        if method == "Kick" or method == "Ban" then
+            return nil
+        end
+        return originalNamecall(self, ...)
+    end)
 end
 
 -- Запуск
-coroutine.wrap(hyperHeal)()
-coroutine.wrap(npcAnnihilator)()
+coroutine.wrap(realGodMode)()
+coroutine.wrap(killNPC)()
+pcall(bypassAC)
 
-print("☠️ АКТИВИРОВАН РЕЖИМ БОГА 2.0 (1000 HP/сек + уничтожение NPC)")
+print("㊙️ CHEAT ACTIVATED | God Mode + NPC Killer + AC Bypass")

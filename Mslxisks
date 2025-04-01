@@ -1,31 +1,68 @@
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 
-local function makeImmortal(character)
+-- 1. Абсолютный иммунитет через StateType
+local function blockAllDamage(character)
     local humanoid = character:WaitForChild("Humanoid")
     
-    -- 1. Делаем здоровье "бесконечным"
-    humanoid.MaxHealth = math.huge
-    humanoid.Health = math.huge
+    -- Фикс для новых версий Roblox/Poblox
+    humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
     
-    -- 2. Блокируем ЛЮБОЙ входящий урон (даже от 1000 зомби)
-    if humanoid:FindFirstChild("TakeDamage") then
-        humanoid.TakeDamage:Connect(function()
-            return false -- Игнорируем урон
-        end)
-    end
-    
-    -- 3. Защита от принудительного убийства (если игра использует .Destroy)
-    character:GetPropertyChangedSignal("Parent"):Connect(function()
-        if not character.Parent then
-            task.wait(0.1)
-            player:LoadCharacter()
+    humanoid.StateChanged:Connect(function(_, newState)
+        if newState == Enum.HumanoidStateType.Dead then
+            humanoid:ChangeState(Enum.HumanoidStateType.Running)
         end
     end)
 end
 
--- Подключаемся к событию появления персонажа
-player.CharacterAdded:Connect(makeImmortal)
-if player.Character then
-    makeImmortal(player.Character)
+-- 2. Двойная защита здоровья
+local function doubleHealthProtection(character)
+    local humanoid = character:WaitForChild("Humanoid")
+    
+    humanoid.MaxHealth = math.huge * 2 -- Двойной запас
+    humanoid.Health = math.huge
+    
+    -- Атомарное обновление (для массовых атак)
+    local healthLock = false
+    humanoid:GetPropertyChangedSignal("Health"):Connect(function()
+        if not healthLock and humanoid.Health < humanoid.MaxHealth then
+            healthLock = true
+            task.defer(function()
+                humanoid.Health = math.huge
+                healthLock = false
+            end)
+        end
+    end)
 end
+
+-- 3. Защита от кастомного урона
+local function antiCustomDamage(character)
+    for _, v in pairs(character:GetDescendants()) do
+        if v:IsA("BaseScript") and v.Name:lower():find("damage") then
+            v:Destroy()
+        end
+    end
+end
+
+-- Главная функция
+local function makeSuperImmortal(character)
+    blockAllDamage(character)
+    doubleHealthProtection(character)
+    antiCustomDamage(character)
+    
+    -- Экстренный респавн
+    character.Destroying:Connect(function()
+        task.delay(0.3, function()
+            player:LoadCharacter()
+        end)
+    end)
+end
+
+-- Инициализация
+player.CharacterAdded:Connect(makeSuperImmortal)
+if player.Character then
+    makeSuperImmortal(player.Character)
+end
+
+print("⚡ АКТИВИРОВАН РЕЖИМ БОГА (защита от 1000+ атак)")

@@ -1,73 +1,45 @@
 local player = game:GetService("Players").LocalPlayer
-local RunService = game:GetService("RunService")
+local forcefield = nil
 
--- 1. Отключаем визуальную смерть
-local function blockDeathEffects()
-    if not player.Character then return end
-    
-    -- Убираем эффекты смерти
-    for _, v in pairs(player.Character:GetDescendants()) do
-        if v:IsA("ParticleEmitter") or v:IsA("Debris") then
-            v:Destroy()
-        end
+-- 1. Создаём вечный щит (аналог синей оболочки)
+local function createGodShield()
+    if player.Character then
+        -- Удаляем старый щит (если есть)
+        if forcefield then forcefield:Destroy() end
+        
+        -- Создаём новый ForceField (синяя оболочка)
+        forcefield = Instance.new("ForceField")
+        forcefield.Name = "GOD_SHIELD"
+        forcefield.Parent = player.Character
+        
+        -- Добавляем визуальный эффект (если нужно)
+        local shieldEffect = Instance.new("ForceFieldEffect")
+        shieldEffect.Visible = true
+        shieldEffect.Color3 = Color3.new(0, 0.5, 1) -- Синий цвет
+        shieldEffect.Parent = forcefield
     end
-    
-    -- Блокируем анимацию смерти
-    local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
-    if humanoid then
-        humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
-    end
 end
 
--- 2. Обнуляем таймер respawn
-local function hackRespawnTimer()
-    local oldRespawn = player.RespawnTime
-    player.RespawnTime = 0 -- Мгновенный респавн
-    
-    -- Защита от сброса
-    player:GetPropertyChangedSignal("RespawnTime"):Connect(function()
-        if player.RespawnTime ~= 0 then
-            player.RespawnTime = 0
-        end
+-- 2. Защита от сброса щита
+local function shieldProtection()
+    game:GetService("RunService").Heartbeat:Connect(function()
+        pcall(function()
+            -- Если щита нет - создаём заново
+            if not player.Character or not player.Character:FindFirstChild("GOD_SHIELD") then
+                createGodShield()
+            end
+            
+            -- Дополнительная защита здоровья
+            if player.Character and player.Character:FindFirstChild("Humanoid") then
+                player.Character.Humanoid.Health = player.Character.Humanoid.MaxHealth
+            end
+        end)
     end)
 end
 
--- 3. Автоматический респавн (невидимый)
-local function instantRespawn()
-    player.CharacterAdded:Connect(function()
-        task.wait(0.1) -- Ждём загрузки
-        
-        -- Возвращаем "мёртвого" персонажа
-        if player.Character then
-            player.Character.HumanoidRootPart.CFrame = CFrame.new(0, 50, 0)
-            blockDeathEffects()
-        end
-    end)
-end
+-- 3. Автоматическая активация
+player.CharacterAdded:Connect(createGodShield)
+createGodShield()
+shieldProtection()
 
--- 4. Защита от выкидывания
-local function antiKick()
-    local meta = getrawmetatable(game)
-    local oldNamecall = meta.__namecall
-    
-    setreadonly(meta, false)
-    
-    meta.__namecall = newcclosure(function(self, ...)
-        local method = getnamecallmethod()
-        
-        -- Блокируем выкидывание
-        if method == "Kick" or method == "Destroy" then
-            return nil
-        end
-        
-        return oldNamecall(self, ...)
-    end)
-end
-
--- Запускаем систему
-blockDeathEffects()
-hackRespawnTimer()
-instantRespawn()
-antiKick()
-
-print("👤 РЕЖИМ ФАНТОМА: Вас невозможно убить или выкинуть")
+print("🛡️ СИНИЙ ЩИТ АКТИВИРОВАН (Бессмертие включено)")

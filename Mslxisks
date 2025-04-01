@@ -1,52 +1,83 @@
 local player = game:GetService("Players").LocalPlayer
 local RunService = game:GetService("RunService")
 
--- 1. Полное отключение серверного контроля
-local function hijackCharacter()
-    if not player.Character then return end
-    
-    -- Создаем дубликат для локального управления
-    local fakeChar = player.Character:Clone()
-    fakeChar.Name = "Fake_"..player.Name
-    fakeChar.Parent = workspace
-    
-    -- Переносим управление
-    player.Character = fakeChar
-    player.Character.HumanoidRootPart.CFrame = CFrame.new(0, 50, 0)
-    
-    -- Делаем оригинального персонажа призраком
-    for _, part in pairs(player.Character:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.Transparency = 1
-            part.CanCollide = false
-        end
-    end
-    
-    -- Фикс камеры
-    workspace.CurrentCamera.CameraSubject = fakeChar.Humanoid
-end
-
--- 2. Автоматическое восстановление
-local function protectionSystem()
-    RunService.Heartbeat:Connect(function()
-        -- Если сервер пытается сбросить персонажа
-        if player.Character and player.Character:FindFirstChild("Humanoid") then
-            if player.Character.Humanoid.Health <= 0 then
-                player.Character.Humanoid.Health = 100
-                player.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Running)
+-- 1. Полный контроль над персонажем
+local function takeOverCharacter()
+    local function processCharacter(char)
+        if not char then return end
+        
+        -- Делаем все части невидимыми для урона
+        for _, part in pairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.LocalTransparencyModifier = 0.5
+                part.CanCollide = false
+                part:SetAttribute("IsGhost", true)
             end
         end
+
+        -- Создаём фейковое тело для управления
+        local fakeBody = char:Clone()
+        fakeBody.Name = "PlayerAvatar"
+        fakeBody.Parent = workspace
         
-        -- Если потеряли контроль
-        if workspace:FindFirstChild("Fake_"..player.Name) and 
-           not player.Character == workspace["Fake_"..player.Name] then
-            hijackCharacter()
-        end
+        -- Переносим управление
+        player.Character = fakeBody
+        workspace.CurrentCamera.CameraSubject = fakeBody.Humanoid
+        
+        -- Фиксируем позицию настоящего тела
+        char.HumanoidRootPart.Anchored = true
+        char.HumanoidRootPart.CFrame = CFrame.new(0, -1000, 0)
+    end
+
+    -- Инициализация
+    processCharacter(player.Character)
+    player.CharacterAdded:Connect(processCharacter)
+end
+
+-- 2. Система вечной жизни
+local function immortalitySystem()
+    RunService.Heartbeat:Connect(function()
+        pcall(function()
+            -- Блокируем смерть на всех уровнях
+            if player.Character and player.Character:FindFirstChild("Humanoid") then
+                player.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+                if player.Character.Humanoid.Health <= 0 then
+                    player.Character.Humanoid.Health = 100
+                    player.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Running)
+                end
+            end
+            
+            -- Восстанавливаем контроль, если сервер пытается его забрать
+            if not player.Character or player.Character.Name ~= "PlayerAvatar" then
+                takeOverCharacter()
+            end
+        end)
     end)
 end
 
--- Первый запуск
-hijackCharacter()
-protectionSystem()
+-- 3. Убийство NPC (дополнительно)
+local function npcEliminator()
+    while task.wait(0.3) do
+        pcall(function()
+            if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                local root = player.Character.HumanoidRootPart
+                
+                for _, npc in ipairs(workspace:GetDescendants()) do
+                    if npc:IsA("Model") and npc:FindFirstChildOfClass("Humanoid") then
+                        local npcRoot = npc:FindFirstChild("HumanoidRootPart")
+                        if npcRoot and (npcRoot.Position - root.Position).Magnitude < 30 then
+                            npc:Destroy()
+                        end
+                    end
+                end
+            end
+        end)
+    end
+end
 
-print("🕴️ Персонаж-призрак активирован! Сервер считает вас мертвым, но вы живы")
+-- Запуск всех систем
+takeOverCharacter()
+immortalitySystem()
+coroutine.wrap(npcEliminator)()
+
+print("💀 РЕЖИМ ПРИЗРАКА АКТИВИРОВАН | Сервер считает вас мёртвым, но вы живы")

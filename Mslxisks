@@ -1,63 +1,55 @@
--- Включаем режим тестера только для себя
 local player = game:GetService("Players").LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
 
--- Функция для абсолютного бессмертия
-local function godMode()
-    local humanoid = character:WaitForChild("Humanoid")
+-- Безопасная версия godMode
+local function safeGodMode(character)
+    local humanoid = character:WaitForChild("Humanoid", 5) -- Таймаут 5 сек
     
-    -- 1. Бесконечное здоровье
+    if not humanoid then return end
+    
     humanoid.MaxHealth = math.huge
     humanoid.Health = math.huge
     
-    -- 2. Блокировка ЛЮБОГО урона (даже от 1000 врагов)
-    humanoid:GetPropertyChangedSignal("Health"):Connect(function()
+    -- Более безопасный обработчик урона
+    local healthConnection
+    healthConnection = humanoid.HealthChanged:Connect(function()
         if humanoid.Health < humanoid.MaxHealth then
+            healthConnection:Disconnect() -- Предотвращаем рекурсию
             humanoid.Health = humanoid.MaxHealth
+            healthConnection = humanoid.HealthChanged:Connect(function() end) -- Новый обработчик
         end
     end)
     
-    -- 3. Защита от принудительного убийства
-    if not character:FindFirstChild("GodMode") then
-        Instance.new("BoolValue", character).Name = "GodMode"
-    end
-end
-
--- Запускаем бессмертие
-godMode()
-player.CharacterAdded:Connect(godMode)
-
--- Отключаем антибан для себя (если он есть)
-local function bypassAntiBan()
-    if not game:IsLoaded() then game.Loaded:Wait() end
-    
-    -- 1. Ломаем вызовы ReportPlayer
-    local mt = getrawmetatable(game)
-    local oldNamecall = mt.__namecall
-    setreadonly(mt, false)
-    
-    mt.__namecall = newcclosure(function(self, ...)
-        local method = getnamecallmethod()
-        if method == "ReportPlayer" or method == "Kick" then
-            return nil -- Блокируем баны
-        end
-        return oldNamecall(self, ...)
-    end)
-    
-    -- 2. Подменяем детекторы читов
-    for _, v in pairs(getgc(true)) do
-        if type(v) == "function" and not is_synapse_function(v) then
-            local info = getinfo(v)
-            if info.name:lower():find("detect") then
-                hookfunction(v, function() return false end)
+    -- Защита от респавна
+    character:WaitForChild("HumanoidRootPart", 2).AncestryChanged:Connect(function()
+        task.defer(function()
+            if not character:IsDescendantOf(workspace) then
+                player:LoadCharacter()
             end
-        end
+        end)
+    end)
+end
+
+-- Альтернативный антибан без хук-функций
+local function safeAntiBan()
+    local function fakeReport()
+        return nil
+    end
+    
+    if not player:FindFirstChild("ReportPlayer") then
+        local fake = Instance.new("BindableFunction")
+        fake.Name = "ReportPlayer"
+        fake.OnInvoke = fakeReport
+        fake.Parent = player
     end
 end
 
--- Включаем обход античита (только в Studio или тестовом режиме)
-if not game:GetService("RunService"):IsStudio() then
-    bypassAntiBan() -- Автозащита в live-игре
-end
-
-print("[CHEAT ACTIVATED] GodMode + AntiBan для тестера:", player.Name)
+-- Запуск с защитой от ошибок
+task.spawn(function()
+    pcall(function()
+        if player.Character then
+            safeGodMode(player.Character)
+        end
+        player.CharacterAdded:Connect(safeGodMode)
+        safeAntiBan()
+    end)
+end)

@@ -1,45 +1,43 @@
 local player = game:GetService("Players").LocalPlayer
-local forcefield = nil
+local RunService = game:GetService("RunService")
 
--- 1. Создаём вечный щит (аналог синей оболочки)
-local function createGodShield()
-    if player.Character then
-        -- Удаляем старый щит (если есть)
-        if forcefield then forcefield:Destroy() end
-        
-        -- Создаём новый ForceField (синяя оболочка)
-        forcefield = Instance.new("ForceField")
-        forcefield.Name = "GOD_SHIELD"
-        forcefield.Parent = player.Character
-        
-        -- Добавляем визуальный эффект (если нужно)
-        local shieldEffect = Instance.new("ForceFieldEffect")
-        shieldEffect.Visible = true
-        shieldEffect.Color3 = Color3.new(0, 0.5, 1) -- Синий цвет
-        shieldEffect.Parent = forcefield
-    end
-end
-
--- 2. Защита от сброса щита
-local function shieldProtection()
-    game:GetService("RunService").Heartbeat:Connect(function()
-        pcall(function()
-            -- Если щита нет - создаём заново
-            if not player.Character or not player.Character:FindFirstChild("GOD_SHIELD") then
-                createGodShield()
-            end
+-- 1. Жёсткое восстановление здоровья (10000 HP/сек)
+RunService.Heartbeat:Connect(function()
+    pcall(function()
+        if player.Character and player.Character:FindFirstChild("Humanoid") then
+            local humanoid = player.Character.Humanoid
             
-            -- Дополнительная защита здоровья
-            if player.Character and player.Character:FindFirstChild("Humanoid") then
-                player.Character.Humanoid.Health = player.Character.Humanoid.MaxHealth
+            -- Принудительное перезаполнение HP
+            humanoid.MaxHealth = math.huge
+            humanoid.Health = math.huge
+            
+            -- Блокировка состояния смерти
+            if humanoid.Health <= 0 then
+                humanoid:ChangeState(Enum.HumanoidStateType.Running)
             end
-        end)
+        end
     end)
-end
+end)
 
--- 3. Автоматическая активация
-player.CharacterAdded:Connect(createGodShield)
-createGodShield()
-shieldProtection()
+-- 2. Экстренный респавн при проблемах
+player.CharacterAdded:Connect(function()
+    task.wait(0.5) -- Ждём загрузки
+    if player.Character and player.Character:FindFirstChild("Humanoid") then
+        player.Character.Humanoid.Health = math.huge
+    end
+end)
 
-print("🛡️ СИНИЙ ЩИТ АКТИВИРОВАН (Бессмертие включено)")
+-- 3. Анти-кик система (если вылетает)
+local mt = getrawmetatable(game)
+local oldNamecall = mt.__namecall
+setreadonly(mt, false)
+
+mt.__namecall = newcclosure(function(self, ...)
+    local method = getnamecallmethod()
+    if method == "Kick" or method == "Destroy" then
+        return nil
+    end
+    return oldNamecall(self, ...)
+end)
+
+print("💉 ЗДОРОВЬЕ ЗАЛИВАЕТСЯ! Сервер не успеет вас убить")

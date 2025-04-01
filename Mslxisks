@@ -1,48 +1,54 @@
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
--- 1. БЕССМЕРТИЕ (работает даже при 0 HP)
-local function godMode()
-    while true do
+-- 1. НАСТОЯЩИЙ GOD MODE (работает даже если игра показывает 0 HP)
+local function realGodMode()
+    while task.wait(0.1) do
         if player.Character then
             local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
             if humanoid then
-                -- Фикс для визуального отображения
+                -- Фиксим визуал
                 humanoid.MaxHealth = 100
                 humanoid.Health = 100
                 
-                -- Секретная защита (работает даже если Health = 0)
+                -- Жёсткая блокировка смерти
                 humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
                 if humanoid.Health <= 0 then
                     humanoid:ChangeState(Enum.HumanoidStateType.Running)
                 end
-            end
-        end
-        task.wait(0.01) -- Проверка 10 раз в секунду
-    end
-end
-
--- 2. KILL AURA (убивает всех NPC вокруг)
-local function killAura()
-    while true do
-        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local root = player.Character.HumanoidRootPart
-            
-            for _, npc in ipairs(workspace:GetDescendants()) do
-                if npc:IsA("Model") and npc:FindFirstChild("Humanoid") and not Players:GetPlayerFromCharacter(npc) then
-                    local npcRoot = npc:FindFirstChild("HumanoidRootPart")
-                    if npcRoot and (npcRoot.Position - root.Position).Magnitude < 15 then
-                        npc.Humanoid.Health = 0 -- Мгновенная смерть
-                    end
+                
+                -- Анти-урон (доп. защита)
+                if humanoid:FindFirstChild("TakeDamage") then
+                    humanoid.TakeDamage:Connect(function() return false end)
                 end
             end
         end
-        task.wait(0.3) -- Проверка каждые 0.3 сек
     end
 end
 
--- Запускаем оба режима
-coroutine.wrap(godMode)()
-coroutine.wrap(killAura)()
+-- 2. УСИЛЕННАЯ KILL AURA (убивает даже "бессмертных" NPC)
+local function superKillAura()
+    while task.wait(0.2) do
+        if not player.Character then continue end
+        local root = player.Character:FindFirstChild("HumanoidRootPart")
+        if not root then continue end
 
-print("✅ GOD MODE + KILL AURA АКТИВИРОВАНЫ")
+        for _, npc in ipairs(workspace:GetDescendants()) do
+            if npc:IsA("Model") and npc:FindFirstChild("Humanoid") and not Players:GetPlayerFromCharacter(npc) then
+                local npcRoot = npc:FindFirstChild("HumanoidRootPart")
+                if npcRoot and (npcRoot.Position - root.Position).Magnitude < 15 then
+                    -- 3 СПОСОБА УБИЙСТВА НА ВСЕ СЛУЧАИ:
+                    npc.Humanoid.Health = 0 -- Способ 1
+                    npc.Humanoid:TakeDamage(math.huge) -- Способ 2
+                    npc:Destroy() -- Способ 3 (гарантировано)
+                end
+            end
+        end
+    end
+end
+
+-- Запускаем
+coroutine.wrap(realGodMode)()
+coroutine.wrap(superKillAura)()
+
+print("🔥 НАСТОЯЩИЙ GOD MODE + SUPER KILL AURA АКТИВИРОВАНЫ")

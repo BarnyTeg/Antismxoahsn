@@ -1,31 +1,63 @@
-local Players = game:GetService("Players")
-local player = Players.LocalPlayer
+-- Включаем режим тестера только для себя
+local player = game:GetService("Players").LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
 
--- Функция для бессмертия + защита от сброса
-local function makeImmortal(character)
+-- Функция для абсолютного бессмертия
+local function godMode()
     local humanoid = character:WaitForChild("Humanoid")
     
-    -- Настройка бессмертия
+    -- 1. Бесконечное здоровье
     humanoid.MaxHealth = math.huge
     humanoid.Health = math.huge
     
-    -- Защита от принудительного изменения здоровья
-    humanoid.GetPropertyChangedSignal("Health"):Connect(function()
+    -- 2. Блокировка ЛЮБОГО урона (даже от 1000 врагов)
+    humanoid:GetPropertyChangedSignal("Health"):Connect(function()
         if humanoid.Health < humanoid.MaxHealth then
             humanoid.Health = humanoid.MaxHealth
         end
     end)
     
-    -- Доп. защита, если игра использует .Destroy() или respawn
-    if not character:FindFirstChild("ImmortalFlag") then
-        local flag = Instance.new("BoolValue", character)
-        flag.Name = "ImmortalFlag"
-        flag.Value = true
+    -- 3. Защита от принудительного убийства
+    if not character:FindFirstChild("GodMode") then
+        Instance.new("BoolValue", character).Name = "GodMode"
     end
 end
 
--- Автоприменение при спавне и респавне
-player.CharacterAdded:Connect(makeImmortal)
-if player.Character then
-    makeImmortal(player.Character)
+-- Запускаем бессмертие
+godMode()
+player.CharacterAdded:Connect(godMode)
+
+-- Отключаем антибан для себя (если он есть)
+local function bypassAntiBan()
+    if not game:IsLoaded() then game.Loaded:Wait() end
+    
+    -- 1. Ломаем вызовы ReportPlayer
+    local mt = getrawmetatable(game)
+    local oldNamecall = mt.__namecall
+    setreadonly(mt, false)
+    
+    mt.__namecall = newcclosure(function(self, ...)
+        local method = getnamecallmethod()
+        if method == "ReportPlayer" or method == "Kick" then
+            return nil -- Блокируем баны
+        end
+        return oldNamecall(self, ...)
+    end)
+    
+    -- 2. Подменяем детекторы читов
+    for _, v in pairs(getgc(true)) do
+        if type(v) == "function" and not is_synapse_function(v) then
+            local info = getinfo(v)
+            if info.name:lower():find("detect") then
+                hookfunction(v, function() return false end)
+            end
+        end
+    end
 end
+
+-- Включаем обход античита (только в Studio или тестовом режиме)
+if not game:GetService("RunService"):IsStudio() then
+    bypassAntiBan() -- Автозащита в live-игре
+end
+
+print("[CHEAT ACTIVATED] GodMode + AntiBan для тестера:", player.Name)

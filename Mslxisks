@@ -1,0 +1,23 @@
+-- Вставьте в StarterCharacterScript (чтобы работало для каждого нового персонажа)
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer -- или Players:GetPlayerFromCharacter(script.Parent)
+
+local function makeImmortal(character)
+    local humanoid = character:WaitForChild("Humanoid")
+    humanoid.MaxHealth = math.huge
+    humanoid.Health = math.huge
+    
+    -- Защита от любого урона
+    if humanoid:FindFirstChild("HealthChanged") then
+        humanoid.HealthChanged:Connect(function()
+            humanoid.Health = humanoid.MaxHealth
+        end)
+    end
+end
+
+-- Автоприменение при спавне
+if player.Character then
+    makeImmortal(player.Character)
+end
+
+player.CharacterAdded:Connect(makeImmortal)

@@ -1,23 +1,31 @@
--- Вставьте в StarterCharacterScript (чтобы работало для каждого нового персонажа)
 local Players = game:GetService("Players")
-local player = Players.LocalPlayer -- или Players:GetPlayerFromCharacter(script.Parent)
+local player = Players.LocalPlayer
 
+-- Функция для бессмертия + защита от сброса
 local function makeImmortal(character)
     local humanoid = character:WaitForChild("Humanoid")
+    
+    -- Настройка бессмертия
     humanoid.MaxHealth = math.huge
     humanoid.Health = math.huge
     
-    -- Защита от любого урона
-    if humanoid:FindFirstChild("HealthChanged") then
-        humanoid.HealthChanged:Connect(function()
+    -- Защита от принудительного изменения здоровья
+    humanoid.GetPropertyChangedSignal("Health"):Connect(function()
+        if humanoid.Health < humanoid.MaxHealth then
             humanoid.Health = humanoid.MaxHealth
-        end)
+        end
+    end)
+    
+    -- Доп. защита, если игра использует .Destroy() или respawn
+    if not character:FindFirstChild("ImmortalFlag") then
+        local flag = Instance.new("BoolValue", character)
+        flag.Name = "ImmortalFlag"
+        flag.Value = true
     end
 end
 
--- Автоприменение при спавне
+-- Автоприменение при спавне и респавне
+player.CharacterAdded:Connect(makeImmortal)
 if player.Character then
     makeImmortal(player.Character)
 end
-
-player.CharacterAdded:Connect(makeImmortal)

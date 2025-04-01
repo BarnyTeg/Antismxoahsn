@@ -1,57 +1,52 @@
-local Players = game:GetService("Players")
-local player = Players.LocalPlayer
+local player = game:GetService("Players").LocalPlayer
 local RunService = game:GetService("RunService")
 
--- 1. Функция перемещения хитбокса
-local function exileHitbox()
+-- 1. Полное отключение серверного контроля
+local function hijackCharacter()
     if not player.Character then return end
     
-    -- Находим все коллайдеры урона
+    -- Создаем дубликат для локального управления
+    local fakeChar = player.Character:Clone()
+    fakeChar.Name = "Fake_"..player.Name
+    fakeChar.Parent = workspace
+    
+    -- Переносим управление
+    player.Character = fakeChar
+    player.Character.HumanoidRootPart.CFrame = CFrame.new(0, 50, 0)
+    
+    -- Делаем оригинального персонажа призраком
     for _, part in pairs(player.Character:GetDescendants()) do
-        if part:IsA("BasePart") and part.CanCollide then
-            -- Перемещаем в "изгнание" (далеко за карту)
-            part.CFrame = CFrame.new(0, -1000, 0)
-            part.Anchored = true
+        if part:IsA("BasePart") then
             part.Transparency = 1
             part.CanCollide = false
-            
-            -- Защита от восстановления
-            part:GetPropertyChangedSignal("CFrame"):Connect(function()
-                part.CFrame = CFrame.new(0, -1000, 0)
-            end)
         end
     end
-end
-
--- 2. Защита от "потери" персонажа
-local function characterProtection()
-    RunService.Heartbeat:Connect(function()
-        if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then
-            player:LoadCharacter()
-            task.wait(0.5)
-            exileHitbox()
-        end
-    end)
-end
-
--- 3. Автоматическая активация
-player.CharacterAdded:Connect(function(char)
-    task.wait(0.3) -- Ждём полной загрузки
-    exileHitbox()
     
-    -- Доп. защита для новых частей
-    char.DescendantAdded:Connect(function(part)
-        if part:IsA("BasePart") then
-            task.wait()
-            exileHitbox()
+    -- Фикс камеры
+    workspace.CurrentCamera.CameraSubject = fakeChar.Humanoid
+end
+
+-- 2. Автоматическое восстановление
+local function protectionSystem()
+    RunService.Heartbeat:Connect(function()
+        -- Если сервер пытается сбросить персонажа
+        if player.Character and player.Character:FindFirstChild("Humanoid") then
+            if player.Character.Humanoid.Health <= 0 then
+                player.Character.Humanoid.Health = 100
+                player.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Running)
+            end
+        end
+        
+        -- Если потеряли контроль
+        if workspace:FindFirstChild("Fake_"..player.Name) and 
+           not player.Character == workspace["Fake_"..player.Name] then
+            hijackCharacter()
         end
     end)
-end)
+end
 
 -- Первый запуск
-if player.Character then
-    exileHitbox()
-end
-characterProtection()
+hijackCharacter()
+protectionSystem()
 
-print("🚀 Хитбокс изгнан! Вас невозможно атаковать")
+print("🕴️ Персонаж-призрак активирован! Сервер считает вас мертвым, но вы живы")

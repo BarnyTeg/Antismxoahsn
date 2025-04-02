@@ -1,50 +1,12 @@
--- Ultra Mobile God Mode (для Android/iOS)
-local player = game:GetService("Players").LocalPlayer
-local RunService = game:GetService("RunService")
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
 
--- 1. Простейший, но эффективный God Mode
-local function mobileGodMode()
-    while task.wait(0.1) do
-        pcall(function()
-            if player.Character then
-                local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
-                if humanoid then
-                    -- Жёсткий контроль здоровья
-                    humanoid.MaxHealth = 100
-                    humanoid.Health = 100
-                    
-                    -- Экстренное восстановление
-                    if humanoid.Health <= 0 then
-                        humanoid:ChangeState(Enum.HumanoidStateType.Running)
-                    end
-                end
-            end
-        end)
+local function setInfiniteHealth()
+    if character:FindFirstChild("Humanoid") then
+        character.Humanoid.MaxHealth = math.huge
+        character.Humanoid.Health = math.huge
     end
 end
 
--- 2. Базовый Kill Aura
-local function mobileKillAura()
-    while task.wait(0.3) do
-        pcall(function()
-            if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                local root = player.Character.HumanoidRootPart
-                
-                for _, npc in ipairs(workspace:GetDescendants()) do
-                    if npc:IsA("Model") and npc:FindFirstChildOfClass("Humanoid") then
-                        local npcRoot = npc:FindFirstChild("HumanoidRootPart")
-                        if npcRoot and (npcRoot.Position - root.Position).Magnitude < 20 then
-                            npc:Destroy()
-                        end
-                    end
-                end
-            end
-        end)
-    end
-end
-
--- Запуск
-coroutine.wrap(mobileGodMode)()
-coroutine.wrap(mobileKillAura)()
-
-print("📱 MOBILE GOD MODE АКТИВИРОВАН")
+setInfiniteHealth()
+player.CharacterAdded:Connect(setInfiniteHealth)

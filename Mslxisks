@@ -1,22 +1,63 @@
 local player = game.Players.LocalPlayer
 local runService = game:GetService("RunService")
-local logData = ""
+local userInputService = game:GetService("UserInputService")
 
-local function addLog(text)
-    logData = logData .. text .. "\n"
-    print(text) -- Лог в консоль (можно скопировать)
+-- Создаём GUI
+local screenGui = Instance.new("ScreenGui", player.PlayerGui)
+local logFrame = Instance.new("Frame", screenGui)
+local logTextBox = Instance.new("TextBox", logFrame)
+local copyButton = Instance.new("TextButton", logFrame)
+
+-- Настройки окна логов
+logFrame.Size = UDim2.new(0.4, 0, 0.5, 0)
+logFrame.Position = UDim2.new(0.3, 0, 0.2, 0)
+logFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+logFrame.BorderSizePixel = 2
+
+-- Настройки текстового поля
+logTextBox.Size = UDim2.new(1, 0, 0.9, 0)
+logTextBox.Position = UDim2.new(0, 0, 0, 0)
+logTextBox.BackgroundTransparency = 1
+logTextBox.TextColor3 = Color3.new(1, 1, 1)
+logTextBox.TextXAlignment = Enum.TextXAlignment.Left
+logTextBox.TextYAlignment = Enum.TextYAlignment.Top
+logTextBox.TextWrapped = true
+logTextBox.ClearTextOnFocus = false
+logTextBox.MultiLine = true
+logTextBox.Text = "Логи HP NPC:\n"
+
+-- Настройки кнопки копирования
+copyButton.Size = UDim2.new(1, 0, 0.1, 0)
+copyButton.Position = UDim2.new(0, 0, 0.9, 0)
+copyButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+copyButton.TextColor3 = Color3.new(1, 1, 1)
+copyButton.Text = "Скопировать логи"
+
+-- Функция копирования логов в буфер обмена
+local function copyLogs()
+    if setclipboard then
+        setclipboard(logTextBox.Text)
+    else
+        print("Функция setclipboard не поддерживается в этом режиме")
+    end
 end
 
+copyButton.MouseButton1Click:Connect(copyLogs)
+
+-- Функция добавления логов
+local function addLog(text)
+    logTextBox.Text = logTextBox.Text .. text .. "\n"
+end
+
+-- Функция отслеживания HP NPC
 local function trackHP()
     for _, npc in pairs(workspace:GetChildren()) do
         if npc:IsA("Model") and npc:FindFirstChild("Humanoid") then
             local humanoid = npc.Humanoid
-            local hp = humanoid.Health
             local maxHp = humanoid.MaxHealth
+            addLog("NPC: " .. npc.Name .. " | HP: " .. humanoid.Health .. "/" .. maxHp)
 
-            addLog("NPC: " .. npc.Name .. " | HP: " .. hp .. "/" .. maxHp)
-
-            -- Проверяем, получает ли NPC урон
+            -- Отслеживаем изменения HP
             humanoid.HealthChanged:Connect(function(newHp)
                 addLog("NPC: " .. npc.Name .. " | Новый HP: " .. newHp .. "/" .. maxHp)
             end)

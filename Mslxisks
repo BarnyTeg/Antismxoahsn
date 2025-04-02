@@ -1,12 +1,26 @@
 local player = game.Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
+local runService = game:GetService("RunService")
 
-local function moveHitbox()
-    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-    if humanoidRootPart then
-        humanoidRootPart.Position = humanoidRootPart.Position + Vector3.new(0, 50, 0) -- Поднимаем хитбокс вверх
+local function killAura()
+    while true do
+        for _, npc in pairs(workspace:GetChildren()) do
+            if npc:IsA("Model") and npc:FindFirstChild("Humanoid") then
+                local humanoid = npc.Humanoid
+                local rootPart = npc:FindFirstChild("HumanoidRootPart")
+                local playerRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+
+                if humanoid and rootPart and playerRoot then
+                    local distance = (playerRoot.Position - rootPart.Position).Magnitude
+
+                    -- Проверяем, что это не игрок и он в радиусе 30
+                    if distance <= 30 and not game.Players:GetPlayerFromCharacter(npc) then
+                        humanoid.Health = humanoid.Health - 1000
+                    end
+                end
+            end
+        end
+        task.wait(1) -- 1000 урона в секунду
     end
 end
 
-moveHitbox()
-player.CharacterAdded:Connect(moveHitbox)
+runService.Heartbeat:Connect(killAura)

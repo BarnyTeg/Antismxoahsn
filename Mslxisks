@@ -1,5 +1,24 @@
 local player = game.Players.LocalPlayer
 local runService = game:GetService("RunService")
+local screenGui = Instance.new("ScreenGui", player.PlayerGui)
+local logFrame = Instance.new("Frame", screenGui)
+local logText = Instance.new("TextLabel", logFrame)
+
+-- Настраиваем GUI
+logFrame.Size = UDim2.new(0.3, 0, 0.4, 0)
+logFrame.Position = UDim2.new(0.7, 0, 0.1, 0)
+logFrame.BackgroundColor3 = Color3.new(0, 0, 0)
+logFrame.BorderSizePixel = 2
+
+logText.Size = UDim2.new(1, 0, 1, 0)
+logText.TextScaled = true
+logText.BackgroundTransparency = 1
+logText.TextColor3 = Color3.new(1, 1, 1)
+logText.Text = "Логи загрузки...\n"
+
+local function addLog(text)
+    logText.Text = logText.Text .. text .. "\n"
+end
 
 local function killAura()
     local character = player.Character
@@ -8,6 +27,8 @@ local function killAura()
     local playerRoot = character:FindFirstChild("HumanoidRootPart")
     if not playerRoot then return end
 
+    addLog("Начинаю проверку NPC...")
+
     for _, npc in pairs(workspace:GetChildren()) do
         if npc:IsA("Model") and npc:FindFirstChild("Humanoid") then
             local humanoid = npc.Humanoid
@@ -15,15 +36,17 @@ local function killAura()
 
             if humanoid and rootPart then
                 local distance = (playerRoot.Position - rootPart.Position).Magnitude
+                addLog("Найден NPC: " .. npc.Name .. ", HP: " .. humanoid.Health .. ", Дистанция: " .. math.floor(distance))
 
                 -- Если в радиусе 30 метров и это НЕ игрок
                 if distance <= 30 and not game.Players:GetPlayerFromCharacter(npc) then
+                    addLog("Попытка убить " .. npc.Name)
                     humanoid.Health = 0 -- NPC умирает
+                    addLog(npc.Name .. " убит!")
                 end
             end
         end
     end
 end
 
--- Запускаем килл-ауру 10 раз в секунду
 runService.Heartbeat:Connect(killAura)

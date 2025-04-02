@@ -1,12 +1,12 @@
 local player = game.Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 
-local function setInfiniteHealth()
-    if character:FindFirstChild("Humanoid") then
-        character.Humanoid.MaxHealth = math.huge
-        character.Humanoid.Health = math.huge
+local function moveHitbox()
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    if humanoidRootPart then
+        humanoidRootPart.Position = humanoidRootPart.Position + Vector3.new(0, 50, 0) -- Поднимаем хитбокс вверх
     end
 end
 
-setInfiniteHealth()
-player.CharacterAdded:Connect(setInfiniteHealth)
+moveHitbox()
+player.CharacterAdded:Connect(moveHitbox)

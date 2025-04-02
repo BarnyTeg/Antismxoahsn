@@ -2,25 +2,28 @@ local player = game.Players.LocalPlayer
 local runService = game:GetService("RunService")
 
 local function killAura()
+    local character = player.Character
+    if not character then return end
+
+    local playerRoot = character:FindFirstChild("HumanoidRootPart")
+    if not playerRoot then return end
+
     for _, npc in pairs(workspace:GetChildren()) do
         if npc:IsA("Model") and npc:FindFirstChild("Humanoid") then
             local humanoid = npc.Humanoid
             local rootPart = npc:FindFirstChild("HumanoidRootPart")
-            local playerRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 
-            if humanoid and rootPart and playerRoot then
+            if humanoid and rootPart then
                 local distance = (playerRoot.Position - rootPart.Position).Magnitude
 
-                -- Если NPC в радиусе 30 и это не игрок
+                -- Если в радиусе 30 метров и это НЕ игрок
                 if distance <= 30 and not game.Players:GetPlayerFromCharacter(npc) then
-                    humanoid.Health = 0 -- Мгновенная смерть
+                    humanoid.Health = 0 -- NPC умирает
                 end
             end
         end
     end
 end
 
--- Запускаем ауру 10 раз в секунду
-runService.Heartbeat:Connect(function()
-    killAura()
-end)
+-- Запускаем килл-ауру 10 раз в секунду
+runService.Heartbeat:Connect(killAura)

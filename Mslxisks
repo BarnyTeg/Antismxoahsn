@@ -1,66 +1,34 @@
-local player = game.Players.LocalPlayer
-local runService = game:GetService("RunService")
-local logData = ""
+local player = game.Players.LocalPlayer local userInputService = game:GetService("UserInputService") local runService = game:GetService("RunService")
 
--- Функция добавления логов
-local function addLog(text)
-    logData = logData .. text .. "\n"
-    print(text) -- Вывод в консоль
-end
+-- Создаём GUI local screenGui = Instance.new("ScreenGui", player.PlayerGui) local logFrame = Instance.new("Frame", screenGui) local logTextBox = Instance.new("TextBox", logFrame) local closeButton = Instance.new("TextButton", logFrame)
 
--- Логируем API и свойства всех NPC
-local function logNPCData()
-    for _, npc in pairs(workspace:GetChildren()) do
-        if npc:IsA("Model") and npc:FindFirstChild("Humanoid") then
-            local humanoid = npc.Humanoid
-            local maxHp = humanoid.MaxHealth
-            local rootPart = npc:FindFirstChild("HumanoidRootPart")
+-- Настройки окна logFrame.Size = UDim2.new(0.4, 0, 0.5, 0) logFrame.Position = UDim2.new(0.3, 0, 0.2, 0) logFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30) logFrame.Active = true logFrame.Draggable = true
 
-            addLog("=== NPC Данные ===")
-            addLog("Имя: " .. npc.Name)
-            addLog("Класс: " .. npc.ClassName)
-            addLog("HP: " .. humanoid.Health .. "/" .. maxHp)
-            addLog("RootPart: " .. tostring(rootPart))
-            
-            -- Выводим все свойства NPC
-            for _, obj in pairs(npc:GetChildren()) do
-                addLog("Объект: " .. obj.Name .. " | Класс: " .. obj.ClassName)
-            end
+-- Поле для текста логов logTextBox.Size = UDim2.new(1, 0, 0.9, 0) logTextBox.Position = UDim2.new(0, 0, 0, 0) logTextBox.BackgroundTransparency = 1 logTextBox.TextColor3 = Color3.new(1, 1, 1) logTextBox.TextXAlignment = Enum.TextXAlignment.Left logTextBox.TextYAlignment = Enum.TextYAlignment.Top logTextBox.ClearTextOnFocus = false logTextBox.MultiLine = true logTextBox.Text = "Логи взаимодействия с предметами:\n"
 
-            -- Логируем изменения HP
-            humanoid.HealthChanged:Connect(function(newHp)
-                addLog(npc.Name .. " получил урон! Новый HP: " .. newHp)
-            end)
+-- Кнопка закрытия closeButton.Size = UDim2.new(1, 0, 0.1, 0) closeButton.Position = UDim2.new(0, 0, 0.9, 0) closeButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50) closeButton.TextColor3 = Color3.new(1, 1, 1) closeButton.Text = "Закрыть"
+
+closeButton.MouseButton1Click:Connect(function() screenGui:Destroy() end)
+
+-- Функция добавления логов local function addLog(text) logTextBox.Text = logTextBox.Text .. text .. "\n" end
+
+-- Логирование предметов при взаимодействии local function trackItems(input, gameProcessed) if gameProcessed then return end
+
+if input.UserInputType == Enum.UserInputType.MouseButton1 then -- ЛКМ
+    local target = player:GetMouse().Target
+    if target then
+        local fullPath = target:GetFullName()
+        addLog("Взаимодействие с предметом: " .. target.Name)
+        addLog("Полный путь: " .. fullPath)
+        
+        -- Вывод API предмета
+        for _, prop in pairs(target:GetChildren()) do
+            addLog("Свойство: " .. prop.Name .. " | Класс: " .. prop.ClassName)
         end
     end
 end
 
--- Логируем API и переменные игрока
-local function logPlayerData()
-    local character = player.Character
-    if not character then return end
-
-    addLog("=== Игрок ===")
-    addLog("Имя: " .. player.Name)
-    addLog("Класс: " .. player.ClassName)
-    
-    -- Перебираем все объекты в персонаже
-    for _, obj in pairs(character:GetChildren()) do
-        addLog("Объект: " .. obj.Name .. " | Класс: " .. obj.ClassName)
-    end
 end
 
--- Логируем все переменные в игре
-local function logGlobalVariables()
-    addLog("=== Глобальные переменные ===")
-    for k, v in pairs(getfenv()) do
-        addLog(tostring(k) .. " = " .. tostring(v))
-    end
-end
+userInputService.InputBegan:Connect(trackItems)
 
--- Запускаем логирование каждые 5 секунд
-runService.Heartbeat:Connect(function()
-    logNPCData()
-    logPlayerData()
-    logGlobalVariables()
-end)

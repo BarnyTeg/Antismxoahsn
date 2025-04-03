@@ -1,6 +1,6 @@
-local player = game.Players.LocalPlayer local userInputService = game:GetService("UserInputService") local runService = game:GetService("RunService")
+local player = game.Players.LocalPlayer local userInputService = game:GetService("UserInputService") local runService = game:GetService("RunService") local setclipboard = setclipboard or toclipboard or function() end -- Функция копирования в буфер обмена
 
--- Создаём GUI local screenGui = Instance.new("ScreenGui") screenGui.Parent = game.CoreGui -- Теперь меню появится сразу
+-- Создаём GUI local screenGui = Instance.new("ScreenGui") screenGui.Parent = game:GetService("CoreGui") -- Делаем меню поверх игры
 
 local logFrame = Instance.new("Frame", screenGui) local logTextBox = Instance.new("TextBox", logFrame) local closeButton = Instance.new("TextButton", logFrame)
 
@@ -12,7 +12,7 @@ local logFrame = Instance.new("Frame", screenGui) local logTextBox = Instance.ne
 
 closeButton.MouseButton1Click:Connect(function() screenGui:Destroy() end)
 
--- Функция добавления логов local function addLog(text) logTextBox.Text = logTextBox.Text .. text .. "\n" end
+-- Функция добавления логов и копирования в буфер local function addLog(text) logTextBox.Text = logTextBox.Text .. text .. "\n" setclipboard(logTextBox.Text) -- Копирование логов в буфер обмена end
 
 -- Логирование предметов при взаимодействии local function trackItems() local target = player:GetMouse().Target if target then local fullPath = target:GetFullName() addLog("Взаимодействие с предметом: " .. target.Name) addLog("Полный путь: " .. fullPath)
 

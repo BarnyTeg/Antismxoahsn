@@ -1,6 +1,8 @@
 local player = game.Players.LocalPlayer local userInputService = game:GetService("UserInputService") local runService = game:GetService("RunService")
 
--- Создаём GUI local screenGui = Instance.new("ScreenGui", player.PlayerGui) local logFrame = Instance.new("Frame", screenGui) local logTextBox = Instance.new("TextBox", logFrame) local closeButton = Instance.new("TextButton", logFrame)
+-- Создаём GUI local screenGui = Instance.new("ScreenGui") screenGui.Parent = game.CoreGui -- Теперь меню появится сразу
+
+local logFrame = Instance.new("Frame", screenGui) local logTextBox = Instance.new("TextBox", logFrame) local closeButton = Instance.new("TextButton", logFrame)
 
 -- Настройки окна logFrame.Size = UDim2.new(0.4, 0, 0.5, 0) logFrame.Position = UDim2.new(0.3, 0, 0.2, 0) logFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30) logFrame.Active = true logFrame.Draggable = true
 
@@ -12,23 +14,15 @@ closeButton.MouseButton1Click:Connect(function() screenGui:Destroy() end)
 
 -- Функция добавления логов local function addLog(text) logTextBox.Text = logTextBox.Text .. text .. "\n" end
 
--- Логирование предметов при взаимодействии local function trackItems(input, gameProcessed) if gameProcessed then return end
+-- Логирование предметов при взаимодействии local function trackItems() local target = player:GetMouse().Target if target then local fullPath = target:GetFullName() addLog("Взаимодействие с предметом: " .. target.Name) addLog("Полный путь: " .. fullPath)
 
-if input.UserInputType == Enum.UserInputType.MouseButton1 then -- ЛКМ
-    local target = player:GetMouse().Target
-    if target then
-        local fullPath = target:GetFullName()
-        addLog("Взаимодействие с предметом: " .. target.Name)
-        addLog("Полный путь: " .. fullPath)
-        
-        -- Вывод API предмета
-        for _, prop in pairs(target:GetChildren()) do
-            addLog("Свойство: " .. prop.Name .. " | Класс: " .. prop.ClassName)
-        end
+-- Вывод API предмета
+    for _, prop in pairs(target:GetChildren()) do
+        addLog("Свойство: " .. prop.Name .. " | Класс: " .. prop.ClassName)
     end
 end
 
 end
 
-userInputService.InputBegan:Connect(trackItems)
+runService.RenderStepped:Connect(trackItems)
 

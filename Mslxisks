@@ -1,22 +1,15 @@
--- Получить персонажа_localplayer
-local character = game.Players.LocalPlayer.Character
-
--- Если персонаж существует
-if character then
-    -- Канал health, чтобы сважать с вызовом функции
-    local humanoid = character:FindFirstChild("Humanoid")
-
-    -- Если Humanoid найден
-    if humanoid then
-        -- Установить здоровье на максимальное и запретить его уменьшение
-        humanoid.MaxHealth = 100 -- любое максимальное значение
-        humanoid.Health = humanoid.MaxHealth
-
-        -- Отслеживать изменения здоровья и восстанавливать при необходимости
-        humanoid.HealthChanged:Connect(function()
-            if humanoid.Health < humanoid.MaxHealth then
-                humanoid.Health = humanoid.MaxHealth
-            end
-        end)
+local function logObject(instance)
+    if instance then
+        print("Имя: " .. instance.Name .. ", Путь: " .. instance:GetFullName() .. ", API: " .. instance.ClassName)
     end
 end
+
+local function logDescendants(parent)
+    for _, child in ipairs(parent:GetChildren()) do
+        logObject(child)
+        logDescendants(child) -- Рекурсивный вызов для дочерних объектов
+    end
+end
+
+-- Запуск логирования для workspace или другого объекта
+logDescendants(workspace)

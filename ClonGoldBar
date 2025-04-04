@@ -1,17 +1,32 @@
--- Получение игрока
-local player = game.Players.LocalPlayer
+-- Получение оригинального золотого слитка
+local original = game:GetService("Workspace").RuntimeItems.GoldBar
 
--- Получение предмета над головой игрока
-local item = player.Character.Head:FindFirstChild("GoldBar")
+-- Если оригинальный золотой слиток найден, клонируем его
+if original then
+    -- Клонируем каждый объект отдельно
+    local goldBar = original:Clone()
+    local objectInfo = original.ObjectInfo:Clone()
+    local title = original.ObjectInfo.Title:Clone()
+    local textLabel = original.ObjectInfo.TextLabel:Clone()
+    local uiListLayout = original.ObjectInfo.UIListLayout:Clone()
+    local propGoldBar = original.Prop_GoldBar:Clone()
 
--- Если предмет найден, дюпаем его
-if item then
-    -- Клонирование предмета
-    local newItem = item:Clone()
-    
-    -- Установка родителя нового предмета
-    newItem.Parent = player.Character.Head
-    
-    -- Установка позиции нового предмета
-    newItem.CFrame = item.CFrame + Vector3.new(0, 1, 0)
+    -- Устанавливаем родителя и имя каждого объекта
+    goldBar.Parent = game:GetService("Workspace").RuntimeItems
+    goldBar.Name = "GoldBar_Copy"
+
+    objectInfo.Parent = goldBar
+    objectInfo.Name = "ObjectInfo"
+
+    title.Parent = objectInfo
+    title.Name = "Title"
+
+    textLabel.Parent = objectInfo
+    textLabel.Name = "TextLabel"
+
+    uiListLayout.Parent = objectInfo
+    uiListLayout.Name = "UIListLayout"
+
+    propGoldBar.Parent = goldBar
+    propGoldBar.Name = "Prop_GoldBar"
 end

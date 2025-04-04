@@ -1,32 +1,49 @@
+-- Создание GUI
 local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "APIExplorer"
+ScreenGui.Parent = game:GetService("CoreGui")
+
 local Frame = Instance.new("Frame")
-local ScrollingFrame = Instance.new("ScrollingFrame")
-local TemplateButton = Instance.new("TextButton")
-local CopyButton = Instance.new("TextButton")
-
-ScreenGui.Parent = game:GetService("CoreGui")  -- Исправлено
+Frame.Size = UDim2.new(0.3, 0, 0.5, 0)
+Frame.Position = UDim2.new(0.35, 0, 0.25, 0)
+Frame.BackgroundColor3 = Color3.new(0, 0, 0)
+Frame.BackgroundTransparency = 0.5
 Frame.Parent = ScreenGui
-ScrollingFrame.Parent = Frame
-CopyButton.Parent = Frame
 
--- Настройка размеров и стиля (пример)
-Frame.Size = UDim2.new(0, 300, 0, 400)
+local ScrollingFrame = Instance.new("ScrollingFrame")
 ScrollingFrame.Size = UDim2.new(1, 0, 0.9, 0)
-TemplateButton.Size = UDim2.new(1, 0, 0, 30)
+ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+ScrollingFrame.Parent = Frame
 
-local function getObjectInfo(obj)
-    return string.format("Class: %s\nName: %s\nPath: %s", obj.ClassName, obj.Name, obj:GetFullName())
-end
+local TemplateButton = Instance.new("TextButton")
+TemplateButton.Size = UDim2.new(1, 0, 0, 35)
+TemplateButton.BackgroundColor3 = Color3.new(1, 1, 1)
+TemplateButton.TextColor3 = Color3.new(0, 0, 0)
+TemplateButton.Parent = ScrollingFrame
+TemplateButton.Visible = false -- Скрыть шаблон
 
-for _, obj in pairs(workspace:GetDescendants()) do
-    local Button = TemplateButton:Clone()
-    Button.Text = obj.Name
-    Button.Parent = ScrollingFrame
-    Button.MouseButton1Click:Connect(function()
-        game:GetService("StarterGui"):SetClipboard(getObjectInfo(obj))  -- Исправлено
+-- Функция для копирования текста в буфер обмена
+local function copyToClipboard(text)
+    local TextService = game:GetService("TextService")
+    pcall(function()
+        TextService:SetClipboard(text)
     end)
 end
 
-CopyButton.MouseButton1Click:Connect(function()
-    game:GetService("StarterGui"):SetClipboard("Данные скопированы!")  -- Исправлено
-end)
+-- Заполнение кнопками объектов
+local function populateButtons()
+    for _, obj in pairs(workspace:GetDescendants()) do
+        local Button = TemplateButton:Clone()
+        Button.Text = obj.Name
+        Button.Parent = ScrollingFrame
+
+        Button.MouseButton1Click:Connect(function()
+            local info = string.format("Class: %s\nName: %s\nPath: %s", obj.ClassName, obj.Name, obj:GetFullName())
+            copyToClipboard(info)
+        end)
+    end
+    ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, #workspace:GetDescendants() * 35)
+end
+
+-- Запуск заполнения кнопок
+populateButtons()

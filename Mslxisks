@@ -1,54 +1,10 @@
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "SecretLogger"
-ScreenGui.ResetOnSpawn = false -- Важно для сохранения GUI
-ScreenGui.Parent = game:GetService("CoreGui")
-
-local Frame = Instance.new("Frame")
-Frame.Size = UDim2.new(0.3, 0, 0.5, 0)
-Frame.Position = UDim2.new(0.7, 0, 0.25, 0)
-Frame.BackgroundColor3 = Color3.new(0.1, 0.1, 0.1)
-Frame.Parent = ScreenGui
-
-local ScrollingFrame = Instance.new("ScrollingFrame")
-ScrollingFrame.Size = UDim2.new(1, 0, 0.9, 0)
-ScrollingFrame.CanvasSize = UDim2.new(0, 0, 10, 0) -- Автоподстройка под контент
-ScrollingFrame.Parent = Frame
-
-local TemplateButton = Instance.new("TextButton")
-TemplateButton.Size = UDim2.new(1, -10, 0, 30)
-TemplateButton.Position = UDim2.new(0, 5, 0, 0)
-TemplateButton.Visible = false -- Скрыть шаблон
-
-local function updateUI()
-    ScrollingFrame:ClearAllChildren()
-    
-    -- Фикс для обхода защиты
-    local success, err = pcall(function()
-        for _, obj in pairs(game:GetDescendants()) do
-            if obj:IsA("BasePart") or obj:IsA("ModuleScript") then
-                local Button = TemplateButton:Clone()
-                Button.Text = obj.Name .. " [" .. obj.ClassName .. "]"
-                Button.Visible = true
-                Button.Parent = ScrollingFrame
-                
-                Button.MouseButton1Click:Connect(function()
-                    setclipboard(obj:GetFullName())
-                end)
-            end
+local function dumpObjects()
+    for _, obj in pairs(game:GetDescendants()) do
+        if obj:IsA("ModuleScript") or obj:IsA("RemoteEvent") then
+            print(string.format("[%s] %s", obj.ClassName, obj:GetFullName()))
         end
-    end)
-    
-    if not success then
-        warn("Ошибка сканирования: " .. err)
     end
+    setclipboard("Данные скопированы в консоль (F9 → All).")
 end
 
-updateUI()
-
--- Кнопка обновления данных
-local RefreshButton = Instance.new("TextButton")
-RefreshButton.Text = "🔄"
-RefreshButton.Size = UDim2.new(0, 30, 0, 30)
-RefreshButton.Position = UDim2.new(1, -35, 0.9, 0)
-RefreshButton.Parent = Frame
-RefreshButton.MouseButton1Click = updateUI
+dumpObjects()

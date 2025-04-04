@@ -1,50 +1,28 @@
--- Создание интерфейса
-local ScreenGui = Instance.new("ScreenGui")
-local Frame = Instance.new("Frame")
-local ScrollingFrame = Instance.new("ScrollingFrame")
-local TemplateButton = Instance.new("TextButton")
-local CopyButton = Instance.new("TextButton")
+-- Создание меню
+local Menu = Instance.new("Frame")
+Menu.Size = UDim2.new(0, 200, 0, 300)
+Menu.Position = UDim2.new(0, 10, 0, 10)
+Menu.BackgroundTransparency = 0.5
+Menu.Parent = game.CoreGui
 
-ScreenGui.Parent = game.CoreGui
-Frame.Parent = ScreenGui
-ScrollingFrame.Parent = Frame
-CopyButton.Parent = Frame
+-- Создание списка предметов
+local ItemList = Instance.new("ScrollingFrame")
+ItemList.Size = UDim2.new(0, 180, 0, 280)
+ItemList.Position = UDim2.new(0, 10, 0, 10)
+ItemList.BackgroundTransparency = 0.5
+ItemList.Parent = Menu
 
--- Настройка внешнего вида (пропущено для краткости)
-
-local function getObjectInfo(obj)
-    return string.format("Класс: %s\nИмя: %s\nПуть: %s", obj.ClassName, obj.Name, obj:GetFullName())
-end
-
--- Обход объектов
-for _, obj in pairs(workspace:GetDescendants()) do
-    local Button = TemplateButton:Clone()
-    Button.Text = obj.Name
-    Button.Parent = ScrollingFrame
-    Button.MouseButton1Click:Connect(function()
-        local info = getObjectInfo(obj)
-        setclipboard(info)
-        wait(0.1) -- добавляем небольшую задержку
-        local success, result = pcall(function()
-            -- добавляем некоторый "мусор" чтобы античит не запалил
-            local randomString = tostring(math.random(1, 100))
-            setclipboard(randomString)
+-- Обход предметов
+for _, item in pairs(workspace:GetDescendants()) do
+    if item:IsA("BasePart") or item:IsA("Model") then
+        local ItemButton = Instance.new("TextButton")
+        ItemButton.Text = item.Name
+        ItemButton.Size = UDim2.new(0, 160, 0, 20)
+        ItemButton.Position = UDim2.new(0, 10, 0, 10)
+        ItemButton.Parent = ItemList
+        ItemButton.MouseButton1Click:Connect(function()
+            -- код, который выполняется при клике на предмет
+            print("Клик на предмет: " .. item.Name)
         end)
-        if not success then
-            warn("Ошибка при копировании данных")
-        end
-    end)
-end
-
-CopyButton.MouseButton1Click:Connect(function()
-    setclipboard("Данные скопированы!")
-    wait(0.1) -- добавляем небольшую задержку
-    local success, result = pcall(function()
-        -- добавляем некоторый "мусор" чтобы античит не запалил
-        local randomString = tostring(math.random(1, 100))
-        setclipboard(randomString)
-    end)
-    if not success then
-        warn("Ошибка при копировании данных")
     end
-end)
+end

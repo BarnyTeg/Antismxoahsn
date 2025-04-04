@@ -1,11 +1,21 @@
 local player = game.Players.LocalPlayer
-local char = player.Character or player.CharacterAdded:Wait()
+local char = player.Character
 local humanoidRootPart = char:WaitForChild("HumanoidRootPart")
 
-local originalPath = game:GetService("Workspace").StartingZone.Buildings.Gunsmith.RevolverTable.Revolver
-if originalPath then
-    local clone = originalPath:Clone()
+local original = workspace.StartingZone.Buildings.Gunsmith.RevolverTable:FindFirstChild("Revolver")
+if original then
+    local clone = original:Clone()
+    
+    -- Добавляем физику, если её нет
+    for _, part in ipairs(clone:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.Anchored = false -- Отключаем "закрепление", чтобы объект падал
+            part.CanCollide = true -- Включаем коллизии
+        end
+    end
+
+    -- Спавн над головой
     clone.Parent = workspace
-    clone:SetPrimaryPartCFrame(humanoidRootPart.CFrame * CFrame.new(0, 5, 0))
-    clone.Name = "DuplicatedRevolver"
+    local spawnCFrame = humanoidRootPart.CFrame * CFrame.new(0, 5, 0)
+    clone:SetPrimaryPartCFrame(spawnCFrame)
 end

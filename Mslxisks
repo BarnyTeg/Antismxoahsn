@@ -1,6 +1,11 @@
-local original = game:GetService("Workspace").StartingZone.Buildings.Gunsmith.RevolverTable:FindFirstChild("Revolver")
-if original then
-    local clone = original:Clone()
-    clone.Parent = original.Parent
-    clone.Name = "Revolver_Copy"
+local player = game.Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+local humanoidRootPart = char:WaitForChild("HumanoidRootPart")
+
+local originalPath = game:GetService("Workspace").StartingZone.Buildings.Gunsmith.RevolverTable.Revolver
+if originalPath then
+    local clone = originalPath:Clone()
+    clone.Parent = workspace
+    clone:SetPrimaryPartCFrame(humanoidRootPart.CFrame * CFrame.new(0, 5, 0))
+    clone.Name = "DuplicatedRevolver"
 end

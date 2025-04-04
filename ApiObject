@@ -1,1 +1,31 @@
-о
+-- Создание интерфейса
+local ScreenGui = Instance.new("ScreenGui")
+local Frame = Instance.new("Frame")
+local ScrollingFrame = Instance.new("ScrollingFrame")
+local TemplateButton = Instance.new("TextButton")
+local CopyButton = Instance.new("TextButton")
+
+ScreenGui.Parent = game.CoreGui
+Frame.Parent = ScreenGui
+ScrollingFrame.Parent = Frame
+CopyButton.Parent = Frame
+
+-- Настройка внешнего вида (пропущено для краткости)
+
+local function getObjectInfo(obj)
+    return string.format("Class: %s\nName: %s\nPath: %s", obj.ClassName, obj.Name, obj:GetFullName())
+end
+
+-- Обход объектов
+for _, obj in pairs(workspace:GetDescendants()) do
+    local Button = TemplateButton:Clone()
+    Button.Text = obj.Name
+    Button.Parent = ScrollingFrame
+    Button.MouseButton1Click:Connect(function()
+        setclipboard(getObjectInfo(obj))
+    end)
+end
+
+CopyButton.MouseButton1Click:Connect(function()
+    setclipboard("Данные скопированы!")
+end)

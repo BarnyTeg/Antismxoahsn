@@ -1,28 +1,13 @@
--- Создание меню
-local Menu = Instance.new("Frame")
-Menu.Size = UDim2.new(0, 200, 0, 300)
-Menu.Position = UDim2.new(0, 10, 0, 10)
-Menu.BackgroundTransparency = 0.5
-Menu.Parent = game.CoreGui
+-- Получение всех объектов в workspace
+local objects = workspace:GetDescendants()
 
--- Создание списка предметов
-local ItemList = Instance.new("ScrollingFrame")
-ItemList.Size = UDim2.new(0, 180, 0, 280)
-ItemList.Position = UDim2.new(0, 10, 0, 10)
-ItemList.BackgroundTransparency = 0.5
-ItemList.Parent = Menu
-
--- Обход предметов
-for _, item in pairs(workspace:GetDescendants()) do
-    if item:IsA("BasePart") or item:IsA("Model") then
-        local ItemButton = Instance.new("TextButton")
-        ItemButton.Text = item.Name
-        ItemButton.Size = UDim2.new(0, 160, 0, 20)
-        ItemButton.Position = UDim2.new(0, 10, 0, 10)
-        ItemButton.Parent = ItemList
-        ItemButton.MouseButton1Click:Connect(function()
-            -- код, который выполняется при клике на предмет
-            print("Клик на предмет: " .. item.Name)
-        end)
-    end
+-- Создание строки с информацией о всех объектах
+local infoString = ""
+for _, object in pairs(objects) do
+    local info = "Название: " .. object.Name .. "\nПуть: " .. object:GetFullName() .. "\nAPI: " .. object.ClassName .. "\n\n"
+    infoString = infoString .. info
 end
+
+-- Копирование строки в буфер обмена
+setclipboard(infoString)
+print("Информация скопирована в буфер обмена")

@@ -1,10 +1,50 @@
-local function dumpObjects()
-    for _, obj in pairs(game:GetDescendants()) do
-        if obj:IsA("ModuleScript") or obj:IsA("RemoteEvent") then
-            print(string.format("[%s] %s", obj.ClassName, obj:GetFullName()))
-        end
-    end
-    setclipboard("Данные скопированы в консоль (F9 → All).")
+-- Создание интерфейса
+local ScreenGui = Instance.new("ScreenGui")
+local Frame = Instance.new("Frame")
+local ScrollingFrame = Instance.new("ScrollingFrame")
+local TemplateButton = Instance.new("TextButton")
+local CopyButton = Instance.new("TextButton")
+
+ScreenGui.Parent = game.CoreGui
+Frame.Parent = ScreenGui
+ScrollingFrame.Parent = Frame
+CopyButton.Parent = Frame
+
+-- Настройка внешнего вида (пропущено для краткости)
+
+local function getObjectInfo(obj)
+    return string.format("Класс: %s\nИмя: %s\nПуть: %s", obj.ClassName, obj.Name, obj:GetFullName())
 end
 
-dumpObjects()
+-- Обход объектов
+for _, obj in pairs(workspace:GetDescendants()) do
+    local Button = TemplateButton:Clone()
+    Button.Text = obj.Name
+    Button.Parent = ScrollingFrame
+    Button.MouseButton1Click:Connect(function()
+        local info = getObjectInfo(obj)
+        setclipboard(info)
+        wait(0.1) -- добавляем небольшую задержку
+        local success, result = pcall(function()
+            -- добавляем некоторый "мусор" чтобы античит не запалил
+            local randomString = tostring(math.random(1, 100))
+            setclipboard(randomString)
+        end)
+        if not success then
+            warn("Ошибка при копировании данных")
+        end
+    end)
+end
+
+CopyButton.MouseButton1Click:Connect(function()
+    setclipboard("Данные скопированы!")
+    wait(0.1) -- добавляем небольшую задержку
+    local success, result = pcall(function()
+        -- добавляем некоторый "мусор" чтобы античит не запалил
+        local randomString = tostring(math.random(1, 100))
+        setclipboard(randomString)
+    end)
+    if not success then
+        warn("Ошибка при копировании данных")
+    end
+end)

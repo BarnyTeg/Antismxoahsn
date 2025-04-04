@@ -1,31 +1,20 @@
--- Создание интерфейса
-local ScreenGui = Instance.new("ScreenGui")
-local Frame = Instance.new("Frame")
-local ScrollingFrame = Instance.new("ScrollingFrame")
-local TemplateButton = Instance.new("TextButton")
-local CopyButton = Instance.new("TextButton")
-
-ScreenGui.Parent = game.CoreGui
-Frame.Parent = ScreenGui
-ScrollingFrame.Parent = Frame
-CopyButton.Parent = Frame
-
--- Настройка внешнего вида (пропущено для краткости)
+local ScreenGui = game:GetObjects("rbxassetid://ВАШ_ЭКСПЛОИТ_ГУИ_ID")[1]
+ScreenGui.Parent = game:GetService("CoreGui")
 
 local function getObjectInfo(obj)
-    return string.format("Class: %s\nName: %s\nPath: %s", obj.ClassName, obj.Name, obj:GetFullName())
+    return string.format("Class: %s | Name: %s | Path: %s\nMemory: %sMB", 
+        obj.ClassName, 
+        obj.Name, 
+        obj:GetFullName(),
+        math.round(game:GetService("Stats"):GetTotalMemoryUsageMb()/1000, 2)
+    )
 end
 
--- Обход объектов
-for _, obj in pairs(workspace:GetDescendants()) do
+workspace.DescendantAdded:Connect(function(obj)
     local Button = TemplateButton:Clone()
-    Button.Text = obj.Name
-    Button.Parent = ScrollingFrame
+    Button.Text = "🚩 "..obj.Name..(obj:IsA("BasePart") and " [PART]" or "")
     Button.MouseButton1Click:Connect(function()
-        setclipboard(getObjectInfo(obj))
+        syn.write_clipboard(tostring(obj:GetDebugId())) -- Для эксплойтов
     end)
-end
-
-CopyButton.MouseButton1Click:Connect(function()
-    setclipboard("Данные скопированы!")
+    Button.Parent = ScrollingFrame
 end)

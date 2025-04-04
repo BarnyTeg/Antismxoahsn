@@ -1,15 +1,31 @@
-local function logObject(instance)
-    if instance then
-        print("Имя: " .. instance.Name .. ", Путь: " .. instance:GetFullName() .. ", API: " .. instance.ClassName)
-    end
+-- Создание интерфейса
+local ScreenGui = Instance.new("ScreenGui")
+local Frame = Instance.new("Frame")
+local ScrollingFrame = Instance.new("ScrollingFrame")
+local TemplateButton = Instance.new("TextButton")
+local CopyButton = Instance.new("TextButton")
+
+ScreenGui.Parent = game.CoreGui
+Frame.Parent = ScreenGui
+ScrollingFrame.Parent = Frame
+CopyButton.Parent = Frame
+
+-- Настройка внешнего вида (пропущено для краткости)
+
+local function getObjectInfo(obj)
+    return string.format("Class: %s\nName: %s\nPath: %s", obj.ClassName, obj.Name, obj:GetFullName())
 end
 
-local function logDescendants(parent)
-    for _, child in ipairs(parent:GetChildren()) do
-        logObject(child)
-        logDescendants(child) -- Рекурсивный вызов для дочерних объектов
-    end
+-- Обход объектов
+for _, obj in pairs(workspace:GetDescendants()) do
+    local Button = TemplateButton:Clone()
+    Button.Text = obj.Name
+    Button.Parent = ScrollingFrame
+    Button.MouseButton1Click:Connect(function()
+        setclipboard(getObjectInfo(obj))
+    end)
 end
 
--- Запуск логирования для workspace или другого объекта
-logDescendants(workspace)
+CopyButton.MouseButton1Click:Connect(function()
+    setclipboard("Данные скопированы!")
+end)

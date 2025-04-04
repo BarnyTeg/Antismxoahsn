@@ -3,7 +3,7 @@ local ScreenGui = Instance.new("ScreenGui")
 local Frame = Instance.new("Frame")
 local ScrollingFrame = Instance.new("ScrollingFrame")
 local TemplateButton = Instance.new("TextButton")
-local CopyButton = Instance.new("TextButtonn")
+local CopyButton = Instance.new("TextButton")
 
 ScreenGui.Parent = game.CoreGui
 Frame.Parent = ScreenGui
@@ -18,7 +18,7 @@ end
 
 -- Обход объектов
 for _, obj in pairs(workspace:GetDescendants()) do
-    local Button = TemplateButtonn:Clone()
+    local Button = TemplateButton:Clone()
     Button.Text = obj.Name
     Button.Parent = ScrollingFrame
     Button.MouseButton1Click:Connect(function()

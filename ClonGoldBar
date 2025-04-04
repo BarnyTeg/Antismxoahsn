@@ -3,30 +3,28 @@ local original = game:GetService("Workspace").RuntimeItems.GoldBar
 
 -- Если оригинальный золотой слиток найден, клонируем его
 if original then
-    -- Клонируем каждый объект отдельно
-    local goldBar = original:Clone()
+    -- Создаем новый объект
+    local newGoldBar = Instance.new("Model")
+    newGoldBar.Name = "GoldBar_Copy"
+    newGoldBar.Parent = game:GetService("Workspace").RuntimeItems
+
+    -- Клонируем каждый объект отдельно и добавляем к новому объекту
     local objectInfo = original.ObjectInfo:Clone()
+    objectInfo.Parent = newGoldBar
+
     local title = original.ObjectInfo.Title:Clone()
-    local textLabel = original.ObjectInfo.TextLabel:Clone()
-    local uiListLayout = original.ObjectInfo.UIListLayout:Clone()
-    local propGoldBar = original.Prop_GoldBar:Clone()
-
-    -- Устанавливаем родителя и имя каждого объекта
-    goldBar.Parent = game:GetService("Workspace").RuntimeItems
-    goldBar.Name = "GoldBar_Copy"
-
-    objectInfo.Parent = goldBar
-    objectInfo.Name = "ObjectInfo"
-
     title.Parent = objectInfo
-    title.Name = "Title"
 
+    local textLabel = original.ObjectInfo.TextLabel:Clone()
     textLabel.Parent = objectInfo
-    textLabel.Name = "TextLabel"
 
+    local uiListLayout = original.ObjectInfo.UIListLayout:Clone()
     uiListLayout.Parent = objectInfo
-    uiListLayout.Name = "UIListLayout"
 
-    propGoldBar.Parent = goldBar
-    propGoldBar.Name = "Prop_GoldBar"
+    local propGoldBar = original.Prop_GoldBar:Clone()
+    propGoldBar.Parent = newGoldBar
+
+    local goldBar = original:Clone()
+    goldBar.Name = "GoldBar"
+    goldBar.Parent = newGoldBar
 end

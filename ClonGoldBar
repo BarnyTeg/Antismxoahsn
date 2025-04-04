@@ -1,0 +1,17 @@
+-- Получение игрока
+local player = game.Players.LocalPlayer
+
+-- Получение предмета над головой игрока
+local item = player.Character.Head:FindFirstChild("GoldBar")
+
+-- Если предмет найден, дюпаем его
+if item then
+    -- Клонирование предмета
+    local newItem = item:Clone()
+    
+    -- Установка родителя нового предмета
+    newItem.Parent = player.Character.Head
+    
+    -- Установка позиции нового предмета
+    newItem.CFrame = item.CFrame + Vector3.new(0, 1, 0)
+end

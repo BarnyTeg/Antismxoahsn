@@ -1,40 +1,47 @@
+-- Получение игрока и его позиции
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local position = character.HumanoidRootPart.Position
+local radius = 10
+
 -- Получение всех объектов в workspace
 local objects = workspace:GetDescendants()
 
--- Создание строки с информацией о всех объектах
+-- Создание строки с информацией о всех объектах в радиусе
 local infoString = ""
 for _, object in pairs(objects) do
-    local info = "Название: " .. object.Name .. "\nПуть: " .. object:GetFullName() .. "\nAPI: " .. object.ClassName .. "\n"
+    -- Проверка, является ли объект частью и находится ли он в радиусе
+    if object:IsA("BasePart") and (object.Position - position).magnitude <= radius then
+        local info = "Название: " .. object.Name .. "\nПуть: " .. object:GetFullName() .. "\nAPI: " .. object.ClassName .. "\n"
 
-    -- Добавление атрибутов объекта
-    if #object:GetAttributes() > 0 then
-        info = info .. "Атрибуты:\n"
-        for attributeName, attributeValue in pairs(object:GetAttributes()) do
-            info = info .. "  " .. attributeName .. ": " .. tostring(attributeValue) .. "\n"
+        -- Добавление атрибутов объекта
+        if #object:GetAttributes() > 0 then
+            info = info .. "Атрибуты:\n"
+            for attributeName, attributeValue in pairs(object:GetAttributes()) do
+                info = info .. "  " .. attributeName .. ": " .. tostring(attributeValue) .. "\n"
+            end
+        else
+            info = info .. "Атрибуты: Нет\n"
         end
-    else
-        info = info .. "Атрибуты: Нет\n"
-    end
 
-    -- Добавление свойств для BasePart
-    if object:IsA("BasePart") then
+        -- Добавление свойств для BasePart
         info = info .. "Позиция: " .. tostring(object.Position) .. "\n"
         info = info .. "Размер: " .. tostring(object.Size) .. "\n"
         info = info .. "Цвет: " .. tostring(object.Color) .. "\n"
         info = info .. "Прозрачность: " .. tostring(object.Transparency) .. "\n"
         info = info .. "Материал: " .. tostring(object.Material) .. "\n"
+
+        -- Добавление информации для моделей
+        if object:IsA("Model") then
+            info = info .. "Количество частей: " .. #object:GetChildren() .. "\n"
+            info = info .. "Первичная часть: " .. (object.PrimaryPart and object.PrimaryPart.Name or "Нет") .. "\n"
+        end
+
+        -- Добавление информации о родителе
+        info = info .. "Родитель: " .. object.Parent.Name .. "\n"
+
+        infoString = infoString .. info .. "\n"
     end
-
-    -- Добавление информации для моделей
-    if object:IsA("Model") then
-        info = info .. "Количество частей: " .. #object:GetChildren() .. "\n"
-        info = info .. "Первичная часть: " .. (object.PrimaryPart and object.PrimaryPart.Name or "Нет") .. "\n"
-    end
-
-    -- Добавление информации о родителе
-    info = info .. "Родитель: " .. object.Parent.Name .. "\n"
-
-    infoString = infoString .. info .. "\n"
 end
 
 -- Проверка, что строка не пустая перед копированием

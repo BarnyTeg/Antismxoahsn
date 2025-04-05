@@ -1,27 +1,16 @@
-local player = game.Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-
--- Функция для дюпа золотого слитка
-local function duplicateGoldBar()
-    -- Получаем оригинальный золотой слиток из Workspace
-    local originalGoldBar = workspace.RuntimeItems.GoldBar.Prop_GoldBar
-
-    if originalGoldBar then
-        -- Клонируем золотой слиток
-        local newGoldBar = originalGoldBar:Clone()
-
-        -- Устанавливаем позицию нового слитка над головой игрока
-        newGoldBar.Position = humanoidRootPart.Position + Vector3.new(0, 5, 0) -- 5 единиц над головой
-
-        -- Устанавливаем родителя для нового слитка
-        newGoldBar.Parent = workspace
-
-        print("Золотой слиток дюпнут и спавнен над головой игрока!")
-    else
-        print("Оригинальный золотой слиток не найден!")
-    end
+local goldBar = game.Workspace.RuntimeItems.GoldBar.Prop_GoldBar
+local function createUniqueObject()
+    local newObject = Instance.new("MeshPart")
+    newObject.Size = Vector3.new(math.random(1, 5), math.random(1, 5), math.random(1, 5))
+    newObject.BrickColor = BrickColor.new(math.random(), math.random(), math.random())
+    newObject.Material = Enum.Material.Metal
+    newObject.Transparency = math.random()
+    newObject.Position = goldBar.Position + Vector3.new(math.random(-10, 10), math.random(-10, 10), math.random(-10, 10))
+    newObject.Parent = goldBar.Parent
+    return newObject
 end
 
--- Вызов функции дюпа
-duplicateGoldBar()
+while true do
+    local newObject = createUniqueObject()
+    wait(0.1)
+end

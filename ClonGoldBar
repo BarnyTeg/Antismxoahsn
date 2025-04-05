@@ -2,40 +2,42 @@ local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 local RunService = game:GetService("RunService")
 
--- Параметры слитка (можно менять)
-local GOLD_SIZE = Vector3.new(2.667, 0.708, 1.120)
-local GOLD_COLOR = Color3.fromRGB(239, 184, 56) -- Золотой цвет
+-- Настройки слитка (можно менять)
+local SPAWN_INTERVAL = 5 -- Спавн каждые 5 секунд
 local SPAWN_HEIGHT = 5 -- Высота над головой
-local SPAWN_INTERVAL = 5 -- Каждые 5 секунд
 
--- Функция создания слитка
-local function spawnGold()
+-- Функция создания нового слитка (не клона, а нового MeshPart)
+local function spawnGoldBar()
     local character = player.Character
     if not character then return end
     
     local head = character:FindFirstChild("Head")
     if not head then return end
-    
-    -- Создаём новый слиток (не клон, а новый Part)
-    local goldBar = Instance.new("Part")
-    goldBar.Name = "GoldBar_" .. math.random(1000, 9999)
-    goldBar.Size = GOLD_SIZE
-    goldBar.Position = head.Position + Vector3.new(0, SPAWN_HEIGHT, 0)
-    goldBar.Color = GOLD_COLOR
-    goldBar.Material = Enum.Material.Metal
-    goldBar.Anchored = false
-    goldBar.CanCollide = true
-    goldBar.Parent = workspace
-    
+
+    -- Создаём новый MeshPart (как оригинальный слиток)
+    local newGoldBar = Instance.new("MeshPart")
+    newGoldBar.Name = "Prop_GoldBar_" .. math.random(1, 10000)
+    newGoldBar.Size = Vector3.new(2.667, 0.708, 1.120) -- Размер как у оригинала
+    newGoldBar.Position = head.Position + Vector3.new(0, SPAWN_HEIGHT, 0) -- Над головой
+    newGoldBar.Color = Color3.fromRGB(239, 184, 56) -- Золотой цвет (RGB 239, 184, 56)
+    newGoldBar.Material = Enum.Material.Metal
+    newGoldBar.CanCollide = true
+    newGoldBar.Anchored = false
+    newGoldBar.Parent = workspace
+
+    -- Задаём меш и текстуру (если известны ID)
+    -- newGoldBar.MeshId = "rbxassetid://..." -- Раскомментируй и вставь ID меша
+    -- newGoldBar.TextureID = "rbxassetid://..." -- Раскомментируй и вставь ID текстуры
+
     -- Физика (чтобы падал)
     local bodyForce = Instance.new("BodyForce")
-    bodyForce.Force = Vector3.new(0, goldBar:GetMass() * workspace.Gravity, 0)
-    bodyForce.Parent = goldBar
-    
+    bodyForce.Force = Vector3.new(0, newGoldBar:GetMass() * workspace.Gravity, 0)
+    bodyForce.Parent = newGoldBar
+
     -- Эффект появления (необязательно)
-    goldBar.Transparency = 1
+    newGoldBar.Transparency = 1
     for i = 1, 20 do
-        goldBar.Transparency = goldBar.Transparency - 0.05
+        newGoldBar.Transparency = newGoldBar.Transparency - 0.05
         task.wait(0.03)
     end
 end
@@ -45,7 +47,7 @@ local spawnLoop
 local function startSpawning()
     spawnLoop = RunService.Heartbeat:Connect(function()
         task.wait(SPAWN_INTERVAL)
-        spawnGold()
+        spawnGoldBar()
     end)
 end
 

@@ -1,32 +1,19 @@
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
-local UserInputService = game:GetService("UserInputService")
 
--- Создаем кнопку
-local button = Instance.new("TextButton")
-button.Name = "SpawnGoldButton"
-button.Text = "🪙 Создать золото"
-button.Size = UDim2.new(0, 200, 0, 50)
-button.Position = UDim2.new(0.5, -100, 0.9, 0) -- Внизу экрана
-button.BackgroundColor3 = Color3.fromRGB(255, 215, 0) -- Золотой цвет
-button.Parent = player:WaitForChild("PlayerGui")
-
--- Обработка нажатия
-button.Activated:Connect(function()
-    local character = player.Character
-    if character and character:FindFirstChild("Head") then
-        local head = character.Head
-        local goldBar = game:GetService("ReplicatedStorage"):FindFirstChild("GoldBar") -- Ищем слиток
-        if goldBar then
-            local newGold = goldBar:Clone()
-            newGold.Position = head.Position + Vector3.new(0, 5, 0) -- 5 - высота над головой
-            newGold.Parent = workspace
-            newGold.Anchored = false
+-- Обработка команды "/gold" в чате
+player.Chatted:Connect(function(message)
+    if message:lower() == "/gold" then
+        local character = player.Character
+        if character and character:FindFirstChild("Head") then
+            local head = character.Head
+            local goldBar = game:GetService("ReplicatedStorage"):FindFirstChild("GoldBar") -- Ищем слиток
+            if goldBar then
+                local newGold = goldBar:Clone()
+                newGold.Position = head.Position + Vector3.new(0, 5, 0) -- 5 - высота над головой
+                newGold.Parent = workspace
+                newGold.Anchored = false
+            end
         end
     end
 end)
-
--- Прячем кнопку, если это не мобильное устройство
-if not UserInputService.TouchEnabled then
-    button.Visible = false
-end

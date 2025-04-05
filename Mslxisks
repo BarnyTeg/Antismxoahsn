@@ -14,7 +14,7 @@ local function getScripts(object)
         if script:IsA("Script") or script:IsA("LocalScript") then
             local scriptCode = script:GetLines()
             for _, line in pairs(scriptCode) do
-                if line:find(object.Name) then
+                if line:find(object.Name) or line:find(object:GetFullName()) then
                     table.insert(scripts, script)
                     break
                 end
@@ -26,18 +26,22 @@ end
 
 local function printScripts(object)
     local scripts = getScripts(object)
-    for _, script in pairs(scripts) do
-        print(script.Name .. ":")
-        for _, line in pairs(script:GetLines()) do
-            print(line)
+    if #scripts > 0 then
+        print(object.Name .. ":")
+        for _, script in pairs(scripts) do
+            print(script.Name .. ":")
+            for _, line in pairs(script:GetLines()) do
+                print(line)
+            end
         end
+    else
+        print(object.Name .. ": Нет скриптов")
     end
 end
 
 while true do
     local objects = scanObjects(10)
     for _, object in pairs(objects) do
-        print(object.Name .. ":")
         printScripts(object)
     end
     wait(1)

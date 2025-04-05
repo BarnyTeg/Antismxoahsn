@@ -1,44 +1,44 @@
-local function createMenu()
-    local menu = Instance.new("ScreenGui")
-    menu.Name = "ObjectMenu"
-    menu.Parent = game.StarterGui
+local function создатьМеню()
+    local меню = Instance.new("ScreenGui")
+    меню.Name = "ОбъектМеню"
+    меню.Parent = game.StarterGui
 
-    local objectList = Instance.new("Frame")
-    objectList.Name = "ObjectList"
-    objectList.Size = UDim2.new(0, 200, 0, 300)
-    objectList.Position = UDim2.new(0, 10, 0, 10)
-    objectList.Parent = menu
+    local объектСписок = Instance.new("Frame")
+    объектСписок.Name = "ОбъектСписок"
+    объектСписок.Size = UDim2.new(0, 200, 0, 300)
+    объектСписок.Position = UDim2.new(0, 10, 0, 10)
+    объектСписок.Parent = меню
 
-    local objectScroll = Instance.new("ScrollingFrame")
-    objectScroll.Name = "ObjectScroll"
-    objectScroll.Size = UDim2.new(0, 200, 0, 280)
-    objectScroll.Position = UDim2.new(0, 0, 0, 20)
-    objectScroll.Parent = objectList
+    local объектПрокрутка = Instance.new("ScrollingFrame")
+    объектПрокрутка.Name = "ОбъектПрокрутка"
+    объектПрокрутка.Size = UDim2.new(0, 200, 0, 280)
+    объектПрокрутка.Position = UDim2.new(0, 0, 0, 20)
+    объектПрокрутка.Parent = объектСписок
 
-    local objects = workspace:GetDescendants()
-    for _, object in pairs(objects) do
-        if object:IsA("BasePart") then
-            local objectButton = Instance.new("TextButton")
-            objectButton.Name = object.Name
-            objectButton.Text = object.Name
-            objectButton.Size = UDim2.new(0, 180, 0, 20)
-            objectButton.Position = UDim2.new(0, 10, 0, 10)
-            objectButton.Parent = objectScroll
+    local объекты = workspace:GetDescendants()
+    for _, объект in pairs(объекты) do
+        if объект:IsA("BasePart") then
+            local объектКнопка = Instance.new("TextButton")
+            объектКнопка.Name = объект.Name
+            объектКнопка.Text = объект.Name
+            объектКнопка.Size = UDim2.new(0, 180, 0, 20)
+            объектКнопка.Position = UDim2.new(0, 10, 0, 10)
+            объектКнопка.Parent = объектПрокрутка
 
-            local copyButton = Instance.new("TextButton")
-            copyButton.Name = "CopyButton"
-            copyButton.Text = "Копировать"
-            copyButton.Size = UDim2.new(0, 50, 0, 20)
-            copyButton.Position = UDim2.new(0, 200, 0, 10)
-            copyButton.Parent = objectScroll
+            local копироватьКнопка = Instance.new("TextButton")
+            копироватьКнопка.Name = "КопироватьКнопка"
+            копироватьКнопка.Text = "Копировать"
+            копироватьКнопка.Size = UDim2.new(0, 50, 0, 20)
+            копироватьКнопка.Position = UDim2.new(0, 200, 0, 10)
+            копироватьКнопка.Parent = объектПрокрутка
 
-            copyButton.MouseButton1Click:Connect(function()
-                local newObject = object:Clone()
-                newObject.Parent = workspace
-                newObject:SetPrimaryPartCFrame(object:GetPrimaryPartCFrame() + Vector3.new(0, 0, 5))
+            копироватьКнопка.MouseButton1Click:Connect(function()
+                local новыйОбъект = объект:Clone()
+                новыйОбъект.Parent = workspace
+                новыйОбъект:SetPrimaryPartCFrame(объект:GetPrimaryPartCFrame() + Vector3.new(0, 0, 5))
             end)
         end
     end
 end
 
-createMenu()
+создатьМеню()

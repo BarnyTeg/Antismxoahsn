@@ -1,66 +1,38 @@
--- Получение игрока и его позиции
-local player = game.Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local position = character.HumanoidRootPart.Position
-local radius = 10
-
--- Получение всех объектов в workspace
-local objects = workspace:GetDescendants()
-
--- Создание строки с информацией о всех объектах в радиусе
-local infoString = ""
-for _, object in pairs(objects) do
-    -- Проверка, является ли объект частью и находится ли он в радиусе
-    if object:IsA("BasePart") and (object.Position - position).magnitude <= radius then
-        local info = "Название: " .. object.Name .. "\nПуть: " .. object:GetFullName() .. "\nAPI: " .. object.ClassName .. "\n"
-
-        -- Добавление атрибутов объекта
-        if #object:GetAttributes() > 0 then
-            info = info .. "Атрибуты:\n"
-            for attributeName, attributeValue in pairs(object:GetAttributes()) do
-                info = info .. "  " .. attributeName .. ": " .. tostring(attributeValue) .. "\n"
-            end
-        else
-            info = info .. "Атрибуты: Нет\n"
+local function scanObjects(radius)
+    local objects = {}
+    for _, object in pairs(workspace:GetDescendants()) do
+        if object:IsA("BasePart") and (object.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude <= radius then
+            table.insert(objects, object)
         end
+    end
+    return objects
+end
 
-        -- Добавление свойств для BasePart
-        info = info .. "Позиция: " .. tostring(object.Position) .. "\n"
-        info = info .. "Размер: " .. tostring(object.Size) .. "\n"
-        info = info .. "Цвет: " .. tostring(object.Color) .. "\n"
-        info = info .. "Прозрачность: " .. tostring(object.Transparency) .. "\n"
-        info = info .. "Материал: " .. tostring(object.Material) .. "\n"
-        info = info .. "Вес: " .. tostring(object:GetMass()) .. "\n"
-        info = info .. "Закреплен: " .. tostring(object.Anchored) .. "\n"
-        info = info .. "Можно сталкиваться: " .. tostring(object.CanCollide) .. "\n"
-
-        -- Добавление информации для моделей
-        if object:IsA("Model") then
-            info = info .. "Количество частей: " .. #object:GetChildren() .. "\n"
-            info = info .. "Первичная часть: " .. (object.PrimaryPart and object.PrimaryPart.Name or "Нет") .. "\n"
+local function getScripts(object)
+    local scripts = {}
+    for _, script in pairs(object:GetDescendants()) do
+        if script:IsA("Script") or script:IsA("LocalScript") then
+            table.insert(scripts, script)
         end
+    end
+    return scripts
+end
 
-        -- Добавление информации о родителе
-        info = info .. "Родитель: " .. object.Parent.Name .. "\n"
-
-        -- Добавление информации о дочерних объектах
-        if #object:GetChildren() > 0 then
-            info = info .. "Дочерние объекты:\n"
-            for _, child in pairs(object:GetChildren()) do
-                info = info .. "  " .. child.Name .. "\n"
-            end
-        else
-            info = info .. "Дочерние объекты: Нет\n"
+local function printScripts(object)
+    local scripts = getScripts(object)
+    for _, script in pairs(scripts) do
+        print(script.Name .. ":")
+        for _, line in pairs(script:GetLines()) do
+            print(line)
         end
-
-        infoString = infoString .. info .. "\n"
     end
 end
 
--- Проверка, что строка не пустая перед копированием
-if infoString ~= "" then
-    setclipboard(infoString)
-    print("Информация скопирована в буфер обмена")
-else
-    print("Нет информации для копирования.")
+while true do
+    local objects = scanObjects(10)
+    for _, object in pairs(objects) do
+        print(object.Name .. ":")
+        printScripts(object)
+    end
+    wait(1)
 end

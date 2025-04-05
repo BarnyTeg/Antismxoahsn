@@ -1,57 +1,83 @@
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 
--- Настройки объекта
-local NEWSPAPER_DATA = {
-    Name = "Part",
-    Size = Vector3.new(5, 5, 0.25),
-    Color = Color3.fromRGB(210, 228, 186), -- 0.823529, 0.894118, 0.729412
-    Transparency = 0,
-    Material = Enum.Material.Cardboard,
-    Position = Vector3.new(95.657, 0.173, 29772.232), -- Можно заменить на позицию перед игроком
-    Parent = workspace -- Или game:GetService("Workspace").RuntimeItems.Newspaper
-}
+-- Поиск оригинала газеты
+local function findOriginalNewspaper()
+    -- Проверяем возможные пути
+    local potentialPaths = {
+        workspace:FindFirstChild("RuntimeItems"),
+        workspace:FindFirstChild("Newspaper"),
+        workspace:FindFirstChild("Part")
+    }
+    
+    for _, location in ipairs(potentialPaths) do
+        if location then
+            for _, obj in ipairs(location:GetDescendants()) do
+                if obj.Name == "Part" and obj:IsA("BasePart") and obj.Material == Enum.Material.Cardboard then
+                    return obj
+                end
+            end
+        end
+    end
+    return nil
+end
 
--- Функция создания газеты с псевдо-уникальным ID
-local function createNewspaperWithFakeId()
-    -- 1. Создаём базовый объект
-    local newspaper = Instance.new("Part")
+-- Полное клонирование объекта со всеми потомками
+local function deepCloneWithPhysics(original)
+    if not original then return nil end
     
-    -- 2. Применяем все свойства
-    newspaper.Name = NEWSPAPER_DATA.Name
-    newspaper.Size = NEWSPAPER_DATA.Size
-    newspaper.Color = NEWSPAPER_DATA.Color
-    newspaper.Transparency = NEWSPAPER_DATA.Transparency
-    newspaper.Material = NEWSPAPER_DATA.Material
-    newspaper.Anchored = true
+    -- 1. Создаем главную копию
+    local clone = original:Clone()
     
-    -- 3. Генерируем "поддельный" ID в формате "1_XXXXX"
-    local lastDigit = math.random(0, 9) -- Случайная последняя цифра
-    local fakeId = "1_" .. tostring(math.random(10000, 99999)):sub(1, 4) .. lastDigit
-    
-    -- 4. Помещаем в игру (это автоматически сгенерирует настоящий GetDebugId)
-    newspaper.Parent = NEWSPAPER_DATA.Parent
-    newspaper.Position = NEWSPAPER_DATA.Position
-    
-    -- 5. Добавляем кастомный атрибут с нашим "поддельным" ID
-    newspaper:SetAttribute("FakeId", fakeId)
-    
-    -- 6. Альтернативно можно изменить имя, включив ID
-    newspaper.Name = "Newspaper_" .. fakeId
-    
-    -- 7. Размещаем перед игроком (если нужно)
-    if player.Character then
-        local humanoidRootPart = player.Character:FindFirstChild("HumanoidRootPart")
-        if humanoidRootPart then
-            newspaper.Position = humanoidRootPart.Position + Vector3.new(0, 0, -3)
+    -- 2. Копируем все скрипты и соединения
+    for _, descendant in ipairs(original:GetDescendants()) do
+        if descendant:IsA("Script") or descendant:IsA("LocalScript") then
+            local scriptClone = descendant:Clone()
+            scriptClone.Parent = clone
+            scriptClone.Enabled = true
         end
     end
     
-    print("✅ Создана газета с FakeId:", fakeId)
-    print("Настоящий DebugId:", newspaper:GetDebugId())
+    -- 3. Настраиваем физику
+    clone.Anchored = false
+    clone.CanCollide = true
     
-    return newspaper
+    -- 4. Генерируем новый "ID" (через атрибут)
+    clone:SetAttribute("UniqueId", "NP_"..tostring(math.random(10000,99999)))
+    
+    -- 5. Переносим в мир
+    clone.Parent = original.Parent
+    
+    return clone
+end
+
+-- Основная функция
+local function createFunctionalNewspaper()
+    -- 1. Находим оригинал
+    local original = findOriginalNewspaper()
+    
+    if not original then
+        print("❌ Оригинальная газета не найдена!")
+        return nil
+    end
+    
+    -- 2. Создаем улучшенную копию
+    local newspaperClone = deepCloneWithPhysics(original)
+    
+    -- 3. Размещаем перед игроком
+    if player.Character then
+        local humanoidRootPart = player.Character:FindFirstChild("HumanoidRootPart")
+        if humanoidRootPart then
+            newspaperClone.Position = humanoidRootPart.Position + (humanoidRootPart.CFrame.LookVector * 3)
+        end
+    end
+    
+    print("✅ Создана функциональная копия газеты!")
+    print("Новый ID:", newspaperClone:GetAttribute("UniqueId"))
+    
+    return newspaperClone
 end
 
 -- Запуск
-createNewspaperWithFakeId()
+createFunctionalNewspaper()

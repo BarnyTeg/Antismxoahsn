@@ -1,13 +1,39 @@
--- Получение всех объектов в workspace
-local objects = workspace:GetDescendants()
+-- Создаем таблицу для хранения информации об объектах
+local objectsInfo = {}
 
--- Создание строки с информацией о всех объектах
-local infoString = ""
-for _, object in pairs(objects) do
-    local info = "Название: " .. object.Name .. "\nПуть: " .. object:GetFullName() .. "\nAPI: " .. object.ClassName .. "\n\n"
-    infoString = infoString .. info
+-- Функция для сбора информации об объектах
+local function gatherInfo(object)
+    local info = {}
+    info.name = object.Name
+    info.type = object.ClassName
+    info.parent = object.Parent.Name
+    info.properties = {}
+    for _, property in pairs(object:GetProperties()) do
+        table.insert(info.properties, property.Name .. ": " .. tostring(property.Value))
+    end
+    table.insert(objectsInfo, info)
 end
 
--- Копирование строки в буфер обмена
-setclipboard(infoString)
-print("Информация скопирована в буфер обмена")
+-- Функция для показа информации об объектах
+local function showInfo()
+    for _, info in pairs(objectsInfo) do
+        print("Объект: " .. info.name)
+        print("Тип: " .. info.type)
+        print("Родитель: " .. info.parent)
+        print("Свойства:")
+        for _, property in pairs(info.properties) do
+            print(property)
+        end
+        print()
+    end
+end
+
+-- Собираем информацию об объектах
+for _, object in pairs(game:GetObjects()) do
+    if object:IsA("BasePart") or object:IsA("Model") then
+        gatherInfo(object)
+    end
+end
+
+-- Показываем информацию об объектах
+showInfo()

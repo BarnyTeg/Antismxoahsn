@@ -34,15 +34,13 @@ for _, object in pairs(objects) do
     -- Добавление информации о родителе
     info = info .. "Родитель: " .. object.Parent.Name .. "\n"
 
-    -- Добавление информации о других свойствах
-    info = info .. "Свойства:\n"
-    for propertyName, propertyValue in pairs(object:GetAttributes()) do
-        info = info .. "  " .. propertyName .. ": " .. tostring(propertyValue) .. "\n"
-    end
-
     infoString = infoString .. info .. "\n"
 end
 
--- Копирование строки в буфер обмена
-setclipboard(infoString)
-print("Информация скопирована в буфер обмена")
+-- Проверка, что строка не пустая перед копированием
+if infoString ~= "" then
+    setclipboard(infoString)
+    print("Информация скопирована в буфер обмена")
+else
+    print("Нет информации для копирования.")
+end

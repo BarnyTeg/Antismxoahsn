@@ -7,6 +7,8 @@ local function duplicateObject(object)
     clone.BrickColor = BrickColor.new(0.937255, 0.721569, 0.219608)
     clone.Material = Enum.Material.Metal
     clone.Transparency = 0
+    clone.Anchored = false
+    clone.CanCollide = true
     return clone
 end
 

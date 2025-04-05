@@ -10,9 +10,15 @@ end
 
 local function getScripts(object)
     local scripts = {}
-    for _, script in pairs(object:GetDescendants()) do
+    for _, script in pairs(workspace:GetDescendants()) do
         if script:IsA("Script") or script:IsA("LocalScript") then
-            table.insert(scripts, script)
+            local scriptCode = script:GetLines()
+            for _, line in pairs(scriptCode) do
+                if line:find(object.Name) then
+                    table.insert(scripts, script)
+                    break
+                end
+            end
         end
     end
     return scripts

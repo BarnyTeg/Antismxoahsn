@@ -2,6 +2,19 @@ local player = game.Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local radius = 10
 
+-- Функция для получения позиции объекта
+local function getObjectPosition(object)
+    if object:IsA("BasePart") then
+        return object.Position
+    elseif object:IsA("Model") then
+        local primaryPart = object.PrimaryPart
+        if primaryPart then
+            return primaryPart.Position
+        end
+    end
+    return nil
+end
+
 -- Функция для сбора информации об объектах в радиусе
 local function gatherInfo()
     local objectsInfo = {}
@@ -9,14 +22,15 @@ local function gatherInfo()
 
     -- Проходим по всем объектам в игре
     for _, object in pairs(workspace:GetDescendants()) do
-        if (object:IsA("BasePart") or object:IsA("Model")) and object:IsDescendantOf(workspace) then
-            local distance = (object.Position - position).magnitude
+        local objectPosition = getObjectPosition(object)
+        if objectPosition then
+            local distance = (objectPosition - position).magnitude
             if distance <= radius then
                 local info = {
                     name = object.Name,
                     type = object.ClassName,
                     parent = object.Parent.Name,
-                    position = object.Position,
+                    position = objectPosition,
                     properties = {}
                 }
                 -- Собираем свойства объекта

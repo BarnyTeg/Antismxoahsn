@@ -1,11 +1,45 @@
-local newGoldBar = Instance.new("MeshPart")
-newGoldBar.Name = "Prop_GoldBar_" .. math.random(1, 10000)
-newGoldBar.Parent = game.Workspace
-newGoldBar.MeshId = "rbxassetid://..." -- ID меша
-newGoldBar.TextureID = "rbxassetid://..." -- ID текстуры
-newGoldBar.Size = Vector3.new(2.667, 0.708, 1.120)
-newGoldBar.Position = Vector3.new(142, 1, 29925)
-newGoldBar.Color = Color3.fromRGB(239, 184, 56) -- Золотой цвет
-newGoldBar.Material = Enum.Material.Metal
-newGoldBar.CanCollide = true
-newGoldBar.Anchored = false
+-- Функция для спавна золотого слитка
+function spawnGoldBar(position)
+    local original = game.Workspace.RuntimeItems.GoldBar.Prop_GoldBar
+    local newBar = createUniqueCopy(original, game.Workspace, position)
+    
+    -- Дополнительные настройки для слитка
+    newBar.CanTouch = true
+    
+    -- Добавляем скрипт для взаимодействия
+    local interactionScript = Instance.new("Script")
+    interactionScript.Name = "GoldBarInteraction"
+    interactionScript.Parent = newBar
+    
+    -- Код скрипта (упрощенный)
+    interactionScript.Source = [[
+        local debounce = false
+        script.Parent.Touched:Connect(function(hit)
+            if debounce then return end
+            debounce = true
+            
+            local humanoid = hit.Parent:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                -- Здесь логика подбора/продажи
+                print("Золотой слиток подобран игроком!")
+            end
+            
+            wait(1)
+            debounce = false
+        end)
+    ]]
+    
+    return newBar
+end
+
+-- Функция для спавна пола
+function spawnFloor(position, size)
+    local original = game.Workspace.StartingZone.Buildings.TradingPost.Floor
+    local newFloor = createUniqueCopy(original, game.Workspace, position)
+    
+    if size then
+        newFloor.Size = size
+    end
+    
+    return newFloor
+end

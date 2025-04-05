@@ -1,18 +1,54 @@
-local function копироватьОбъекты()
-    local игрок = game.Players.LocalPlayer
-    local персонаж = игрок.Character
-    local позиция = персонаж.HumanoidRootPart.Position
+-- Настройки
+local scanRadius = 10 -- радиус в метрах
+local updateDelay = 1 -- задержка между сканированиями (в секундах)
 
-    for _, объект in pairs(workspace:GetDescendants()) do
-        if объект:IsA("BasePart") and (объект.Position - позиция).Magnitude <= 10 then
-            local новыйОбъект = объект:Clone()
-            новыйОбъект.Parent = workspace
-            новыйОбъект:SetPrimaryPartCFrame(объект:GetPrimaryPartCFrame() + Vector3.new(0, 0, 5))
+-- Сервисы
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local clipboard = setclipboard or toclipboard or function(text) print("📋 Буфер недоступен. Вот данные:\n" .. text) end
+
+-- Функция для поиска объектов
+local function getNearbyObjects(position)
+    local result = "🔍 Объекты в радиусе " .. scanRadius .. " метров:\n\n"
+    local objects = {}
+    
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("BasePart") then
+            local distance = (obj.Position - position).Magnitude
+            if distance <= scanRadius then
+                table.insert(objects, {
+                    Name = obj.Name,
+                    Class = obj.ClassName,
+                    Distance = distance,
+                    Id = obj:GetDebugId()
+                })
+            end
         end
     end
+
+    -- Сортировка по расстоянию
+    table.sort(objects, function(a, b) return a.Distance < b.Distance end)
+
+    -- Форматирование вывода
+    for _, item in ipairs(objects) do
+        result ..= string.format(
+            "📌 %s (%s)\nID: %s | Дистанция: %.1f м\n\n",
+            item.Name, item.Class, item.Id, item.Distance
+        )
+    end
+
+    return result
 end
 
+-- Основной цикл
 while true do
-    копироватьОбъекты()
-    wait(1)
+    if player.Character then
+        local rootPart = player.Character:FindFirstChild("HumanoidRootPart") or player.Character:WaitForChild("HumanoidRootPart")
+        if rootPart then
+            local report = getNearbyObjects(rootPart.Position)
+            print(report) -- Вывод в консоль
+            clipboard(report) -- Копируем в буфер
+        end
+    end
+    task.wait(updateDelay)
 end

@@ -1,18 +1,21 @@
-local goldBar = game.Workspace.RuntimeItems.GoldBar.Prop_GoldBar
-local function duplicateObject(object)
-    local clone = object:Clone()
-    clone.Parent = object.Parent
-    clone.Position = object.Position + Vector3.new(math.random(-0.5, 0.5), 0, math.random(-0.5, 0.5))
-    clone.Size = Vector3.new(2.6679298877716064, 0.7086928486824036, 1.1205151081085205)
-    clone.BrickColor = BrickColor.new(0.937255, 0.721569, 0.219608)
-    clone.Material = Enum.Material.Metal
-    clone.Transparency = 0
-    clone.Anchored = false
-    clone.CanCollide = true
-    return clone
-end
+-- Создаем новый объект Part
+local part = Instance.new("Part")
+part.Name = "Part"
+part.Parent = game.Workspace.RuntimeItems.Newspaper
 
-while true do
-    local newObject = duplicateObject(goldBar)
-    wait(0.1)
-end
+-- Устанавливаем атрибуты объекта
+part.Position = Vector3.new(93.15756225585938, 0.17376059293746948, 29764.482421875)
+part.Size = Vector3.new(5, 5, 0.25)
+part.BrickColor = BrickColor.new(0.823529, 0.894118, 0.729412)
+part.Transparency = 0
+part.Material = Enum.Material.Cardboard
+part.Weight = 4.375
+part.Anchored = false
+part.CanCollide = true
+
+-- Создаем дочерние объекты
+local surfaceGui = Instance.new("SurfaceGui")
+surfaceGui.Parent = part
+
+local decal = Instance.new("Decal")
+decal.Parent = part

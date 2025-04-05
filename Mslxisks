@@ -7,8 +7,13 @@ for _, object in pairs(objects) do
     local info = "Название: " .. object.Name .. "\nПуть: " .. object:GetFullName() .. "\nAPI: " .. object.ClassName .. "\n"
 
     -- Добавление атрибутов объекта
-    for _, attribute in pairs(object:GetAttributes()) do
-        info = info .. "Атрибут: " .. attribute.Name .. " = " .. tostring(attribute.Value) .. "\n"
+    if #object:GetAttributes() > 0 then
+        info = info .. "Атрибуты:\n"
+        for attributeName, attributeValue in pairs(object:GetAttributes()) do
+            info = info .. "  " .. attributeName .. ": " .. tostring(attributeValue) .. "\n"
+        end
+    else
+        info = info .. "Атрибуты: Нет\n"
     end
 
     -- Добавление свойств для BasePart
@@ -31,8 +36,8 @@ for _, object in pairs(objects) do
 
     -- Добавление информации о других свойствах
     info = info .. "Свойства:\n"
-    for property, value in pairs(object:GetAttributes()) do
-        info = info .. property .. ": " .. tostring(value) .. "\n"
+    for propertyName, propertyValue in pairs(object:GetAttributes()) do
+        info = info .. "  " .. propertyName .. ": " .. tostring(propertyValue) .. "\n"
     end
 
     infoString = infoString .. info .. "\n"

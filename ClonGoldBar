@@ -1,38 +1,53 @@
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
-local originalGold = game.Workspace.RuntimeItems.GoldBar.Prop_GoldBar
 
-local function spawnWorkingGold()
-    if not player.Character then return end
-    local head = player.Character:FindFirstChild("Head")
-    if not head then return end
+-- Настройки
+local TARGET_ID = "1_14101" -- ID оригинала (Gold Bar)
+local SPAWN_DISTANCE = 3 -- Дистанция перед игроком (метры)
 
-    -- 1. Клонируем оригинал (со ВСЕМ содержимым)
-    local goldCopy = originalGold:Clone()
-
-    -- 2. Делаем его уникальным
-    goldCopy.Name = "Gold_"..tostring(os.time())
-    goldCopy.Position = head.Position + Vector3.new(0, 5, 0)
-    goldCopy.Anchored = false
-    goldCopy.Parent = workspace
-
-    -- 3. Переносим ВСЕ скрипты оригинала
-    for _, descendant in pairs(originalGold:GetDescendants()) do
-        if descendant:IsA("Script") or descendant:IsA("LocalScript") then
-            local scriptCopy = descendant:Clone()
-            scriptCopy.Parent = goldCopy
-            scriptCopy.Disabled = false
+-- Функция поиска объекта по ID
+local function findObjectById(id)
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if tostring(obj:GetDebugId()) == id then
+            return obj
         end
     end
-
-    -- 4. Добавляем физику (если нужно)
-    local bodyForce = Instance.new("BodyForce")
-    bodyForce.Force = Vector3.new(0, goldCopy:GetMass() * workspace.Gravity, 0)
-    bodyForce.Parent = goldCopy
 end
 
--- Спавн раз в 5 секунд
-while true do
-    spawnWorkingGold()
-    task.wait(5)
+-- Главная функция
+local function createCloneWithNewId()
+    -- 1. Находим оригинал
+    local original = findObjectById(TARGET_ID)
+    
+    if not original then
+        print("❌ Оригинальный объект не найден!")
+        return
+    end
+
+    -- 2. Создаем копию
+    local clone = original:Clone()
+    
+    -- 3. Генерируем новый "ID" (на самом деле новый DebugId)
+    clone.Parent = workspace -- Важно: сначала помещаем в игру
+    local newId = clone:GetDebugId() -- Автоматически генерируется новый
+    
+    -- 4. Настраиваем копию
+    clone.Name = "Cloned_"..original.Name -- Меняем имя
+    
+    -- 5. Размещаем перед игроком
+    if player.Character then
+        local humanoidRootPart = player.Character:WaitForChild("HumanoidRootPart")
+        clone.Position = humanoidRootPart.Position + (humanoidRootPart.CFrame.LookVector * SPAWN_DISTANCE)
+        clone.Anchored = true -- Чтобы не упал
+    end
+
+    -- 6. Выводим информацию
+    print("✅ Создана копия:")
+    print("Оригинал:", original:GetFullName(), "| ID:", TARGET_ID)
+    print("Клон:", clone:GetFullName(), "| Новый ID:", newId)
+    
+    return clone
 end
+
+-- Запуск
+createCloneWithNewId()

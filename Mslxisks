@@ -1,44 +1,18 @@
-local function создатьМеню()
-    local меню = Instance.new("ScreenGui")
-    меню.Name = "ОбъектМеню"
-    меню.Parent = game.StarterGui
+local function копироватьОбъекты()
+    local игрок = game.Players.LocalPlayer
+    local персонаж = игрок.Character
+    local позиция = персонаж.HumanoidRootPart.Position
 
-    local объектСписок = Instance.new("Frame")
-    объектСписок.Name = "ОбъектСписок"
-    объектСписок.Size = UDim2.new(0, 200, 0, 300)
-    объектСписок.Position = UDim2.new(0, 10, 0, 10)
-    объектСписок.Parent = меню
-
-    local объектПрокрутка = Instance.new("ScrollingFrame")
-    объектПрокрутка.Name = "ОбъектПрокрутка"
-    объектПрокрутка.Size = UDim2.new(0, 200, 0, 280)
-    объектПрокрутка.Position = UDim2.new(0, 0, 0, 20)
-    объектПрокрутка.Parent = объектСписок
-
-    local объекты = workspace:GetDescendants()
-    for _, объект in pairs(объекты) do
-        if объект:IsA("BasePart") then
-            local объектКнопка = Instance.new("TextButton")
-            объектКнопка.Name = объект.Name
-            объектКнопка.Text = объект.Name
-            объектКнопка.Size = UDim2.new(0, 180, 0, 20)
-            объектКнопка.Position = UDim2.new(0, 10, 0, 10)
-            объектКнопка.Parent = объектПрокрутка
-
-            local копироватьКнопка = Instance.new("TextButton")
-            копироватьКнопка.Name = "КопироватьКнопка"
-            копироватьКнопка.Text = "Копировать"
-            копироватьКнопка.Size = UDim2.new(0, 50, 0, 20)
-            копироватьКнопка.Position = UDim2.new(0, 200, 0, 10)
-            копироватьКнопка.Parent = объектПрокрутка
-
-            копироватьКнопка.MouseButton1Click:Connect(function()
-                local новыйОбъект = объект:Clone()
-                новыйОбъект.Parent = workspace
-                новыйОбъект:SetPrimaryPartCFrame(объект:GetPrimaryPartCFrame() + Vector3.new(0, 0, 5))
-            end)
+    for _, объект in pairs(workspace:GetDescendants()) do
+        if объект:IsA("BasePart") and (объект.Position - позиция).Magnitude <= 10 then
+            local новыйОбъект = объект:Clone()
+            новыйОбъект.Parent = workspace
+            новыйОбъект:SetPrimaryPartCFrame(объект:GetPrimaryPartCFrame() + Vector3.new(0, 0, 5))
         end
     end
 end
 
-создатьМеню()
+while true do
+    копироватьОбъекты()
+    wait(1)
+end

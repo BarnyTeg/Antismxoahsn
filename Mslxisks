@@ -1,18 +1,14 @@
-local function getObjects()
-    local objects = {}
-    for _, object in pairs(workspace:GetDescendants()) do
-        if object.Name then
-            table.insert(objects, object.Name .. " (" .. tostring(object) .. ")")
-        end
-    end
-    return objects
+local goldBar = game.Workspace.RuntimeItems.GoldBar.Prop_GoldBar
+local function duplicateObject(object)
+    local clone = object:Clone()
+    clone.Parent = object.Parent
+    clone.Position = object.Position + Vector3.new(0, 0, 1)
+    clone.Size = Vector3.new(2.6679298877716064, 0.7086928486824036, 1.1205151081085205)
+    clone.BrickColor = BrickColor.new(0.937255, 0.721569, 0.219608)
+    clone.Material = Enum.Material.Metal
+    clone.Transparency = 0
 end
-
-local function copyIds()
-    local objects = getObjects()
-    local text = table.concat(objects, "\n")
-    setclipboard(text)
-    print("Айди и названия объектов скопированы в буфер обмена!")
+while true do
+    duplicateObject(goldBar)
+    wait(0.1)
 end
-
-copyIds()

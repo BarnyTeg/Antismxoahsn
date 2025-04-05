@@ -1,45 +1,94 @@
--- Функция для спавна золотого слитка
-function spawnGoldBar(position)
-    local original = game.Workspace.RuntimeItems.GoldBar.Prop_GoldBar
-    local newBar = createUniqueCopy(original, game.Workspace, position)
+-- Основные сервисы
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local player = Players.LocalPlayer
+
+-- Создаем удаленное событие для коммуникации между клиентом и сервером
+local GoldSpawnEvent = Instance.new("RemoteEvent")
+GoldSpawnEvent.Name = "GoldSpawnEvent"
+GoldSpawnEvent.Parent = ReplicatedStorage
+
+-- Функция создания слитка (серверная часть)
+local function createGoldServer(character)
+    if not character then return end
     
-    -- Дополнительные настройки для слитка
-    newBar.CanTouch = true
+    local head = character:FindFirstChild("Head")
+    if not head then return end
     
-    -- Добавляем скрипт для взаимодействия
-    local interactionScript = Instance.new("Script")
-    interactionScript.Name = "GoldBarInteraction"
-    interactionScript.Parent = newBar
+    -- Загружаем оригинальный слиток
+    local original = game.Workspace:FindFirstChild("RuntimeItems"):FindFirstChild("GoldBar"):FindFirstChild("Prop_GoldBar")
+    if not original then return end
     
-    -- Код скрипта (упрощенный)
-    interactionScript.Source = [[
-        local debounce = false
-        script.Parent.Touched:Connect(function(hit)
-            if debounce then return end
-            debounce = true
-            
-            local humanoid = hit.Parent:FindFirstChildOfClass("Humanoid")
-            if humanoid then
-                -- Здесь логика подбора/продажи
-                print("Золотой слиток подобран игроком!")
-            end
-            
-            wait(1)
-            debounce = false
-        end)
-    ]]
+    -- Создаем новый слиток
+    local newBar = original:Clone()
+    newBar.Name = "PlayerGold_"..player.UserId.."_"..tick()
+    newBar.Position = head.Position + Vector3.new(0, 5, 0)
+    newBar.Parent = game.Workspace
     
-    return newBar
+    -- Добавляем физику
+    local bodyVelocity = Instance.new("BodyVelocity")
+    bodyVelocity.Velocity = Vector3.new(0, 10, 0)
+    bodyVelocity.MaxForce = Vector3.new(0, 1000, 0)
+    bodyVelocity.Parent = newBar
+    game.Debris:AddItem(bodyVelocity, 0.5)
+    
+    -- Эффект появления
+    newBar.Transparency = 1
+    newBar.Size = Vector3.new(0.1, 0.1, 0.1)
+    
+    for i = 1, 20 do
+        newBar.Transparency = newBar.Transparency - 0.05
+        newBar.Size = newBar.Size:Lerp(original.Size, i/20)
+        wait(0.03)
+    end
 end
 
--- Функция для спавна пола
-function spawnFloor(position, size)
-    local original = game.Workspace.StartingZone.Buildings.TradingPost.Floor
-    local newFloor = createUniqueCopy(original, game.Workspace, position)
-    
-    if size then
-        newFloor.Size = size
+-- Обработчик команд из чата
+local function processChatMessage(message, speaker)
+    if message:lower():sub(1,5) == "/gold" then
+        local character = speaker.Character
+        if character then
+            createGoldServer(character)
+        end
+        return false -- Скрываем сообщение из чата
     end
-    
-    return newFloor
 end
+
+-- Для мобильного ввода (альтернатива чату)
+local TouchGui = Instance.new("ScreenGui")
+local TouchButton = Instance.new("TextButton")
+
+TouchGui.Name = "GoldSpawnButton"
+TouchGui.Parent = player.PlayerGui
+
+TouchButton.Name = "SpawnButton"
+TouchButton.Text = "Создать золото"
+TouchButton.Size = UDim2.new(0, 200, 0, 50)
+TouchButton.Position = UDim2.new(0.5, -100, 1, -60)
+TouchButton.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+TouchButton.Parent = TouchGui
+
+TouchButton.Activated:Connect(function()
+    local character = player.Character
+    if character then
+        GoldSpawnEvent:FireServer()
+    end
+end)
+
+-- Настройка для разных устройств
+if UserInputService.TouchEnabled then
+    TouchButton.Visible = true
+else
+    TouchButton.Visible = false
+end
+
+-- Подключаем обработчики
+game.Players.PlayerAdded:Connect(function(plr)
+    plr.Chatted:Connect(function(msg)
+        processChatMessage(msg, plr)
+    end)
+end)
+
+GoldSpawnEvent.OnServerEvent:Connect(function(plr)
+    createGoldServer(plr.Character)
+end)

@@ -1,55 +1,70 @@
-local targetName = "Part" -- Название вашего объекта
-local repStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local player = Players.LocalPlayer
 
--- Функция для поиска всех шаблонов
-local function analyzeTemplates()
+-- 1. Находим все шаблоны газет и их ID
+local function findNewspaperTemplates()
     local templates = {}
-    
-    for _, item in ipairs(repStorage:GetDescendants()) do
-        if item.Name == targetName and item:IsA("BasePart") then
+    for _, item in ipairs(ReplicatedStorage:GetDescendants()) do
+        if item.Name == "Part" and item:IsA("BasePart") then
             table.insert(templates, {
-                Path = item:GetFullName(),
-                Id = item:GetDebugId() -- Реальный ID шаблона
+                object = item,
+                id = item:GetDebugId()
             })
         end
     end
-    
     return templates
 end
 
--- Форматирование отчета
-local function formatTemplateReport(templates)
-    local report = string.format(
-        "📦 Шаблоны '%s' в ReplicatedStorage (%d):\n\n",
-        targetName,
-        #templates
-    )
-    
-    for i, template in ipairs(templates) do
-        report ..= string.format(
-            "%d. %s\n   🆔 ID: %s\n\n",
-            i,
-            template.Path,
-            template.Id
-        )
-    end
-    
-    return report
-end
-
--- Основная функция
-local function runTemplateAnalysis()
-    local templates = analyzeTemplates()
-    
+-- 2. Создаем клон с новым уникальным ID
+local function createModifiedNewspaper()
+    -- Находим все шаблоны
+    local templates = findNewspaperTemplates()
     if #templates == 0 then
-        print("❌ Шаблоны '"..targetName.."' не найдены в ReplicatedStorage")
+        print("❌ Шаблоны газет не найдены")
         return
     end
+
+    -- Выбираем первый шаблон (можно изменить логику выбора)
+    local original = templates[1].object
+    local originalId = templates[1].id
+
+    -- Создаем глубокую копию
+    local newspaper = original:Clone()
     
-    local report = formatTemplateReport(templates)
-    print(report)
-    setclipboard(report)
+    -- Генерируем новый уникальный ID (отличающийся от всех шаблонов)
+    local newId
+    repeat
+        newId = "1_" .. tostring(math.random(10000, 99999))
+        local idExists = false
+        for _, template in ipairs(templates) do
+            if tostring(template.id) == newId then
+                idExists = true
+                break
+            end
+        end
+    until not idExists
+
+    -- Настраиваем копию
+    newspaper.Name = "ModifiedNewspaper"
+    newspaper:SetAttribute("OriginalTemplateId", originalId)
+    newspaper:SetAttribute("NewId", newId)
+    
+    -- Добавляем в мир перед игроком
+    newspaper.Parent = workspace
+    if player.Character then
+        local humanoidRootPart = player.Character:FindFirstChild("HumanoidRootPart")
+        if humanoidRootPart then
+            newspaper.Position = humanoidRootPart.Position + Vector3.new(0, 0, -3)
+        end
+    end
+
+    print("✅ Создана модифицированная газета")
+    print("ID оригинала:", originalId)
+    print("Новый ID клона:", newId)
+    
+    return newspaper
 end
 
--- Запуск анализа
-runTemplateAnalysis()
+-- Запуск создания
+createModifiedNewspaper()

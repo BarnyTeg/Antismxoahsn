@@ -1,53 +1,57 @@
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
--- Настройки
-local TARGET_ID = "1_14101" -- ID оригинала (Gold Bar)
-local SPAWN_DISTANCE = 3 -- Дистанция перед игроком (метры)
+-- Настройки объекта
+local NEWSPAPER_DATA = {
+    Name = "Part",
+    Size = Vector3.new(5, 5, 0.25),
+    Color = Color3.fromRGB(210, 228, 186), -- 0.823529, 0.894118, 0.729412
+    Transparency = 0,
+    Material = Enum.Material.Cardboard,
+    Position = Vector3.new(95.657, 0.173, 29772.232), -- Можно заменить на позицию перед игроком
+    Parent = workspace -- Или game:GetService("Workspace").RuntimeItems.Newspaper
+}
 
--- Функция поиска объекта по ID
-local function findObjectById(id)
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        if tostring(obj:GetDebugId()) == id then
-            return obj
+-- Функция создания газеты с псевдо-уникальным ID
+local function createNewspaperWithFakeId()
+    -- 1. Создаём базовый объект
+    local newspaper = Instance.new("Part")
+    
+    -- 2. Применяем все свойства
+    newspaper.Name = NEWSPAPER_DATA.Name
+    newspaper.Size = NEWSPAPER_DATA.Size
+    newspaper.Color = NEWSPAPER_DATA.Color
+    newspaper.Transparency = NEWSPAPER_DATA.Transparency
+    newspaper.Material = NEWSPAPER_DATA.Material
+    newspaper.Anchored = true
+    
+    -- 3. Генерируем "поддельный" ID в формате "1_XXXXX"
+    local lastDigit = math.random(0, 9) -- Случайная последняя цифра
+    local fakeId = "1_" .. tostring(math.random(10000, 99999)):sub(1, 4) .. lastDigit
+    
+    -- 4. Помещаем в игру (это автоматически сгенерирует настоящий GetDebugId)
+    newspaper.Parent = NEWSPAPER_DATA.Parent
+    newspaper.Position = NEWSPAPER_DATA.Position
+    
+    -- 5. Добавляем кастомный атрибут с нашим "поддельным" ID
+    newspaper:SetAttribute("FakeId", fakeId)
+    
+    -- 6. Альтернативно можно изменить имя, включив ID
+    newspaper.Name = "Newspaper_" .. fakeId
+    
+    -- 7. Размещаем перед игроком (если нужно)
+    if player.Character then
+        local humanoidRootPart = player.Character:FindFirstChild("HumanoidRootPart")
+        if humanoidRootPart then
+            newspaper.Position = humanoidRootPart.Position + Vector3.new(0, 0, -3)
         end
     end
-end
-
--- Главная функция
-local function createCloneWithNewId()
-    -- 1. Находим оригинал
-    local original = findObjectById(TARGET_ID)
     
-    if not original then
-        print("❌ Оригинальный объект не найден!")
-        return
-    end
-
-    -- 2. Создаем копию
-    local clone = original:Clone()
+    print("✅ Создана газета с FakeId:", fakeId)
+    print("Настоящий DebugId:", newspaper:GetDebugId())
     
-    -- 3. Генерируем новый "ID" (на самом деле новый DebugId)
-    clone.Parent = workspace -- Важно: сначала помещаем в игру
-    local newId = clone:GetDebugId() -- Автоматически генерируется новый
-    
-    -- 4. Настраиваем копию
-    clone.Name = "Cloned_"..original.Name -- Меняем имя
-    
-    -- 5. Размещаем перед игроком
-    if player.Character then
-        local humanoidRootPart = player.Character:WaitForChild("HumanoidRootPart")
-        clone.Position = humanoidRootPart.Position + (humanoidRootPart.CFrame.LookVector * SPAWN_DISTANCE)
-        clone.Anchored = true -- Чтобы не упал
-    end
-
-    -- 6. Выводим информацию
-    print("✅ Создана копия:")
-    print("Оригинал:", original:GetFullName(), "| ID:", TARGET_ID)
-    print("Клон:", clone:GetFullName(), "| Новый ID:", newId)
-    
-    return clone
+    return newspaper
 end
 
 -- Запуск
-createCloneWithNewId()
+createNewspaperWithFakeId()

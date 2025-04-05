@@ -1,48 +1,44 @@
-local function scanObjects(radius)
-    local objects = {}
-    for _, object in pairs(workspace:GetDescendants()) do
-        if object:IsA("BasePart") and (object.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude <= radius then
-            table.insert(objects, object)
-        end
-    end
-    return objects
-end
+local function createMenu()
+    local menu = Instance.new("ScreenGui")
+    menu.Name = "ObjectMenu"
+    menu.Parent = game.StarterGui
 
-local function getScripts(object)
-    local scripts = {}
-    for _, script in pairs(workspace:GetDescendants()) do
-        if script:IsA("Script") or script:IsA("LocalScript") then
-            local scriptCode = script:GetLines()
-            for _, line in pairs(scriptCode) do
-                if line:find(object.Name) or line:find(object:GetFullName()) then
-                    table.insert(scripts, script)
-                    break
-                end
-            end
-        end
-    end
-    return scripts
-end
+    local objectList = Instance.new("Frame")
+    objectList.Name = "ObjectList"
+    objectList.Size = UDim2.new(0, 200, 0, 300)
+    objectList.Position = UDim2.new(0, 10, 0, 10)
+    objectList.Parent = menu
 
-local function printScripts(object)
-    local scripts = getScripts(object)
-    if #scripts > 0 then
-        print(object.Name .. ":")
-        for _, script in pairs(scripts) do
-            print(script.Name .. ":")
-            for _, line in pairs(script:GetLines()) do
-                print(line)
-            end
-        end
-    else
-        print(object.Name .. ": Нет скриптов")
-    end
-end
+    local objectScroll = Instance.new("ScrollingFrame")
+    objectScroll.Name = "ObjectScroll"
+    objectScroll.Size = UDim2.new(0, 200, 0, 280)
+    objectScroll.Position = UDim2.new(0, 0, 0, 20)
+    objectScroll.Parent = objectList
 
-while true do
-    local objects = scanObjects(10)
+    local objects = workspace:GetDescendants()
     for _, object in pairs(objects) do
-        printScripts(object)
+        if object:IsA("BasePart") then
+            local objectButton = Instance.new("TextButton")
+            objectButton.Name = object.Name
+            objectButton.Text = object.Name
+            objectButton.Size = UDim2.new(0, 180, 0, 20)
+            objectButton.Position = UDim2.new(0, 10, 0, 10)
+            objectButton.Parent = objectScroll
+
+            local copyButton = Instance.new("TextButton")
+            copyButton.Name = "CopyButton"
+            copyButton.Text = "Копировать"
+            copyButton.Size = UDim2.new(0, 50, 0, 20)
+            copyButton.Position = UDim2.new(0, 200, 0, 10)
+            copyButton.Parent = objectScroll
+
+            copyButton.MouseButton1Click:Connect(function()
+                local newObject = object:Clone()
+                newObject.Parent = workspace
+                newObject:SetPrimaryPartCFrame(object:GetPrimaryPartCFrame() + Vector3.new(0, 0, 5))
+            end)
+        end
     end
-    wait(1)
 end
+
+createMenu()

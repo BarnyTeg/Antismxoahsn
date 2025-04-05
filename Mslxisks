@@ -1,19 +1,29 @@
-local player = game.Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local position = character.HumanoidRootPart.Position
-local radius = 10
+local players = game:GetService("Players")
+local player = players.LocalPlayer
+local character = player.Character
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
 
-local nearbyObjects = {}
-
-for _, object in pairs(workspace:GetChildren()) do
-    if object:IsA("BasePart") then
-        local distance = (object.Position - position).magnitude
-        if distance <= radius then
-            table.insert(nearbyObjects, {id = object:GetFullName(), name = object.Name})
+local function getObjectsInRadius(radius)
+    local objects = {}
+    for _, object in pairs(workspace:GetDescendants()) do
+        if object:IsA("BasePart") then
+            local distance = (object.Position - humanoidRootPart.Position).Magnitude
+            if distance <= radius then
+                table.insert(objects, {id = object.Id, name = object.Name})
+            end
         end
+    end
+    return objects
+end
+
+local function printObjects()
+    local objects = getObjectsInRadius(10)
+    for _, object in pairs(objects) do
+        print("Айди: " .. object.id .. ", Название: " .. object.name)
     end
 end
 
-for _, obj in pairs(nearbyObjects) do
-    print("ID: " .. obj.id .. ", Name: " .. obj.name)
+while true do
+    printObjects()
+    wait(1)
 end

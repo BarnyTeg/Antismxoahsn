@@ -1,5 +1,5 @@
 -- Создаем новый объект Part
-local uniquePart = Instance.new("Partt")
+local uniquePart = Instance.new("Part")
 uniquePart.Name = "UniquePart_" .. tostring(math.random(1, 1000))
 uniquePart.Parent = game.Workspace
 
@@ -10,7 +10,7 @@ uniquePart.BrickColor = BrickColor.new(0.823529, 0.894118, 0.729412)
 uniquePart.Transparency = 0
 uniquePart.Material = Enum.Material.Cardboard
 uniquePart.Anchored = false
-uniquePart.CanCollide = true
+uniquePart.CanCollide = false
 
 -- Создаем дочерние объекты
 local surfaceGui = Instance.new("SurfaceGui")

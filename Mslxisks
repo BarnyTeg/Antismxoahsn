@@ -1,60 +1,43 @@
-local player = game.Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local radius = 10
+-- Получение всех объектов в workspace
+local objects = workspace:GetDescendants()
 
--- Функция для получения позиции объекта
-local function getObjectPosition(object)
+-- Создание строки с информацией о всех объектах
+local infoString = ""
+for _, object in pairs(objects) do
+    local info = "Название: " .. object.Name .. "\nПуть: " .. object:GetFullName() .. "\nAPI: " .. object.ClassName .. "\n"
+
+    -- Добавление атрибутов объекта
+    for _, attribute in pairs(object:GetAttributes()) do
+        info = info .. "Атрибут: " .. attribute.Name .. " = " .. tostring(attribute.Value) .. "\n"
+    end
+
+    -- Добавление свойств для BasePart
     if object:IsA("BasePart") then
-        return object.Position
-    elseif object:IsA("Model") then
-        local primaryPart = object.PrimaryPart
-        if primaryPart then
-            return primaryPart.Position
-        end
+        info = info .. "Позиция: " .. tostring(object.Position) .. "\n"
+        info = info .. "Размер: " .. tostring(object.Size) .. "\n"
+        info = info .. "Цвет: " .. tostring(object.Color) .. "\n"
+        info = info .. "Прозрачность: " .. tostring(object.Transparency) .. "\n"
+        info = info .. "Материал: " .. tostring(object.Material) .. "\n"
     end
-    return nil
+
+    -- Добавление информации для моделей
+    if object:IsA("Model") then
+        info = info .. "Количество частей: " .. #object:GetChildren() .. "\n"
+        info = info .. "Первичная часть: " .. (object.PrimaryPart and object.PrimaryPart.Name or "Нет") .. "\n"
+    end
+
+    -- Добавление информации о родителе
+    info = info .. "Родитель: " .. object.Parent.Name .. "\n"
+
+    -- Добавление информации о других свойствах
+    info = info .. "Свойства:\n"
+    for property, value in pairs(object:GetAttributes()) do
+        info = info .. property .. ": " .. tostring(value) .. "\n"
+    end
+
+    infoString = infoString .. info .. "\n"
 end
 
--- Функция для сбора информации об объектах в радиусе
-local function gatherInfo()
-    local objectsInfo = {}
-    local position = character.HumanoidRootPart.Position
-
-    -- Проходим по всем объектам в игре
-    for _, object in pairs(workspace:GetDescendants()) do
-        local objectPosition = getObjectPosition(object)
-        if objectPosition then
-            local distance = (objectPosition - position).magnitude
-            if distance <= radius then
-                local info = {
-                    name = object.Name,
-                    type = object.ClassName,
-                    parent = object.Parent.Name,
-                    position = objectPosition,
-                    properties = {}
-                }
-                -- Собираем свойства объекта
-                for _, property in pairs(object:GetAttributes()) do
-                    table.insert(info.properties, property.Name .. ": " .. tostring(property.Value))
-                end
-                table.insert(objectsInfo, info)
-            end
-        end
-    end
-
-    -- Выводим информацию об объектах
-    for _, info in pairs(objectsInfo) do
-        print("Объект: " .. info.name)
-        print("Тип: " .. info.type)
-        print("Родитель: " .. info.parent)
-        print("Позиция: " .. tostring(info.position))
-        print("Свойства:")
-        for _, property in pairs(info.properties) do
-            print(property)
-        end
-        print()
-    end
-end
-
--- Запускаем сбор информации
-gatherInfo()
+-- Копирование строки в буфер обмена
+setclipboard(infoString)
+print("Информация скопирована в буфер обмена")

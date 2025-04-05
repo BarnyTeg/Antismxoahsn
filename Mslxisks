@@ -9,21 +9,21 @@ local function getObjectsInRadius(radius)
         if object:IsA("BasePart") then
             local distance = (object.Position - humanoidRootPart.Position).Magnitude
             if distance <= radius then
-                table.insert(objects, {id = object.Id, name = object.Name})
+                table.insert(objects, object)
             end
         end
     end
     return objects
 end
 
-local function printObjects()
+local function copyIds()
     local objects = getObjectsInRadius(10)
+    local ids = {}
     for _, object in pairs(objects) do
-        print("Айди: " .. object.id .. ", Название: " .. object.name)
+        table.insert(ids, object.Id)
     end
+    local clipboard = game:GetService("StarterGui"):FindFirstChild("CoreGui").Clipboard
+    clipboard:SetText(table.concat(ids, ", "))
 end
 
-while true do
-    printObjects()
-    wait(1)
-end
+copyIds()

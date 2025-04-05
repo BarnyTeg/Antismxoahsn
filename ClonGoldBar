@@ -1,56 +1,155 @@
-local target = workspace:FindFirstChild("Part") -- Замените на ваш объект
-if not target then return end
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local targetName = "Part" -- Название вашего объекта
+local scanRadius = 10 -- Метры
 
--- 1. Проверка атрибутов
-local attributes = {}
-for _, attr in pairs(target:GetAttributes()) do
-    table.insert(attributes, {Name = attr, Value = target:GetAttribute(attr)})
+-- 1. Функция поиска всех нужных объектов
+local function findTargetObjects(centerPos)
+    local found = {}
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj.Name == targetName and obj:IsA("BasePart") then
+            if (centerPos - obj.Position).Magnitude <= scanRadius then
+                table.insert(found, obj)
+            end
+        end
+    end
+    return found
 end
 
--- 2. Поиск связанных Value объектов
-local values = {}
-for _, child in ipairs(target:GetChildren()) do
-    if child:IsA("ValueBase") then
-        table.insert(values, {
-            Type = child.ClassName,
-            Name = child.Name,
-            Value = child.Value
+-- 2. Полный анализ объекта
+local function analyzeObject(obj)
+    local result = {
+        Object = obj,
+        Attributes = {},
+        Values = {},
+        Scripts = {},
+        Remotes = {},
+        Physics = {},
+        Templates = {}
+    }
+    
+    -- Атрибуты
+    for _, attr in pairs(obj:GetAttributes()) do
+        table.insert(result.Attributes, {
+            Name = attr,
+            Value = obj:GetAttribute(attr)
         })
     end
+    
+    -- Value объекты
+    for _, child in ipairs(obj:GetChildren()) do
+        if child:IsA("ValueBase") then
+            table.insert(result.Values, {
+                Type = child.ClassName,
+                Name = child.Name,
+                Value = child.Value
+            })
+        end
+    end
+    
+    -- Скрипты
+    for _, descendant in ipairs(obj:GetDescendants()) do
+        if descendant:IsA("Script") or descendant:IsA("LocalScript") then
+            table.insert(result.Scripts, {
+                Type = descendant.ClassName,
+                Name = descendant.Name,
+                Path = descendant:GetFullName()
+            })
+        end
+    end
+    
+    -- Remote события
+    for _, descendant in ipairs(obj:GetDescendants()) do
+        if descendant:IsA("RemoteEvent") or descendant:IsA("RemoteFunction") then
+            table.insert(result.Remotes, {
+                Type = descendant.ClassName,
+                Name = descendant.Name,
+                Path = descendant:GetFullName()
+            })
+        end
+    end
+    
+    -- Физические взаимодействия
+    if obj:FindFirstChildOfClass("ClickDetector") then
+        table.insert(result.Physics, "ClickDetector")
+    end
+    if obj:FindFirstChildOfClass("TouchTransmitter") then
+        table.insert(result.Physics, "TouchTransmitter")
+    end
+    
+    -- Поиск шаблонов
+    local repStorage = game:GetService("ReplicatedStorage")
+    for _, item in ipairs(repStorage:GetDescendants()) do
+        if item.Name == obj.Name and item:IsA("BasePart") then
+            table.insert(result.Templates, item:GetFullName())
+        end
+    end
+    
+    return result
 end
 
--- 3. Поиск в ReplicatedStorage для этого объекта
-local templates = {}
-local repStorage = game:GetService("ReplicatedStorage")
-for _, item in ipairs(repStorage:GetDescendants()) do
-    if item.Name == target.Name and item:IsA("BasePart") then
-        table.insert(templates, item:GetFullName())
+-- 3. Форматирование отчета
+local function formatReport(data)
+    local report = string.format(
+        "🔍 Анализ объекта [%s] (%s)\n\n"..
+        "📌 Позиция: %s\n\n"..
+        "🏷️ Атрибуты (%d):\n%s\n\n"..
+        "🔢 Значения (%d):\n%s\n\n"..
+        "📜 Скрипты (%d):\n%s\n\n"..
+        "📡 Remote соединения (%d):\n%s\n\n"..
+        "🖱️ Физические взаимодействия (%d):\n%s\n\n"..
+        "📦 Шаблоны (%d):\n%s",
+        data.Object.Name,
+        data.Object:GetDebugId(),
+        tostring(data.Object.Position),
+        #data.Attributes,
+        #data.Attributes > 0 and table.concat(
+            table.tabulate(data.Attributes, function(i,v)
+                return string.format("- %s = %s", v.Name, tostring(v.Value))
+            end), "\n") or "Нет",
+        #data.Values,
+        #data.Values > 0 and table.concat(
+            table.tabulate(data.Values, function(i,v)
+                return string.format("- %s (%s) = %s", v.Name, v.Type, tostring(v.Value))
+            end), "\n") or "Нет",
+        #data.Scripts,
+        #data.Scripts > 0 and table.concat(
+            table.tabulate(data.Scripts, function(i,v)
+                return string.format("- %s (%s)\n  Путь: %s", v.Name, v.Type, v.Path)
+            end), "\n") or "Нет",
+        #data.Remotes,
+        #data.Remotes > 0 and table.concat(
+            table.tabulate(data.Remotes, function(i,v)
+                return string.format("- %s (%s)\n  Путь: %s", v.Name, v.Type, v.Path)
+            end), "\n") or "Нет",
+        #data.Physics,
+        #data.Physics > 0 and table.concat(data.Physics, "\n") or "Нет",
+        #data.Templates,
+        #data.Templates > 0 and table.concat(data.Templates, "\n") or "Нет"
+    )
+    
+    return report
+end
+
+-- 4. Основная функция
+local function runAnalysis()
+    local character = player.Character or player.CharacterAdded:Wait()
+    local rootPart = character:WaitForChild("HumanoidRootPart")
+    
+    local targets = findTargetObjects(rootPart.Position)
+    if #targets == 0 then
+        print("❌ Объекты '"..targetName.."' не найдены в радиусе "..scanRadius.."м")
+        return
+    end
+    
+    for _, target in ipairs(targets) do
+        local analysis = analyzeObject(target)
+        local report = formatReport(analysis)
+        
+        print(report)
+        setclipboard(report)
     end
 end
 
--- 4. Формирование отчета
-local report = string.format(
-    "🔍 Анализ объекта [%s] (%s)\n\n"..
-    "📌 Атрибуты (%d):\n%s\n\n"..
-    "🔢 Значения (%d):\n%s\n\n"..
-    "📦 Шаблоны (%d):\n%s",
-    target.Name,
-    target:GetDebugId(),
-    #attributes,
-    table.concat(
-        table.tabulate(attributes, function(i,v)
-            return string.format("- %s = %s", v.Name, tostring(v.Value))
-        end), "\n"
-    ),
-    #values,
-    table.concat(
-        table.tabulate(values, function(i,v)
-            return string.format("- %s (%s) = %s", v.Name, v.Type, tostring(v.Value))
-        end), "\n"
-    ),
-    #templates,
-    table.concat(templates, "\n")
-)
-
-print(report)
-setclipboard(report)
+-- Запуск
+runAnalysis()

@@ -3,26 +3,17 @@ local character = player.Character or player.CharacterAdded:Wait()
 local position = character.HumanoidRootPart.Position
 local radius = 10
 
-local function getNearbyObjects()
-    local nearbyObjects = {}
-    
-    for _, object in pairs(workspace:GetChildren()) do
-        if object:IsA("BasePart") then
-            local distance = (object.Position - position).magnitude
-            if distance <= radius then
-                table.insert(nearbyObjects, {id = object:GetFullName(), name = object.Name})
-            end
+local nearbyObjects = {}
+
+for _, object in pairs(workspace:GetChildren()) do
+    if object:IsA("BasePart") then
+        local distance = (object.Position - position).magnitude
+        if distance <= radius then
+            table.insert(nearbyObjects, {id = object:GetFullName(), name = object.Name})
         end
     end
-    
-    return nearbyObjects
 end
 
-local function printNearbyObjects()
-    local objects = getNearbyObjects()
-    for _, obj in pairs(objects) do
-        print("ID: " .. obj.id .. ", Name: " .. obj.name)
-    end
+for _, obj in pairs(nearbyObjects) do
+    print("ID: " .. obj.id .. ", Name: " .. obj.name)
 end
-
-printNearbyObjects()

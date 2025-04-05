@@ -1,28 +1,62 @@
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
+local RunService = game:GetService("RunService")
 
--- Обработка команды "/gold"
-player.Chatted:Connect(function(message)
-    if message:lower() == "/gold" then
-        local character = player.Character
-        if character and character:FindFirstChild("Head") then
-            local head = character.Head
-            
-            -- Создаём новый слиток (не клон, а новый объект)
-            local goldBar = Instance.new("Part")
-            goldBar.Name = "GoldBar_" .. math.random(1, 1000)
-            goldBar.Size = Vector3.new(2.667, 0.708, 1.120) -- Твои параметры
-            goldBar.Position = head.Position + Vector3.new(0, 5, 0) -- Над головой
-            goldBar.Color = Color3.fromRGB(239, 184, 56) -- Золотой цвет
-            goldBar.Material = Enum.Material.Metal
-            goldBar.Anchored = false
-            goldBar.CanCollide = true
-            goldBar.Parent = workspace
-            
-            -- Физика (чтобы падал)
-            local bodyForce = Instance.new("BodyForce")
-            bodyForce.Force = Vector3.new(0, goldBar:GetMass() * workspace.Gravity, 0)
-            bodyForce.Parent = goldBar
-        end
+-- Параметры слитка (можно менять)
+local GOLD_SIZE = Vector3.new(2.667, 0.708, 1.120)
+local GOLD_COLOR = Color3.fromRGB(239, 184, 56) -- Золотой цвет
+local SPAWN_HEIGHT = 5 -- Высота над головой
+local SPAWN_INTERVAL = 5 -- Каждые 5 секунд
+
+-- Функция создания слитка
+local function spawnGold()
+    local character = player.Character
+    if not character then return end
+    
+    local head = character:FindFirstChild("Head")
+    if not head then return end
+    
+    -- Создаём новый слиток (не клон, а новый Part)
+    local goldBar = Instance.new("Part")
+    goldBar.Name = "GoldBar_" .. math.random(1000, 9999)
+    goldBar.Size = GOLD_SIZE
+    goldBar.Position = head.Position + Vector3.new(0, SPAWN_HEIGHT, 0)
+    goldBar.Color = GOLD_COLOR
+    goldBar.Material = Enum.Material.Metal
+    goldBar.Anchored = false
+    goldBar.CanCollide = true
+    goldBar.Parent = workspace
+    
+    -- Физика (чтобы падал)
+    local bodyForce = Instance.new("BodyForce")
+    bodyForce.Force = Vector3.new(0, goldBar:GetMass() * workspace.Gravity, 0)
+    bodyForce.Parent = goldBar
+    
+    -- Эффект появления (необязательно)
+    goldBar.Transparency = 1
+    for i = 1, 20 do
+        goldBar.Transparency = goldBar.Transparency - 0.05
+        task.wait(0.03)
     end
+end
+
+-- Запускаем цикл спавна каждые 5 секунд
+local spawnLoop
+local function startSpawning()
+    spawnLoop = RunService.Heartbeat:Connect(function()
+        task.wait(SPAWN_INTERVAL)
+        spawnGold()
+    end)
+end
+
+-- Если персонаж уже есть - запускаем сразу
+if player.Character then
+    startSpawning()
+end
+
+-- Если персонаж умер/переродился - перезапускаем
+player.CharacterAdded:Connect(function()
+    if spawnLoop then spawnLoop:Disconnect() end
+    task.wait(1) -- Даём время на появление головы
+    startSpawning()
 end)

@@ -1,80 +1,50 @@
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
--- Параметры оригинала
-local NEWSPAPER_DATA = {
-    Name = "Part",
-    Size = Vector3.new(5, 5, 0.25),
-    Color = Color3.fromRGB(210, 228, 186), -- RGB(0.823529, 0.894118, 0.729412)
-    Transparency = 0,
-    Material = Enum.Material.Cardboard,
-    Position = Vector3.new(95.657, 0.173, 29772.232),
-    Parent = workspace
-}
-
--- Создаем газету с новым ID
-local function createExactNewspaperCopy()
-    -- 1. Создаем базовый объект
+-- 1. Создаем НЕЗАВИСИМЫЙ объект
+local function createIndependentNewspaper()
+    -- Базовые параметры (как у оригинала)
     local newspaper = Instance.new("Part")
-    
-    -- 2. Применяем все свойства
-    newspaper.Name = NEWSPAPER_DATA.Name
-    newspaper.Size = NEWSPAPER_DATA.Size
-    newspaper.Color = NEWSPAPER_DATA.Color
-    newspaper.Transparency = NEWSPAPER_DATA.Transparency
-    newspaper.Material = NEWSPAPER_DATA.Material
-    newspaper.Anchored = false -- Физика включена!
+    newspaper.Name = "IndependentNewspaper"
+    newspaper.Size = Vector3.new(5, 5, 0.25)
+    newspaper.Color = Color3.fromRGB(210, 228, 186)
+    newspaper.Material = Enum.Material.Cardboard
+    newspaper.Transparency = 0
+    newspaper.Anchored = false
     newspaper.CanCollide = true
-    newspaper.CastShadow = true
+
+    -- 2. Генерация УНИКАЛЬНОГО идентификатора
+    local newId = "NPID_"..os.time().."_"..math.random(1000,9999)
+    newspaper:SetAttribute("UniqueId", newId)
     
-    -- 3. Генерируем новый ID (формат как у оригинала)
-    local baseId = "1_" .. tostring(math.random(23000, 24000)) -- Диапазон похожий на оригинал
-    newspaper:SetAttribute("UniqueId", baseId)
-    
-    -- 4. Добавляем физическое тело
-    local bodyForce = Instance.new("BodyForce")
-    bodyForce.Force = Vector3.new(0, newspaper:GetMass() * workspace.Gravity, 0)
-    bodyForce.Parent = newspaper
-    
-    -- 5. Размещаем в мире
-    newspaper.Parent = NEWSPAPER_DATA.Parent
-    
-    -- 6. Позиционируем (либо оригинальная позиция, либо перед игроком)
+    -- 3. Собственная физическая система
+    local bodyVelocity = Instance.new("BodyVelocity")
+    bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+    bodyVelocity.Parent = newspaper
+
+    -- 4. Система взаимодействий (пример)
+    local clickDetector = Instance.new("ClickDetector")
+    clickDetector.Parent = newspaper
+    clickDetector.MouseClick:Connect(function()
+        print("Газета ", newId, " использована")
+        -- Ваш код взаимодействия
+    end)
+
+    -- 5. Размещение в мире
+    newspaper.Parent = workspace
     if player.Character then
-        local humanoidRootPart = player.Character:FindFirstChild("HumanoidRootPart")
-        if humanoidRootPart then
-            newspaper.Position = humanoidRootPart.Position + Vector3.new(0, 0, -3)
-        else
-            newspaper.Position = NEWSPAPER_DATA.Position
+        local root = player.Character:FindFirstChild("HumanoidRootPart")
+        if root then
+            newspaper.Position = root.Position + Vector3.new(0, 0, -3)
         end
-    else
-        newspaper.Position = NEWSPAPER_DATA.Position
     end
-    
-    -- 7. Добавляем эффекты для реалистичности
-    local sound = Instance.new("Sound")
-    sound.SoundId = "rbxassetid://142376088" -- Звук падения бумаги
-    sound.Parent = newspaper
-    sound:Play()
-    
-    print("✅ Создана точная копия газеты")
-    print("Новый ID:", baseId)
-    print("Размер:", newspaper.Size)
-    print("Материал:", newspaper.Material)
-    
+
+    print("✅ Создана НЕЗАВИСИМАЯ газета ID:", newId)
     return newspaper
 end
 
--- Автоматическое создание при запуске
-createExactNewspaperCopy()
-
--- Функция для создания нескольких копий
-local function createMultipleCopies(count)
-    for i = 1, count do
-        createExactNewspaperCopy()
-        task.wait(0.3) -- Задержка между созданиями
-    end
+-- Создаем 3 разных газеты
+for i = 1, 3 do
+    createIndependentNewspaper()
+    task.wait(0.5)
 end
-
--- Раскомментируйте для создания нескольких копий:
--- createMultipleCopies(5)

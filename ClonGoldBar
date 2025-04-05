@@ -1,20 +1,20 @@
 -- Создаем новый объект Part
-local part = Instance.new("Part")
-part.Name = "Part"
-part.Parent = game.Workspace.RuntimeItems.Newspaper
+local uniquePart = Instance.new("Part")
+uniquePart.Name = "UniquePart_" .. tostring(math.random(1, 1000))
+uniquePart.Parent = game.Workspace
 
 -- Устанавливаем атрибуты объекта
-part.Position = Vector3.new(93.15756225585938, 0.17376059293746948, 29764.482421875)
-part.Size = Vector3.new(5, 5, 0.25)
-part.BrickColor = BrickColor.new(0.823529, 0.894118, 0.729412)
-part.Transparency = 0
-part.Material = Enum.Material.Cardboard
-part.Anchored = false
-part.CanCollide = true
+uniquePart.Position = Vector3.new(93.15756225585938, 0.17376059293746948, 29764.482421875)
+uniquePart.Size = Vector3.new(5, 5, 0.25)
+uniquePart.BrickColor = BrickColor.new(0.823529, 0.894118, 0.729412)
+uniquePart.Transparency = 0
+uniquePart.Material = Enum.Material.Cardboard
+uniquePart.Anchored = false
+uniquePart.CanCollide = true
 
 -- Создаем дочерние объекты
 local surfaceGui = Instance.new("SurfaceGui")
-surfaceGui.Parent = part
+surfaceGui.Parent = uniquePart
 
 local decal = Instance.new("Decal")
-decal.Parent = part
+decal.Parent = uniquePart

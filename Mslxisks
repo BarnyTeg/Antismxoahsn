@@ -30,6 +30,9 @@ for _, object in pairs(objects) do
         info = info .. "Цвет: " .. tostring(object.Color) .. "\n"
         info = info .. "Прозрачность: " .. tostring(object.Transparency) .. "\n"
         info = info .. "Материал: " .. tostring(object.Material) .. "\n"
+        info = info .. "Вес: " .. tostring(object:GetMass()) .. "\n"
+        info = info .. "Закреплен: " .. tostring(object.Anchored) .. "\n"
+        info = info .. "Можно сталкиваться: " .. tostring(object.CanCollide) .. "\n"
 
         -- Добавление информации для моделей
         if object:IsA("Model") then
@@ -39,6 +42,16 @@ for _, object in pairs(objects) do
 
         -- Добавление информации о родителе
         info = info .. "Родитель: " .. object.Parent.Name .. "\n"
+
+        -- Добавление информации о дочерних объектах
+        if #object:GetChildren() > 0 then
+            info = info .. "Дочерние объекты:\n"
+            for _, child in pairs(object:GetChildren()) do
+                info = info .. "  " .. child.Name .. "\n"
+            end
+        else
+            info = info .. "Дочерние объекты: Нет\n"
+        end
 
         infoString = infoString .. info .. "\n"
     end

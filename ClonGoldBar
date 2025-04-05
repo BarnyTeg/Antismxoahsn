@@ -2,63 +2,45 @@ local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 local RunService = game:GetService("RunService")
 
--- Настройки слитка (можно менять)
-local SPAWN_INTERVAL = 5 -- Спавн каждые 5 секунд
-local SPAWN_HEIGHT = 5 -- Высота над головой
+-- Настройки
+local SPAWN_INTERVAL = 30  -- Интервал спавна (секунды)
+local SPAWN_HEIGHT = 3      -- Высота над головой
+local originalGold = game.Workspace.RuntimeItems.GoldBar.Prop_GoldBar  -- Оригинальный слиток
 
--- Функция создания нового слитка (не клона, а нового MeshPart)
-local function spawnGoldBar()
-    local character = player.Character
-    if not character then return end
-    
-    local head = character:FindFirstChild("Head")
+-- Функция создания точной копии (но с новым Instance ID)
+local function spawnExactCopy()
+    if not player.Character then return end
+    local head = player.Character:FindFirstChild("Head")
     if not head then return end
 
-    -- Создаём новый MeshPart (как оригинальный слиток)
-    local newGoldBar = Instance.new("MeshPart")
-    newGoldBar.Name = "Prop_GoldBar_" .. math.random(1, 10000)
-    newGoldBar.Size = Vector3.new(2.667, 0.708, 1.120) -- Размер как у оригинала
-    newGoldBar.Position = head.Position + Vector3.new(0, SPAWN_HEIGHT, 0) -- Над головой
-    newGoldBar.Color = Color3.fromRGB(239, 184, 56) -- Золотой цвет (RGB 239, 184, 56)
-    newGoldBar.Material = Enum.Material.Metal
-    newGoldBar.CanCollide = true
-    newGoldBar.Anchored = false
-    newGoldBar.Parent = workspace
+    -- 1. Полное клонирование оригинала
+    local goldCopy = originalGold:Clone()
+    
+    -- 2. Уникальные идентификаторы:
+    goldCopy.Name = originalGold.Name.."_"..tick()  -- Новое имя + временная метка
+    goldCopy.Position = head.Position + Vector3.new(0, SPAWN_HEIGHT, 0)
+    goldCopy.Anchored = true  -- Фиксируем позицию (не летает)
+    goldCopy.Parent = workspace
 
-    -- Задаём меш и текстуру (если известны ID)
-    -- newGoldBar.MeshId = "rbxassetid://..." -- Раскомментируй и вставь ID меша
-    -- newGoldBar.TextureID = "rbxassetid://..." -- Раскомментируй и вставь ID текстуры
-
-    -- Физика (чтобы падал)
-    local bodyForce = Instance.new("BodyForce")
-    bodyForce.Force = Vector3.new(0, newGoldBar:GetMass() * workspace.Gravity, 0)
-    bodyForce.Parent = newGoldBar
-
-    -- Эффект появления (необязательно)
-    newGoldBar.Transparency = 1
-    for i = 1, 20 do
-        newGoldBar.Transparency = newGoldBar.Transparency - 0.05
-        task.wait(0.03)
-    end
+    -- 3. Проверка: это действительно новый объект?
+    print("Создан слиток: "..goldCopy:GetFullName())
+    print("Original ID: "..tostring(originalGold:GetDebugId()))
+    print("Copy ID: "..tostring(goldCopy:GetDebugId()))
 end
 
--- Запускаем цикл спавна каждые 5 секунд
-local spawnLoop
+-- Автоматический спавн
+local spawnConnection
 local function startSpawning()
-    spawnLoop = RunService.Heartbeat:Connect(function()
+    spawnConnection = RunService.Heartbeat:Connect(function()
         task.wait(SPAWN_INTERVAL)
-        spawnGoldBar()
+        spawnExactCopy()
     end)
 end
 
--- Если персонаж уже есть - запускаем сразу
-if player.Character then
-    startSpawning()
-end
-
--- Если персонаж умер/переродился - перезапускаем
+-- Инициализация
 player.CharacterAdded:Connect(function()
-    if spawnLoop then spawnLoop:Disconnect() end
-    task.wait(1) -- Даём время на появление головы
+    if spawnConnection then spawnConnection:Disconnect() end
     startSpawning()
 end)
+
+if player.Character then startSpawning() end

@@ -2,63 +2,37 @@ local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 local originalGold = game.Workspace.RuntimeItems.GoldBar.Prop_GoldBar
 
--- Настройки
-local SPAWN_DELAY = 5  -- Интервал в секундах
-local SPAWN_HEIGHT = 3 -- Высота над головой
-local MAX_GOLD_BARS = 10 -- Максимальное количество слитков
-
-local activeGoldBars = {} -- Таблица для хранения активных слитков
-
--- Функция создания слитка с физикой
-local function spawnGoldWithPhysics()
+local function spawnWorkingGold()
     if not player.Character then return end
     local head = player.Character:FindFirstChild("Head")
     if not head then return end
-    
-    -- Очистка старых слитков
-    for i, gold in pairs(activeGoldBars) do
-        if not gold or not gold.Parent then
-            table.remove(activeGoldBars, i)
-        end
-    end
-    
-    -- Проверка максимального количества
-    if #activeGoldBars >= MAX_GOLD_BARS then
-        local oldestGold = activeGoldBars[1]
-        if oldestGold then
-            oldestGold:Destroy()
-            table.remove(activeGoldBars, 1)
-        end
-    end
-    
-    -- Создание копии
+
+    -- 1. Клонируем оригинал (со ВСЕМ содержимым)
     local goldCopy = originalGold:Clone()
-    goldCopy.Name = "PhysicsGold_"..tostring(os.time())
-    goldCopy.Position = head.Position + Vector3.new(0, SPAWN_HEIGHT, 0)
-    goldCopy.Anchored = false -- Включаем физику
-    goldCopy.CanCollide = true
+
+    -- 2. Делаем его уникальным
+    goldCopy.Name = "Gold_"..tostring(os.time())
+    goldCopy.Position = head.Position + Vector3.new(0, 5, 0)
+    goldCopy.Anchored = false
     goldCopy.Parent = workspace
-    
-    -- Добавляем физические эффекты
-    local bodyVelocity = Instance.new("BodyVelocity")
-    bodyVelocity.Velocity = Vector3.new(0, 10, 0) -- Небольшой толчок вверх
-    bodyVelocity.MaxForce = Vector3.new(0, 1000, 0)
-    bodyVelocity.Parent = goldCopy
-    game:GetService("Debris"):AddItem(bodyVelocity, 0.5)
-    
-    -- Добавляем в список активных
-    table.insert(activeGoldBars, goldCopy)
-    
-    -- Автоудаление через 60 секунд
-    delay(60, function()
-        if goldCopy and goldCopy.Parent then
-            goldCopy:Destroy()
+
+    -- 3. Переносим ВСЕ скрипты оригинала
+    for _, descendant in pairs(originalGold:GetDescendants()) do
+        if descendant:IsA("Script") or descendant:IsA("LocalScript") then
+            local scriptCopy = descendant:Clone()
+            scriptCopy.Parent = goldCopy
+            scriptCopy.Disabled = false
         end
-    end)
+    end
+
+    -- 4. Добавляем физику (если нужно)
+    local bodyForce = Instance.new("BodyForce")
+    bodyForce.Force = Vector3.new(0, goldCopy:GetMass() * workspace.Gravity, 0)
+    bodyForce.Parent = goldCopy
 end
 
--- Основной цикл
+-- Спавн раз в 5 секунд
 while true do
-    spawnGoldWithPhysics()
-    wait(SPAWN_DELAY)
+    spawnWorkingGold()
+    task.wait(5)
 end

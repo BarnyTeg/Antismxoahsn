@@ -1,70 +1,80 @@
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 
--- 1. Находим все шаблоны газет и их ID
-local function findNewspaperTemplates()
-    local templates = {}
-    for _, item in ipairs(ReplicatedStorage:GetDescendants()) do
-        if item.Name == "Part" and item:IsA("BasePart") then
-            table.insert(templates, {
-                object = item,
-                id = item:GetDebugId()
-            })
-        end
-    end
-    return templates
-end
+-- Параметры оригинала
+local NEWSPAPER_DATA = {
+    Name = "Part",
+    Size = Vector3.new(5, 5, 0.25),
+    Color = Color3.fromRGB(210, 228, 186), -- RGB(0.823529, 0.894118, 0.729412)
+    Transparency = 0,
+    Material = Enum.Material.Cardboard,
+    Position = Vector3.new(95.657, 0.173, 29772.232),
+    Parent = workspace
+}
 
--- 2. Создаем клон с новым уникальным ID
-local function createModifiedNewspaper()
-    -- Находим все шаблоны
-    local templates = findNewspaperTemplates()
-    if #templates == 0 then
-        print("❌ Шаблоны газет не найдены")
-        return
-    end
-
-    -- Выбираем первый шаблон (можно изменить логику выбора)
-    local original = templates[1].object
-    local originalId = templates[1].id
-
-    -- Создаем глубокую копию
-    local newspaper = original:Clone()
+-- Создаем газету с новым ID
+local function createExactNewspaperCopy()
+    -- 1. Создаем базовый объект
+    local newspaper = Instance.new("Part")
     
-    -- Генерируем новый уникальный ID (отличающийся от всех шаблонов)
-    local newId
-    repeat
-        newId = "1_" .. tostring(math.random(10000, 99999))
-        local idExists = false
-        for _, template in ipairs(templates) do
-            if tostring(template.id) == newId then
-                idExists = true
-                break
-            end
-        end
-    until not idExists
-
-    -- Настраиваем копию
-    newspaper.Name = "ModifiedNewspaper"
-    newspaper:SetAttribute("OriginalTemplateId", originalId)
-    newspaper:SetAttribute("NewId", newId)
+    -- 2. Применяем все свойства
+    newspaper.Name = NEWSPAPER_DATA.Name
+    newspaper.Size = NEWSPAPER_DATA.Size
+    newspaper.Color = NEWSPAPER_DATA.Color
+    newspaper.Transparency = NEWSPAPER_DATA.Transparency
+    newspaper.Material = NEWSPAPER_DATA.Material
+    newspaper.Anchored = false -- Физика включена!
+    newspaper.CanCollide = true
+    newspaper.CastShadow = true
     
-    -- Добавляем в мир перед игроком
-    newspaper.Parent = workspace
+    -- 3. Генерируем новый ID (формат как у оригинала)
+    local baseId = "1_" .. tostring(math.random(23000, 24000)) -- Диапазон похожий на оригинал
+    newspaper:SetAttribute("UniqueId", baseId)
+    
+    -- 4. Добавляем физическое тело
+    local bodyForce = Instance.new("BodyForce")
+    bodyForce.Force = Vector3.new(0, newspaper:GetMass() * workspace.Gravity, 0)
+    bodyForce.Parent = newspaper
+    
+    -- 5. Размещаем в мире
+    newspaper.Parent = NEWSPAPER_DATA.Parent
+    
+    -- 6. Позиционируем (либо оригинальная позиция, либо перед игроком)
     if player.Character then
         local humanoidRootPart = player.Character:FindFirstChild("HumanoidRootPart")
         if humanoidRootPart then
             newspaper.Position = humanoidRootPart.Position + Vector3.new(0, 0, -3)
+        else
+            newspaper.Position = NEWSPAPER_DATA.Position
         end
+    else
+        newspaper.Position = NEWSPAPER_DATA.Position
     end
-
-    print("✅ Создана модифицированная газета")
-    print("ID оригинала:", originalId)
-    print("Новый ID клона:", newId)
+    
+    -- 7. Добавляем эффекты для реалистичности
+    local sound = Instance.new("Sound")
+    sound.SoundId = "rbxassetid://142376088" -- Звук падения бумаги
+    sound.Parent = newspaper
+    sound:Play()
+    
+    print("✅ Создана точная копия газеты")
+    print("Новый ID:", baseId)
+    print("Размер:", newspaper.Size)
+    print("Материал:", newspaper.Material)
     
     return newspaper
 end
 
--- Запуск создания
-createModifiedNewspaper()
+-- Автоматическое создание при запуске
+createExactNewspaperCopy()
+
+-- Функция для создания нескольких копий
+local function createMultipleCopies(count)
+    for i = 1, count do
+        createExactNewspaperCopy()
+        task.wait(0.3) -- Задержка между созданиями
+    end
+end
+
+-- Раскомментируйте для создания нескольких копий:
+-- createMultipleCopies(5)

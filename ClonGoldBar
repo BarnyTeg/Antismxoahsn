@@ -1,130 +1,56 @@
-local Players = game:GetService("Players")
-local player = Players.LocalPlayer
-local targetName = "Part" -- Название анализируемого объекта (например, газета)
-local scanRadius = 10 -- Радиус поиска связей (метры)
+local target = workspace:FindFirstChild("Part") -- Замените на ваш объект
+if not target then return end
 
--- Находит все объекты с указанным именем в радиусе
-local function findTargetObjects(centerPos)
-    local found = {}
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        if obj.Name == targetName and obj:IsA("BasePart") then
-            if (obj.Position - centerPos).Magnitude <= scanRadius then
-                table.insert(found, obj)
-            end
-        end
-    end
-    return found
+-- 1. Проверка атрибутов
+local attributes = {}
+for _, attr in pairs(target:GetAttributes()) do
+    table.insert(attributes, {Name = attr, Value = target:GetAttribute(attr)})
 end
 
--- Анализирует связи объекта
-local function analyzeObjectConnections(obj)
-    local connections = {}
-    
-    -- 1. Поиск прикрепленных скриптов
-    local attachedScripts = {}
-    for _, descendant in ipairs(obj:GetDescendants()) do
-        if descendant:IsA("Script") or descendant:IsA("LocalScript") then
-            table.insert(attachedScripts, {
-                Type = descendant.ClassName,
-                Name = descendant.Name,
-                Path = descendant:GetFullName()
-            })
-        end
-    end
-    
-    -- 2. Поиск RemoteEvent/RemoteFunction
-    local remoteConnections = {}
-    for _, descendant in ipairs(obj:GetDescendants()) do
-        if descendant:IsA("RemoteEvent") then
-            table.insert(remoteConnections, {
-                Type = "RemoteEvent",
-                Name = descendant.Name,
-                Path = descendant:GetFullName()
-            })
-        elseif descendant:IsA("RemoteFunction") then
-            table.insert(remoteConnections, {
-                Type = "RemoteFunction",
-                Name = descendant.Name,
-                Path = descendant:GetFullName()
-            })
-        end
-    end
-    
-    -- 3. Поиск соединений через Touched/ClickDetector
-    local physicalConnections = {}
-    if obj:FindFirstChildOfClass("ClickDetector") then
-        table.insert(physicalConnections, "ClickDetector")
-    end
-    if obj:FindFirstChildOfClass("TouchTransmitter") then
-        table.insert(physicalConnections, "TouchTransmitter")
-    end
-    
-    -- 4. Поиск в ReplicatedStorage (возможные шаблоны)
-    local templateLinks = {}
-    local repStorage = game:GetService("ReplicatedStorage")
-    for _, item in ipairs(repStorage:GetDescendants()) do
-        if item.Name == obj.Name and item:IsA("BasePart") then
-            table.insert(templateLinks, item:GetFullName())
-        end
-    end
-    
-    return {
-        Scripts = attachedScripts,
-        Remotes = remoteConnections,
-        Physics = physicalConnections,
-        Templates = templateLinks,
-        ObjectId = obj:GetDebugId()
-    }
-end
-
--- Форматирует отчет для вывода
-local function formatReport(data)
-    local report = "🔍 Анализ объекта ["..targetName.."] ("..data.ObjectId..")\n\n"
-    
-    report ..= "📜 Скрипты ("..#data.Scripts.."):\n"
-    for _, script in ipairs(data.Scripts) do
-        report ..= string.format("- %s (%s)\n  Путь: %s\n", script.Name, script.Type, script.Path)
-    end
-    
-    report ..= "\n📡 Remote соединения ("..#data.Remotes.."):\n"
-    for _, remote in ipairs(data.Remotes) do
-        report ..= string.format("- %s (%s)\n  Путь: %s\n", remote.Name, remote.Type, remote.Path)
-    end
-    
-    report ..= "\n🖱️ Физические взаимодействия ("..#data.Physics.."):\n"
-    for _, phys in ipairs(data.Physics) do
-        report ..= "- "..phys.."\n"
-    end
-    
-    report ..= "\n📦 Шаблоны в ReplicatedStorage ("..#data.Templates.."):\n"
-    for _, template in ipairs(data.Templates) do
-        report ..= "- "..template.."\n"
-    end
-    
-    return report
-end
-
--- Основная функция
-local function analyzeNearbyObjects()
-    if not player.Character then return end
-    
-    local rootPart = player.Character:FindFirstChild("HumanoidRootPart")
-    if not rootPart then return end
-    
-    local targets = findTargetObjects(rootPart.Position)
-    if #targets == 0 then
-        print("❌ Объекты '"..targetName.."' не найдены в радиусе "..scanRadius.."м")
-        return
-    end
-    
-    for _, target in ipairs(targets) do
-        local analysis = analyzeObjectConnections(target)
-        local report = formatReport(analysis)
-        
-        print(report)
-        setclipboard(report) -- Копируем в буфер обмена
+-- 2. Поиск связанных Value объектов
+local values = {}
+for _, child in ipairs(target:GetChildren()) do
+    if child:IsA("ValueBase") then
+        table.insert(values, {
+            Type = child.ClassName,
+            Name = child.Name,
+            Value = child.Value
+        })
     end
 end
 
--- Запуск анализа
-analyzeNearbyObjects()
+-- 3. Поиск в ReplicatedStorage для этого объекта
+local templates = {}
+local repStorage = game:GetService("ReplicatedStorage")
+for _, item in ipairs(repStorage:GetDescendants()) do
+    if item.Name == target.Name and item:IsA("BasePart") then
+        table.insert(templates, item:GetFullName())
+    end
+end
+
+-- 4. Формирование отчета
+local report = string.format(
+    "🔍 Анализ объекта [%s] (%s)\n\n"..
+    "📌 Атрибуты (%d):\n%s\n\n"..
+    "🔢 Значения (%d):\n%s\n\n"..
+    "📦 Шаблоны (%d):\n%s",
+    target.Name,
+    target:GetDebugId(),
+    #attributes,
+    table.concat(
+        table.tabulate(attributes, function(i,v)
+            return string.format("- %s = %s", v.Name, tostring(v.Value))
+        end), "\n"
+    ),
+    #values,
+    table.concat(
+        table.tabulate(values, function(i,v)
+            return string.format("- %s (%s) = %s", v.Name, v.Type, tostring(v.Value))
+        end), "\n"
+    ),
+    #templates,
+    table.concat(templates, "\n")
+)
+
+print(report)
+setclipboard(report)

@@ -1,19 +1,28 @@
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
--- Обработка команды "/gold" в чате
+-- Обработка команды "/gold"
 player.Chatted:Connect(function(message)
     if message:lower() == "/gold" then
         local character = player.Character
         if character and character:FindFirstChild("Head") then
             local head = character.Head
-            local goldBar = game:GetService("ReplicatedStorage"):FindFirstChild("GoldBar") -- Ищем слиток
-            if goldBar then
-                local newGold = goldBar:Clone()
-                newGold.Position = head.Position + Vector3.new(0, 5, 0) -- 5 - высота над головой
-                newGold.Parent = workspace
-                newGold.Anchored = false
-            end
+            
+            -- Создаём новый слиток (не клон, а новый объект)
+            local goldBar = Instance.new("Part")
+            goldBar.Name = "GoldBar_" .. math.random(1, 1000)
+            goldBar.Size = Vector3.new(2.667, 0.708, 1.120) -- Твои параметры
+            goldBar.Position = head.Position + Vector3.new(0, 5, 0) -- Над головой
+            goldBar.Color = Color3.fromRGB(239, 184, 56) -- Золотой цвет
+            goldBar.Material = Enum.Material.Metal
+            goldBar.Anchored = false
+            goldBar.CanCollide = true
+            goldBar.Parent = workspace
+            
+            -- Физика (чтобы падал)
+            local bodyForce = Instance.new("BodyForce")
+            bodyForce.Force = Vector3.new(0, goldBar:GetMass() * workspace.Gravity, 0)
+            bodyForce.Parent = goldBar
         end
     end
 end)

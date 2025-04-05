@@ -1,46 +1,64 @@
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
-local RunService = game:GetService("RunService")
+local originalGold = game.Workspace.RuntimeItems.GoldBar.Prop_GoldBar
 
 -- Настройки
-local SPAWN_INTERVAL = 30  -- Интервал спавна (секунды)
-local SPAWN_HEIGHT = 3      -- Высота над головой
-local originalGold = game.Workspace.RuntimeItems.GoldBar.Prop_GoldBar  -- Оригинальный слиток
+local SPAWN_DELAY = 5  -- Интервал в секундах
+local SPAWN_HEIGHT = 3 -- Высота над головой
+local MAX_GOLD_BARS = 10 -- Максимальное количество слитков
 
--- Функция создания точной копии (но с новым Instance ID)
-local function spawnExactCopy()
+local activeGoldBars = {} -- Таблица для хранения активных слитков
+
+-- Функция создания слитка с физикой
+local function spawnGoldWithPhysics()
     if not player.Character then return end
     local head = player.Character:FindFirstChild("Head")
     if not head then return end
-
-    -- 1. Полное клонирование оригинала
-    local goldCopy = originalGold:Clone()
     
-    -- 2. Уникальные идентификаторы:
-    goldCopy.Name = originalGold.Name.."_"..tick()  -- Новое имя + временная метка
+    -- Очистка старых слитков
+    for i, gold in pairs(activeGoldBars) do
+        if not gold or not gold.Parent then
+            table.remove(activeGoldBars, i)
+        end
+    end
+    
+    -- Проверка максимального количества
+    if #activeGoldBars >= MAX_GOLD_BARS then
+        local oldestGold = activeGoldBars[1]
+        if oldestGold then
+            oldestGold:Destroy()
+            table.remove(activeGoldBars, 1)
+        end
+    end
+    
+    -- Создание копии
+    local goldCopy = originalGold:Clone()
+    goldCopy.Name = "PhysicsGold_"..tostring(os.time())
     goldCopy.Position = head.Position + Vector3.new(0, SPAWN_HEIGHT, 0)
-    goldCopy.Anchored = true  -- Фиксируем позицию (не летает)
+    goldCopy.Anchored = false -- Включаем физику
+    goldCopy.CanCollide = true
     goldCopy.Parent = workspace
-
-    -- 3. Проверка: это действительно новый объект?
-    print("Создан слиток: "..goldCopy:GetFullName())
-    print("Original ID: "..tostring(originalGold:GetDebugId()))
-    print("Copy ID: "..tostring(goldCopy:GetDebugId()))
-end
-
--- Автоматический спавн
-local spawnConnection
-local function startSpawning()
-    spawnConnection = RunService.Heartbeat:Connect(function()
-        task.wait(SPAWN_INTERVAL)
-        spawnExactCopy()
+    
+    -- Добавляем физические эффекты
+    local bodyVelocity = Instance.new("BodyVelocity")
+    bodyVelocity.Velocity = Vector3.new(0, 10, 0) -- Небольшой толчок вверх
+    bodyVelocity.MaxForce = Vector3.new(0, 1000, 0)
+    bodyVelocity.Parent = goldCopy
+    game:GetService("Debris"):AddItem(bodyVelocity, 0.5)
+    
+    -- Добавляем в список активных
+    table.insert(activeGoldBars, goldCopy)
+    
+    -- Автоудаление через 60 секунд
+    delay(60, function()
+        if goldCopy and goldCopy.Parent then
+            goldCopy:Destroy()
+        end
     end)
 end
 
--- Инициализация
-player.CharacterAdded:Connect(function()
-    if spawnConnection then spawnConnection:Disconnect() end
-    startSpawning()
-end)
-
-if player.Character then startSpawning() end
+-- Основной цикл
+while true do
+    spawnGoldWithPhysics()
+    wait(SPAWN_DELAY)
+end

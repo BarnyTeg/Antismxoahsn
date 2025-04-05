@@ -1,16 +1,18 @@
 local goldBar = game.Workspace.RuntimeItems.GoldBar.Prop_GoldBar
-local function createUniqueObject()
-    local newObject = Instance.new("MeshPart")
-    newObject.Size = Vector3.new(math.random(1, 5), math.random(1, 5), math.random(1, 5))
-    newObject.BrickColor = BrickColor.new(math.random(), math.random(), math.random())
-    newObject.Material = Enum.Material.Metal
-    newObject.Transparency = math.random()
-    newObject.Position = goldBar.Position + Vector3.new(math.random(-10, 10), math.random(-10, 10), math.random(-10, 10))
-    newObject.Parent = goldBar.Parent
-    return newObject
+local function duplicateObject(object)
+    local clone = object:Clone()
+    clone.Parent = object.Parent
+    clone.Position = object.Position + Vector3.new(0, 0, 1)
+    clone.Size = Vector3.new(2.6679298877716064, 0.7086928486824036, 1.1205151081085205)
+    clone.BrickColor = BrickColor.new(0.937255, 0.721569, 0.219608)
+    clone.Material = Enum.Material.Metal
+    clone.Transparency = 0
+    clone.Name = "GoldBar_" .. tostring(math.random(1, 1000)) -- изменяем имя объекта
+    clone.Description = "Золотой слиток №" .. tostring(math.random(1, 1000)) -- изменяем описание объекта
+    return clone
 end
 
 while true do
-    local newObject = createUniqueObject()
-    wait(0.1)
+    local newObject = duplicateObject(goldBar)
+    wait(0.8)
 end

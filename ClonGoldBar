@@ -1,5 +1,5 @@
 -- Создаем новый объект Part
-local uniquePart = Instance.new("Part")
+local uniquePart = Instance.new("Partt")
 uniquePart.Name = "UniquePart_" .. tostring(math.random(1, 1000))
 uniquePart.Parent = game.Workspace
 

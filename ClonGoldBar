@@ -1,124 +1,55 @@
-local Players = game:GetService("Players")
-local player = Players.LocalPlayer
 local targetName = "Part" -- Название вашего объекта
-local scanRadius = 10 -- Метры
+local repStorage = game:GetService("ReplicatedStorage")
 
--- Функция для получения ID атрибута (внутренний идентификатор)
-local function getAttributeId(obj, attrName)
-    local success, attrId = pcall(function()
-        return tostring(obj:GetAttribute(attrName)).." | ID: "..tostring(obj:GetDebugId()).."_"..attrName
-    end)
-    return success and attrId or "N/A"
+-- Функция для поиска всех шаблонов
+local function analyzeTemplates()
+    local templates = {}
+    
+    for _, item in ipairs(repStorage:GetDescendants()) do
+        if item.Name == targetName and item:IsA("BasePart") then
+            table.insert(templates, {
+                Path = item:GetFullName(),
+                Id = item:GetDebugId() -- Реальный ID шаблона
+            })
+        end
+    end
+    
+    return templates
 end
 
--- Полный анализ объекта с ID атрибутов
-local function analyzeObjectWithIds(obj)
-    local result = {
-        Object = obj,
-        ObjectId = obj:GetDebugId(),
-        Attributes = {},
-        Values = {},
-        Scripts = {},
-        Remotes = {},
-        Physics = {},
-        Templates = {}
-    }
-    
-    -- Анализ атрибутов с ID
-    for attrName, _ in pairs(obj:GetAttributes()) do
-        table.insert(result.Attributes, {
-            Name = attrName,
-            Value = obj:GetAttribute(attrName),
-            Id = obj:GetDebugId().."_"..attrName -- Уникальный ID атрибута
-        })
-    end
-    
-    -- Остальной анализ (как в предыдущем скрипте)
-    for _, child in ipairs(obj:GetChildren()) do
-        if child:IsA("ValueBase") then
-            table.insert(result.Values, {
-                Type = child.ClassName,
-                Name = child.Name,
-                Value = child.Value,
-                Id = child:GetDebugId()
-            })
-        end
-    end
-    
-    for _, descendant in ipairs(obj:GetDescendants()) do
-        if descendant:IsA("Script") or descendant:IsA("LocalScript") then
-            table.insert(result.Scripts, {
-                Type = descendant.ClassName,
-                Name = descendant.Name,
-                Path = descendant:GetFullName(),
-                Id = descendant:GetDebugId()
-            })
-        elseif descendant:IsA("RemoteEvent") or descendant:IsA("RemoteFunction") then
-            table.insert(result.Remotes, {
-                Type = descendant.ClassName,
-                Name = descendant.Name,
-                Path = descendant:GetFullName(),
-                Id = descendant:GetDebugId()
-            })
-        end
-    end
-
-    -- Форматирование отчета с ID
+-- Форматирование отчета
+local function formatTemplateReport(templates)
     local report = string.format(
-        "🔍 Анализ объекта [%s]\n"..
-        "🆔 Object ID: %s\n\n"..
-        "🏷️ Атрибуты (%d):\n%s\n\n"..
-        "🔢 Значения (%d):\n%s\n\n"..
-        "📜 Скрипты (%d):\n%s\n\n"..
-        "📡 Remote соединения (%d):\n%s\n\n"..
-        "🖱️ Физические взаимодействия (%d):\n%s",
+        "📦 Шаблоны '%s' в ReplicatedStorage (%d):\n\n",
         targetName,
-        result.ObjectId,
-        #result.Attributes,
-        #result.Attributes > 0 and table.concat(
-            table.tabulate(result.Attributes, function(i,v)
-                return string.format("- %s = %s (ID: %s)", v.Name, tostring(v.Value), v.Id)
-            end), "\n") or "Нет",
-        #result.Values,
-        #result.Values > 0 and table.concat(
-            table.tabulate(result.Values, function(i,v)
-                return string.format("- %s (%s) = %s (ID: %s)", v.Name, v.Type, tostring(v.Value), v.Id)
-            end), "\n") or "Нет",
-        #result.Scripts,
-        #result.Scripts > 0 and table.concat(
-            table.tabulate(result.Scripts, function(i,v)
-                return string.format("- %s (%s)\n  Путь: %s\n  ID: %s", v.Name, v.Type, v.Path, v.Id)
-            end), "\n") or "Нет",
-        #result.Remotes,
-        #result.Remotes > 0 and table.concat(
-            table.tabulate(result.Remotes, function(i,v)
-                return string.format("- %s (%s)\n  Путь: %s\n  ID: %s", v.Name, v.Type, v.Path, v.Id)
-            end), "\n") or "Нет",
-        #result.Physics,
-        #result.Physics > 0 and table.concat(result.Physics, "\n") or "Нет"
+        #templates
     )
+    
+    for i, template in ipairs(templates) do
+        report ..= string.format(
+            "%d. %s\n   🆔 ID: %s\n\n",
+            i,
+            template.Path,
+            template.Id
+        )
+    end
     
     return report
 end
 
 -- Основная функция
-local function runAnalysis()
-    local character = player.Character or player.CharacterAdded:Wait()
-    local rootPart = character:FindFirstChild("HumanoidRootPart")
-    if not rootPart then return end
-
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        if obj.Name == targetName and obj:IsA("BasePart") then
-            if (obj.Position - rootPart.Position).Magnitude <= scanRadius then
-                local report = analyzeObjectWithIds(obj)
-                print(report)
-                setclipboard(report)
-                return -- Останавливаемся после первого найденного объекта
-            end
-        end
+local function runTemplateAnalysis()
+    local templates = analyzeTemplates()
+    
+    if #templates == 0 then
+        print("❌ Шаблоны '"..targetName.."' не найдены в ReplicatedStorage")
+        return
     end
-    print("❌ Объект не найден в радиусе "..scanRadius.."м")
+    
+    local report = formatTemplateReport(templates)
+    print(report)
+    setclipboard(report)
 end
 
--- Запуск
-runAnalysis()
+-- Запуск анализа
+runTemplateAnalysis()

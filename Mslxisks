@@ -3,23 +3,28 @@ local player = Players.LocalPlayer
 local targetName = "Part" -- Название вашего объекта
 local scanRadius = 10 -- Метры
 
--- 1. Получаем позицию игрока
+-- Функция для форматирования Vector3
+local function formatVector(vec)
+    return string.format("(%.2f, %.2f, %.2f)", vec.X, vec.Y, vec.Z)
+end
+
+-- Получение корневой части персонажа
 local function getPlayerRoot()
     local character = player.Character or player.CharacterAdded:Wait()
     return character:WaitForChild("HumanoidRootPart")
 end
 
--- 2. Расширенный анализ объекта
-local function deepAnalyze(obj)
+-- Анализ объекта
+local function analyzeObject(obj)
     local result = {
-        BasicInfo = {
+        Basic = {
             Name = obj.Name,
             Class = obj.ClassName,
             Id = obj:GetDebugId(),
-            Position = obj.Position,
-            Size = obj.Size,
-            Color = obj.Color,
-            Material = obj.Material,
+            Position = formatVector(obj.Position),
+            Size = formatVector(obj.Size),
+            Color = string.format("(%.2f, %.2f, %.2f)", obj.Color.R, obj.Color.G, obj.Color.B),
+            Material = obj.Material.Name,
             Transparency = obj.Transparency,
             Anchored = obj.Anchored,
             CanCollide = obj.CanCollide
@@ -27,10 +32,7 @@ local function deepAnalyze(obj)
         Attributes = {},
         Values = {},
         Scripts = {},
-        Events = {},
-        Connections = {},
         Physics = {},
-        Network = {},
         Templates = {}
     }
 
@@ -38,18 +40,29 @@ local function deepAnalyze(obj)
     for attr, value in pairs(obj:GetAttributes()) do
         table.insert(result.Attributes, {
             Name = attr,
-            Value = value,
+            Value = tostring(value),
             Type = typeof(value)
         })
     end
 
-    -- Value объекты
+    -- Value-объекты
     for _, child in ipairs(obj:GetChildren()) do
         if child:IsA("ValueBase") then
             table.insert(result.Values, {
                 Name = child.Name,
                 Type = child.ClassName,
-                Value = child.Value
+                Value = tostring(child.Value)
+            })
+        end
+    end
+
+    -- Скрипты
+    for _, script in ipairs(obj:GetDescendants()) do
+        if script:IsA("Script") or script:IsA("LocalScript") then
+            table.insert(result.Scripts, {
+                Name = script.Name,
+                Type = script.ClassName,
+                Disabled = script.Disabled
             })
         end
     end
@@ -76,50 +89,75 @@ local function deepAnalyze(obj)
     return result
 end
 
--- 3. Форматирование Vector3 для вывода
-local function formatVector3(vec)
-    return string.format("(%.2f, %.2f, %.2f)", vec.X, vec.Y, vec.Z)
-end
-
--- 4. Формирование отчета
+-- Формирование отчета
 local function generateReport(data)
     local report = ""
     
     -- Базовая информация
-    report ..= string.format("🔍 Полный анализ объекта [%s]\n", data.BasicInfo.Name)
-    report ..= string.format("🆔 ID: %s | Класс: %s\n", data.BasicInfo.Id, data.BasicInfo.Class)
-    report ..= string.format("📍 Позиция: %s\n", formatVector3(data.BasicInfo.Position))
-    report ..= string.format("📏 Размер: %s | Материал: %s\n\n", formatVector3(data.BasicInfo.Size), data.BasicInfo.Material)
+    report ..= string.format("🔍 Полный анализ объекта [%s]\n", data.Basic.Name)
+    report ..= string.format("🆔 ID: %s | Класс: %s\n", data.Basic.Id, data.Basic.Class)
+    report ..= string.format("📍 Позиция: %s\n", data.Basic.Position)
+    report ..= string.format("📏 Размер: %s | Материал: %s\n", data.Basic.Size, data.Basic.Material)
+    report ..= string.format("🎨 Цвет: %s | Прозрачность: %.2f\n", data.Basic.Color, data.Basic.Transparency)
+    report ..= string.format("📌 Anchored: %s | CanCollide: %s\n\n", 
+        tostring(data.Basic.Anchored), tostring(data.Basic.CanCollide))
     
     -- Атрибуты
-    report ..= "🏷️ Атрибуты:\n"
-    for _, attr in ipairs(data.Attributes) do
-        report ..= string.format("- %s = %s (%s)\n", attr.Name, tostring(attr.Value), attr.Type)
+    if #data.Attributes > 0 then
+        report ..= "🏷️ Атрибуты:\n"
+        for _, attr in ipairs(data.Attributes) do
+            report ..= string.format("- %s = %s (%s)\n", attr.Name, attr.Value, attr.Type)
+        end
+    else
+        report ..= "🏷️ Атрибуты: Нет\n"
     end
     
-    -- Value объекты
-    report ..= "\n🔢 Значения:\n"
-    for _, val in ipairs(data.Values) do
-        report ..= string.format("- %s (%s) = %s\n", val.Name, val.Type, tostring(val.Value))
+    -- Value-объекты
+    if #data.Values > 0 then
+        report ..= "\n🔢 Значения:\n"
+        for _, val in ipairs(data.Values) do
+            report ..= string.format("- %s (%s) = %s\n", val.Name, val.Type, val.Value)
+        end
+    else
+        report ..= "\n🔢 Значения: Нет\n"
+    end
+    
+    -- Скрипты
+    if #data.Scripts > 0 then
+        report ..= "\n📜 Скрипты:\n"
+        for _, script in ipairs(data.Scripts) do
+            report ..= string.format("- %s (%s) %s\n", 
+                script.Name, script.Type, script.Disabled and "[Disabled]" or "")
+        end
+    else
+        report ..= "\n📜 Скрипты: Нет\n"
     end
     
     -- Физика
-    report ..= "\n🖱️ Физические взаимодействия:\n"
-    for _, phys in ipairs(data.Physics) do
-        report ..= string.format("- %s\n", phys)
+    if #data.Physics > 0 then
+        report ..= "\n🖱️ Физические взаимодействия:\n"
+        for _, phys in ipairs(data.Physics) do
+            report ..= string.format("- %s\n", phys)
+        end
+    else
+        report ..= "\n🖱️ Физические взаимодействия: Нет\n"
     end
     
     -- Шаблоны
-    report ..= "\n📦 Шаблоны:\n"
-    for _, template in ipairs(data.Templates) do
-        report ..= string.format("- %s (ID: %s)\n", template.Path, template.Id)
+    if #data.Templates > 0 then
+        report ..= "\n📦 Шаблоны:\n"
+        for _, template in ipairs(data.Templates) do
+            report ..= string.format("- %s (ID: %s)\n", template.Path, template.Id)
+        end
+    else
+        report ..= "\n📦 Шаблоны: Нет\n"
     end
     
     return report
 end
 
--- 5. Основная функция
-local function runFullAnalysis()
+-- Основная функция
+local function runAnalysis()
     local root = getPlayerRoot()
     local region = Region3.new(
         root.Position - Vector3.new(scanRadius, scanRadius, scanRadius),
@@ -130,8 +168,8 @@ local function runFullAnalysis()
     local found = false
     for _, part in ipairs(parts) do
         if part.Name == targetName then
-            local analysis = deepAnalyze(part)
-            local report = generateReport(analysis)
+            local data = analyzeObject(part)
+            local report = generateReport(data)
             
             print(report)
             setclipboard(report)
@@ -145,4 +183,4 @@ local function runFullAnalysis()
 end
 
 -- Запуск анализа
-runFullAnalysis()
+runAnalysis()

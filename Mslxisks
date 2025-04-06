@@ -1,159 +1,163 @@
-local Players = game:GetService("Players")
-local player = Players.LocalPlayer
-local RunService = game:GetService("RunService")
-local HttpService = game:GetService("HttpService")
+-- Создание интерфейса
+local ScreenGui = Instance.new("ScreenGui")
+local Frame = Instance.new("Frame")
+local ScrollingFrame = Instance.new("ScrollingFrame")
+local TemplateButton = Instance.new("TextButton")
+local CopyButton = Instance.new("TextButton")
+local RadiusButton = Instance.new("TextButton")
+local TitleLabel = Instance.new("TextLabel")
 
--- Настройки
-local MAX_LOG = 500
-local LOG_INTERVAL = 3
-local BLACKLIST = {
-    "RobloxReplicatedStorage",
-    "CoreGui"
-}
+ScreenGui.Parent = game:GetService("CoreGui")
+ScreenGui.Name = "ObjectScannerGUI"
 
--- Логирование
-local Log = {}
-local function addLog(cat, event, data)
-    local entry = string.format("[%s][%s] %s: %s",
-        os.date("%H:%M:%S"),
-        cat,
-        event,
-        data
-    )
-    table.insert(Log, 1, entry)
-    if #Log > MAX_LOG then table.remove(Log) end
-    print(entry)
-end
+Frame.Parent = ScreenGui
+Frame.Size = UDim2.new(0, 300, 0, 400)
+Frame.Position = UDim2.new(0.5, -150, 0.5, -200)
+Frame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+Frame.Active = true
+Frame.Draggable = true
 
--- Безопасный мониторинг
-local function safeHook(obj, callback)
-    pcall(function()
-        if not obj or not obj.Parent then return end
-        for _,v in ipairs(BLACKLIST) do
-            if obj:IsDescendantOf(game:GetService(v)) then return end
-        end
-        callback(obj)
-    end)
-end
+TitleLabel.Parent = Frame
+TitleLabel.Text = "Object Scanner (Radius: 15m)"
+TitleLabel.Size = UDim2.new(1, 0, 0, 30)
+TitleLabel.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 
--- 1. Мониторинг инвентаря
-local function watchInventory()
-    if not player:FindFirstChild("Backpack") then return end
-    
-    local function logItem(action, item)
-        addLog("INVENTORY", action, item.Name.." | "..item.ClassName)
+ScrollingFrame.Parent = Frame
+ScrollingFrame.Size = UDim2.new(1, -10, 1, -80)
+ScrollingFrame.Position = UDim2.new(0, 5, 0, 35)
+ScrollingFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+ScrollingFrame.ScrollBarThickness = 8
+
+TemplateButton.Parent = ScrollingFrame
+TemplateButton.Size = UDim2.new(1, -10, 0, 30)
+TemplateButton.Position = UDim2.new(0, 5, 0, 5)
+TemplateButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+TemplateButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+TemplateButton.Text = "Template"
+TemplateButton.Visible = false
+
+CopyButton.Parent = Frame
+CopyButton.Size = UDim2.new(0.45, 0, 0, 30)
+CopyButton.Position = UDim2.new(0.025, 0, 1, -35)
+CopyButton.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
+CopyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+CopyButton.Text = "Copy Selected"
+
+RadiusButton.Parent = Frame
+RadiusButton.Size = UDim2.new(0.45, 0, 0, 30)
+RadiusButton.Position = UDim2.new(0.525, 0, 1, -35)
+RadiusButton.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+RadiusButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+RadiusButton.Text = "Scan Radius"
+
+local function getPlayerPosition()
+    local player = game:GetService("Players").LocalPlayer
+    if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        return player.Character.HumanoidRootPart.Position
     end
-
-    player.Backpack.ChildAdded:Connect(function(item)
-        safeHook(item, function(i) logItem("ADD", i) end)
-    end)
-    
-    player.Backpack.ChildRemoved:Connect(function(item)
-        safeHook(item, function(i) logItem("REMOVE", i) end)
-    end)
+    return Vector3.new(0, 0, 0)
 end
 
--- 2. Мониторинг персонажа
-local function watchCharacter()
-    player.CharacterAdded:Connect(function(char)
-        addLog("CHARACTER", "SPAWN", char.Name)
+local function isInRadius(obj, radius)
+    if not obj:IsA("BasePart") then
+        if obj:FindFirstChildOfClass("BasePart") then
+            obj = obj:FindFirstChildOfClass("BasePart")
+        else
+            return false
+        end
+    end
+    
+    local playerPos = getPlayerPosition()
+    return (obj.Position - playerPos).Magnitude <= radius
+end
+
+local function getDetailedInfo(obj)
+    local info = {}
+    
+    -- Основная информация
+    table.insert(info, string.format("Class: %s", obj.ClassName))
+    table.insert(info, string.format("Name: %s", obj.Name))
+    table.insert(info, string.format("Full Path: %s", obj:GetFullName()))
+    
+    -- Позиция и размер (если есть)
+    if obj:IsA("BasePart") then
+        table.insert(info, string.format("Position: (%.2f, %.2f, %.2f)", obj.Position.X, obj.Position.Y, obj.Position.Z))
+        table.insert(info, string.format("Size: (%.2f, %.2f, %.2f)", obj.Size.X, obj.Size.Y, obj.Size.Z))
+    end
+    
+    -- Свойства объекта
+    if obj:IsA("Model") then
+        table.insert(info, string.format("Children: %d", #obj:GetChildren()))
+    elseif obj:IsA("BasePart") then
+        table.insert(info, string.format("Material: %s", tostring(obj.Material)))
+        table.insert(info, string.format("CanCollide: %s", tostring(obj.CanCollide)))
+        table.insert(info, string.format("Anchored: %s", tostring(obj.Anchored)))
+        table.insert(info, string.format("Transparency: %.2f", obj.Transparency))
+    end
+    
+    -- Расстояние до игрока
+    if obj:IsA("BasePart") or obj:FindFirstChildOfClass("BasePart") then
+        local part = obj:IsA("BasePart") and obj or obj:FindFirstChildOfClass("BasePart")
+        local distance = (part.Position - getPlayerPosition()).Magnitude
+        table.insert(info, string.format("Distance: %.2f meters", distance))
+    end
+    
+    return table.concat(info, "\n")
+end
+
+local function clearObjects()
+    for _, child in ipairs(ScrollingFrame:GetChildren()) do
+        if child:IsA("TextButton") and child ~= TemplateButton then
+            child:Destroy()
+        end
+    end
+end
+
+local function scanAllObjects()
+    clearObjects()
+    
+    for _, obj in pairs(workspace:GetDescendants()) do
+        local Button = TemplateButton:Clone()
+        Button.Text = string.format("%s (%s)", obj.Name, obj.ClassName)
+        Button.Parent = ScrollingFrame
+        Button.Visible = true
         
-        local humanoid = char:WaitForChild("Humanoid")
-        humanoid:GetPropertyChangedSignal("Health"):Connect(function()
-            addLog("STATS", "HEALTH", humanoid.Health.."/"..humanoid.MaxHealth)
+        Button.MouseButton1Click:Connect(function()
+            setclipboard(getDetailedInfo(obj))
         end)
-    end)
-end
-
--- 3. Мониторинг физики
-local function watchPhysics()
-    workspace.DescendantAdded:Connect(function(obj)
-        safeHook(obj, function(o)
-            if o:IsA("BasePart") then
-                o.Touched:Connect(function(other)
-                    addLog("PHYSICS", "COLLISION", o.Name.." ↔ "..other.Name)
-                end)
-            end
-        end)
-    end)
-end
-
--- 4. Мониторинг UI
-local function watchUI()
-    local function setupButton(btn)
-        safeHook(btn, function(b)
-            if b:IsA("TextButton") or b:IsA("ImageButton") then
-                b.MouseButton1Click:Connect(function()
-                    addLog("UI", "CLICK", b:GetFullName())
-                end)
-            end
-        end)
-    end
-
-    player:WaitForChild("PlayerGui").DescendantAdded:Connect(setupButton)
-    for _,btn in ipairs(player.PlayerGui:GetDescendants()) do
-        setupButton(btn)
     end
 end
 
--- 5. Безопасный мониторинг сетевых событий
-local function watchNetwork()
-    local function logRemote(remote, ...)
-        local args = {...}
-        local strArgs = ""
-        for i,v in ipairs(args) do
-            strArgs = strArgs..(i > 1 and ", " or "")..tostring(v)
-        end
-        addLog("NETWORK", remote.ClassName..": "..remote.Name, 
-            "From: "..remote:GetFullName().." | Args: "..strArgs)
-    end
-
-    local function hookRemote(remote)
-        safeHook(remote, function(r)
-            if r:IsA("RemoteEvent") then
-                r.OnClientEvent:Connect(function(...)
-                    logRemote(r, ...)
-                end)
-            elseif r:IsA("RemoteFunction") then
-                local old = r.InvokeServer
-                if old then
-                    r.InvokeServer = function(self, ...)
-                        logRemote(r, ...)
-                        return old(self, ...)
-                    end
-                end
-            end
-        end)
-    end
-
-    for _,obj in ipairs(game:GetDescendants()) do
-        if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
-            hookRemote(obj)
-        end
-    end
-
-    game.DescendantAdded:Connect(function(obj)
-        if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
-            hookRemote(obj)
-        end
-    end)
-end
-
--- Запуск
-watchInventory()
-watchCharacter()
-watchPhysics()
-watchUI()
-watchNetwork()
-
-addLog("SYSTEM", "START", "Logger activated")
-
--- Автоочистка
-while true do
-    wait(LOG_INTERVAL)
-    if #Log > MAX_LOG * 0.9 then
-        for i = MAX_LOG, #Log do
-            Log[i] = nil
+local function scanRadiusObjects(radius)
+    clearObjects()
+    
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if isInRadius(obj, radius) then
+            local Button = TemplateButton:Clone()
+            
+            -- Добавляем расстояние к имени кнопки
+            local part = obj:IsA("BasePart") and obj or obj:FindFirstChildOfClass("BasePart")
+            local distance = part and math.floor((part.Position - getPlayerPosition()).Magnitude) or "?"
+            
+            Button.Text = string.format("%s (%s) [%dm]", obj.Name, obj.ClassName, distance)
+            Button.Parent = ScrollingFrame
+            Button.Visible = true
+            
+            Button.MouseButton1Click:Connect(function()
+                setclipboard(getDetailedInfo(obj))
+            end)
         end
     end
 end
+
+-- Инициализация
+scanAllObjects()
+
+CopyButton.MouseButton1Click:Connect(function()
+    setclipboard("Выберите объект для копирования информации")
+end)
+
+RadiusButton.MouseButton1Click:Connect(function()
+    scanRadiusObjects(15) -- 15 метров радиус
+end)

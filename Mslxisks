@@ -1,60 +1,88 @@
-local radius = 15 -- Радиус поиска в метрах
+local radius = 15 -- радиус в метрах
 local player = game:GetService("Players").LocalPlayer
 
--- Функция для безопасного получения DebugId
-local function getSafeId(obj)
-    local success, id = pcall(function() return obj:GetDebugId() end)
+-- Безопасное получение ID
+local function getObjectId(obj)
+    local success, id = pcall(function() return obj:GetDebugId(2) end)
     return success and id or "N/A"
+end
+
+-- Безопасная проверка радиуса
+local function isInRadius(obj, centerPos)
+    local success, position = pcall(function()
+        if obj:IsA("BasePart") then
+            return obj.Position
+        elseif obj:IsA("Model") then
+            return obj.PrimaryPart and obj.PrimaryPart.Position or nil
+        else
+            local part = obj:FindFirstChildWhichIsA("BasePart")
+            return part and part.Position or nil
+        end
+    end)
+    return success and position and (position - centerPos).Magnitude <= radius
+end
+
+-- Получение информации об объекте
+local function getObjectInfo(obj)
+    local info = {
+        "🔷 "..obj.Name.." ("..obj.ClassName..")",
+        "🆔 ID: "..getObjectId(obj),
+        "📁 Путь: "..obj:GetFullName()
+    }
+    
+    -- Дополнительные свойства
+    if obj:IsA("BasePart") then
+        table.insert(info, "📍 Позиция: "..tostring(obj.Position))
+        table.insert(info, "📏 Размер: "..tostring(obj.Size))
+    end
+    
+    -- Информация о детях
+    local children = obj:GetChildren()
+    if #children > 0 then
+        table.insert(info, "🧒 Дети ("..#children.."):")
+        for _, child in ipairs(children) do
+            table.insert(info, "   ├─ "..child.Name.." ("..child.ClassName..") | ID: "..getObjectId(child))
+        end
+    end
+    
+    return table.concat(info, "\n")
 end
 
 -- Основная функция сканирования
 local function scanArea()
-    local result = {"=== ОБЪЕКТЫ В РАДИУСЕ "..radius.."м ==="}
     local char = player.Character
-    local rootPart = char and char:FindFirstChild("HumanoidRootPart")
+    if not char then return end
     
-    if not rootPart then
-        print("❌ Ошибка: не найден HumanoidRootPart")
-        return
-    end
-
+    local rootPart = char:FindFirstChild("HumanoidRootPart")
+    if not rootPart then return end
+    
     local playerPos = rootPart.Position
-
+    local result = {"=== ОБЪЕКТЫ В РАДИУСЕ "..radius.."м ==="}
+    local count = 0
+    
     for _, obj in pairs(workspace:GetDescendants()) do
-        local objRoot = obj:IsA("BasePart") and obj or obj:FindFirstChildOfClass("BasePart") or obj.PrimaryPart
-        if objRoot and (objRoot.Position - playerPos).Magnitude <= radius then
-            -- Информация о родительском объекте
-            table.insert(result, string.format(
-                "\n🔷 %s (%s) | ID: %s\n   Путь: %s",
-                obj.Name,
-                obj.ClassName,
-                getSafeId(obj),
-                obj:GetFullName()
-            ))
-
-            -- Информация о детях
-            if #obj:GetChildren() > 0 then
-                table.insert(result, "   ├─ Дети:")
-                for _, child in ipairs(obj:GetChildren()) do
-                    table.insert(result, string.format(
-                        "   │  %s (%s) | ID: %s",
-                        child.Name,
-                        child.ClassName,
-                        getSafeId(child)
-                    ))
-                end
+        if isInRadius(obj, playerPos) then
+            local success, info = pcall(getObjectInfo, obj)
+            if success then
+                table.insert(result, "\n"..info)
+                count = count + 1
             end
         end
     end
-
-    -- Вывод результатов
-    table.insert(result, "\n=== СКАНИРОВАНИЕ ЗАВЕРШЕНО ===")
+    
+    table.insert(result, "\n=== НАЙДЕНО ОБЪЕКТОВ: "..count.." ===")
     local output = table.concat(result, "\n")
     
-    setclipboard(output) -- Копируем в буфер
-    print(output) -- Выводим в консоль
+    setclipboard(output)
+    print(output)
     print("\n✅ Данные скопированы в буфер обмена!")
 end
 
--- Автозапуск
+-- Запуск сканирования
 scanArea()
+
+-- Автоматическое обновление (по желанию)
+while true do
+    wait(30)
+    scanArea()
+end

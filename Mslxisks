@@ -14,8 +14,8 @@ local function getPlayerRoot()
     return character:WaitForChild("HumanoidRootPart")
 end
 
--- Анализ объекта
-local function analyzeObject(obj)
+-- Глубокий анализ объекта
+local function deepAnalyze(obj)
     local result = {
         Basic = {
             Name = obj.Name,
@@ -27,137 +27,177 @@ local function analyzeObject(obj)
             Material = obj.Material.Name,
             Transparency = obj.Transparency,
             Anchored = obj.Anchored,
-            CanCollide = obj.CanCollide
+            CanCollide = obj.CanCollide,
+            Mass = obj:GetMass(),
+            Shape = obj.Shape.Name,
+            Reflectance = obj.Reflectance,
+            Elasticity = obj.Elasticity,
+            Friction = obj.Friction
         },
         Attributes = {},
         Values = {},
         Scripts = {},
         Physics = {},
-        Templates = {}
+        Network = {},
+        Templates = {},
+        Connections = {}
     }
 
-    -- Атрибуты
+    -- Анализ атрибутов
     for attr, value in pairs(obj:GetAttributes()) do
         table.insert(result.Attributes, {
             Name = attr,
             Value = tostring(value),
-            Type = typeof(value)
+            Type = typeof(value),
+            Id = obj:GetDebugId().."_"..attr -- Уникальный ID атрибута
         })
     end
 
-    -- Value-объекты
+    -- Анализ дочерних объектов
     for _, child in ipairs(obj:GetChildren()) do
+        -- Value-объекты
         if child:IsA("ValueBase") then
             table.insert(result.Values, {
                 Name = child.Name,
                 Type = child.ClassName,
-                Value = tostring(child.Value)
+                Value = tostring(child.Value),
+                Id = child:GetDebugId()
+            })
+        end
+        
+        -- Сетевые объекты
+        if child:IsA("RemoteEvent") or child:IsA("RemoteFunction") then
+            table.insert(result.Network, {
+                Name = child.Name,
+                Type = child.ClassName,
+                Id = child:GetDebugId()
+            })
+        end
+        
+        -- Физические компоненты
+        if child:IsA("BodyMover") then
+            table.insert(result.Physics, {
+                Name = child.Name,
+                Type = child.ClassName,
+                Id = child:GetDebugId()
             })
         end
     end
 
-    -- Скрипты
+    -- Анализ всех скриптов
     for _, script in ipairs(obj:GetDescendants()) do
         if script:IsA("Script") or script:IsA("LocalScript") then
+            local connections = {}
+            
+            -- Попытка получить соединения (требует Synapse X или аналоги)
+            pcall(function()
+                for _, conn in ipairs(getconnections(script.Changed)) do
+                    table.insert(connections, tostring(conn.Function))
+                end
+            end)
+            
             table.insert(result.Scripts, {
                 Name = script.Name,
                 Type = script.ClassName,
-                Disabled = script.Disabled
+                Disabled = script.Disabled,
+                Source = script.Enabled and script.Source or "[disabled]",
+                Connections = connections,
+                Id = script:GetDebugId()
             })
         end
     end
 
-    -- Физические взаимодействия
-    if obj:FindFirstChildOfClass("TouchTransmitter") then
-        table.insert(result.Physics, "TouchTransmitter")
-    end
-    if obj:FindFirstChildOfClass("ClickDetector") then
-        table.insert(result.Physics, "ClickDetector")
-    end
-
-    -- Поиск шаблонов
+    -- Поиск шаблонов с дополнительной информацией
     local repStorage = game:GetService("ReplicatedStorage")
     for _, item in ipairs(repStorage:GetDescendants()) do
         if item.Name == obj.Name and item:IsA("BasePart") then
-            table.insert(result.Templates, {
+            local templateInfo = {
                 Path = item:GetFullName(),
-                Id = item:GetDebugId()
-            })
+                Id = item:GetDebugId(),
+                Size = formatVector(item.Size),
+                Material = item.Material.Name
+            }
+            table.insert(result.Templates, templateInfo)
         end
     end
 
     return result
 end
 
--- Формирование отчета
-local function generateReport(data)
+-- Формирование расширенного отчета
+local function generateEnhancedReport(data)
     local report = ""
     
-    -- Базовая информация
-    report ..= string.format("🔍 Полный анализ объекта [%s]\n", data.Basic.Name)
-    report ..= string.format("🆔 ID: %s | Класс: %s\n", data.Basic.Id, data.Basic.Class)
+    -- Заголовок
+    report ..= string.format("🔍 УГЛУБЛЕННЫЙ АНАЛИЗ ОБЪЕКТА [%s]\n", data.Basic.Name)
+    report ..= string.rep("=", 50) .. "\n"
+    
+    -- Основные свойства
+    report ..= "📌 ОСНОВНЫЕ СВОЙСТВА:\n"
+    report ..= string.format("🆔 ID: %s\n", data.Basic.Id)
     report ..= string.format("📍 Позиция: %s\n", data.Basic.Position)
-    report ..= string.format("📏 Размер: %s | Материал: %s\n", data.Basic.Size, data.Basic.Material)
-    report ..= string.format("🎨 Цвет: %s | Прозрачность: %.2f\n", data.Basic.Color, data.Basic.Transparency)
-    report ..= string.format("📌 Anchored: %s | CanCollide: %s\n\n", 
-        tostring(data.Basic.Anchored), tostring(data.Basic.CanCollide))
+    report ..= string.format("📏 Размер: %s | Форма: %s\n", data.Basic.Size, data.Basic.Shape)
+    report ..= string.format("🎨 Цвет: %s | Материал: %s\n", data.Basic.Color, data.Basic.Material)
+    report ..= string.format("⚖️ Масса: %.2f | Отражение: %.2f\n", data.Basic.Mass, data.Basic.Reflectance)
+    report ..= string.format("🔘 Anchored: %s | CanCollide: %s\n", 
+        data.Basic.Anchored and "Да" or "Нет", 
+        data.Basic.CanCollide and "Да" or "Нет")
+    report ..= string.format("🌀 Упругость: %.2f | Трение: %.2f\n\n", 
+        data.Basic.Elasticity, data.Basic.Friction)
     
-    -- Атрибуты
-    if #data.Attributes > 0 then
-        report ..= "🏷️ Атрибуты:\n"
-        for _, attr in ipairs(data.Attributes) do
-            report ..= string.format("- %s = %s (%s)\n", attr.Name, attr.Value, attr.Type)
-        end
-    else
-        report ..= "🏷️ Атрибуты: Нет\n"
-    end
+    -- Детализированные разделы
+    local sections = {
+        {title = "🏷️ АТРИБУТЫ", data = data.Attributes, func = function(item)
+            return string.format("- %s = %s (%s) [ID: %s]", 
+                item.Name, item.Value, item.Type, item.Id)
+        end},
+        
+        {title = "🔢 ЗНАЧЕНИЯ", data = data.Values, func = function(item)
+            return string.format("- %s (%s) = %s [ID: %s]", 
+                item.Name, item.Type, item.Value, item.Id)
+        end},
+        
+        {title = "📜 СКРИПТЫ", data = data.Scripts, func = function(item)
+            local conns = #item.Connections > 0 and 
+                string.format(" [Соединений: %d]", #item.Connections) or ""
+            return string.format("- %s (%s)%s\n   ID: %s\n   %s", 
+                item.Name, item.Type, conns, item.Id,
+                item.Disabled and "[DISABLED]" or item.Source:sub(1, 100).."...")
+        end},
+        
+        {title = "🌐 СЕТЕВЫЕ ОБЪЕКТЫ", data = data.Network, func = function(item)
+            return string.format("- %s (%s) [ID: %s]", 
+                item.Name, item.Type, item.Id)
+        end},
+        
+        {title = "⚙️ ФИЗИЧЕСКИЕ КОМПОНЕНТЫ", data = data.Physics, func = function(item)
+            return string.format("- %s (%s) [ID: %s]", 
+                item.Name, item.Type, item.Id)
+        end},
+        
+        {title = "📦 ШАБЛОНЫ", data = data.Templates, func = function(item)
+            return string.format("- %s\n   ID: %s | Размер: %s | Материал: %s", 
+                item.Path, item.Id, item.Size, item.Material)
+        end}
+    }
     
-    -- Value-объекты
-    if #data.Values > 0 then
-        report ..= "\n🔢 Значения:\n"
-        for _, val in ipairs(data.Values) do
-            report ..= string.format("- %s (%s) = %s\n", val.Name, val.Type, val.Value)
+    -- Генерация разделов
+    for _, section in ipairs(sections) do
+        if #section.data > 0 then
+            report ..= "\n" .. section.title .. ":\n"
+            for _, item in ipairs(section.data) do
+                report ..= section.func(item) .. "\n"
+            end
+        else
+            report ..= "\n" .. section.title .. ": Нет\n"
         end
-    else
-        report ..= "\n🔢 Значения: Нет\n"
-    end
-    
-    -- Скрипты
-    if #data.Scripts > 0 then
-        report ..= "\n📜 Скрипты:\n"
-        for _, script in ipairs(data.Scripts) do
-            report ..= string.format("- %s (%s) %s\n", 
-                script.Name, script.Type, script.Disabled and "[Disabled]" or "")
-        end
-    else
-        report ..= "\n📜 Скрипты: Нет\n"
-    end
-    
-    -- Физика
-    if #data.Physics > 0 then
-        report ..= "\n🖱️ Физические взаимодействия:\n"
-        for _, phys in ipairs(data.Physics) do
-            report ..= string.format("- %s\n", phys)
-        end
-    else
-        report ..= "\n🖱️ Физические взаимодействия: Нет\n"
-    end
-    
-    -- Шаблоны
-    if #data.Templates > 0 then
-        report ..= "\n📦 Шаблоны:\n"
-        for _, template in ipairs(data.Templates) do
-            report ..= string.format("- %s (ID: %s)\n", template.Path, template.Id)
-        end
-    else
-        report ..= "\n📦 Шаблоны: Нет\n"
     end
     
     return report
 end
 
--- Основная функция
-local function runAnalysis()
+-- Основная функция анализа
+local function runDeepAnalysis()
     local root = getPlayerRoot()
     local region = Region3.new(
         root.Position - Vector3.new(scanRadius, scanRadius, scanRadius),
@@ -168,12 +208,15 @@ local function runAnalysis()
     local found = false
     for _, part in ipairs(parts) do
         if part.Name == targetName then
-            local data = analyzeObject(part)
-            local report = generateReport(data)
+            local data = deepAnalyze(part)
+            local report = generateEnhancedReport(data)
             
             print(report)
             setclipboard(report)
             found = true
+            
+            -- Останавливаемся после первого найденного объекта
+            break
         end
     end
     
@@ -183,4 +226,4 @@ local function runAnalysis()
 end
 
 -- Запуск анализа
-runAnalysis()
+runDeepAnalysis()

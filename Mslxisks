@@ -1,99 +1,36 @@
-local radius = 15 -- радиус сканирования в метрах
-local player = game:GetService("Players").LocalPlayer
+local bandage = workspace:WaitForChild("RuntimeItems"):WaitForChild("Bandage")
 
--- Безопасное получение информации об объекте
-local function getObjectInfo(obj)
-    local info = {}
+-- Функция для безопасного чтения скриптов
+local function scanScripts(object)
+    print("🔍 Анализ объекта:", object:GetFullName())
     
-    -- Основные свойства
-    table.insert(info, "🔷 "..obj.Name.." ("..obj.ClassName..")")
+    -- Проверяем все виды скриптов
+    local scriptTypes = {"Script", "LocalScript", "ModuleScript"}
     
-    -- Пытаемся получить ID (с защитой от ошибок)
-    local success, id = pcall(function() return obj:GetDebugId() end)
-    table.insert(info, "🆔 ID: "..(success and id or "N/A"))
-    
-    table.insert(info, "📁 Путь: "..obj:GetFullName())
-    
-    -- Физические свойства (если есть)
-    if obj:IsA("BasePart") then
-        table.insert(info, "📍 Позиция: "..tostring(obj.Position))
-        table.insert(info, "📏 Размер: "..tostring(obj.Size))
-    end
-    
-    -- Дочерние объекты
-    local children = {}
-    for _, child in pairs(obj:GetChildren()) do
-        table.insert(children, "   ├─ "..child.Name.." ("..child.ClassName..")")
-    end
-    
-    if #children > 0 then
-        table.insert(info, "🧒 Дети ("..#children.."):")
-        for _, childInfo in ipairs(children) do
-            table.insert(info, childInfo)
-        end
-    end
-    
-    return table.concat(info, "\n")
-end
-
--- Основная функция сканирования
-local function scanArea()
-    -- Проверяем наличие персонажа
-    if not player.Character then
-        print("❌ Персонаж не найден")
-        return
-    end
-    
-    local humanoidRoot = player.Character:FindFirstChild("HumanoidRootPart")
-    if not humanoidRoot then
-        print("❌ Не найден HumanoidRootPart")
-        return
-    end
-    
-    local playerPos = humanoidRoot.Position
-    local result = {"=== ОБЪЕКТЫ В РАДИУСЕ "..radius.."м ==="}
-    local count = 0
-    
-    -- Сканируем все объекты
-    for _, obj in pairs(workspace:GetDescendants()) do
-        local objPos
-        local success = pcall(function()
-            if obj:IsA("BasePart") then
-                objPos = obj.Position
-            elseif obj:IsA("Model") then
-                if obj.PrimaryPart then
-                    objPos = obj.PrimaryPart.Position
-                end
-            else
-                local part = obj:FindFirstChildOfClass("BasePart")
-                if part then
-                    objPos = part.Position
-                end
+    for _, scriptType in ipairs(scriptTypes) do
+        for _, script in ipairs(object:GetChildren()) do
+            if script:IsA(scriptType) then
+                print("\n📜 Найден скрипт:")
+                print("   Тип:", script.ClassName)
+                print("   Имя:", script.Name)
+                print("   Путь:", script:GetFullName())
+                
+                -- Безопасное чтение исходного кода
+                pcall(function()
+                    print("   Код:")
+                    print("   " .. string.rep("-", 30))
+                    print(script.Source)
+                    print("   " .. string.rep("-", 30))
+                end)
             end
-        end)
-        
-        if success and objPos and (objPos - playerPos).Magnitude <= radius then
-            local objInfo = getObjectInfo(obj)
-            table.insert(result, "\n"..objInfo)
-            count = count + 1
         end
     end
-    
-    -- Формируем итоговый результат
-    table.insert(result, "\n=== НАЙДЕНО ОБЪЕКТОВ: "..count.." ===")
-    local output = table.concat(result, "\n")
-    
-    -- Копируем и выводим
-    setclipboard(output)
-    print(output)
-    print("\n✅ Данные скопированы в буфер обмена!")
 end
 
--- Запускаем сканирование
-scanArea()
-
--- Опционально: автоматическое обновление каждые 30 секунд
-while true do
-    wait(30)
-    scanArea()
+-- Анализируем сам бандаж и все его дочерние объекты
+scanScripts(bandage)
+for _, child in ipairs(bandage:GetDescendants()) do
+    scanScripts(child)
 end
+
+print("\n✅ Анализ завершен! Проверьте консоль (F9)")

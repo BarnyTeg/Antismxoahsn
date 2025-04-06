@@ -1,82 +1,60 @@
-local radius = 15
-local includeChildren = true
+local radius = 15 -- Радиус поиска в метрах
+local player = game:GetService("Players").LocalPlayer
 
-local function getPlayerPosition()
-    local player = game:GetService("Players").LocalPlayer
-    return player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") 
-        and player.Character.HumanoidRootPart.Position or Vector3.new(0, 0, 0)
+-- Функция для безопасного получения DebugId
+local function getSafeId(obj)
+    local success, id = pcall(function() return obj:GetDebugId() end)
+    return success and id or "N/A"
 end
 
-local function safeToString(value)
-    local success, result = pcall(function()
-        if typeof(value) == "Instance" then
-            return value:GetFullName()
-        elseif typeof(value) == "Vector3" then
-            return string.format("(%.2f, %.2f, %.2f)", value.X, value.Y, value.Z)
-        elseif typeof(value) == "Color3" then
-            return string.format("(%.2f, %.2f, %.2f)", value.R, value.G, value.B)
-        else
-            return tostring(value)
-        end
-    end)
-    return success and result or "N/A"
-end
-
-local function getExtendedInfo(obj)
-    local info = {}
-    
-    -- Базовые свойства
-    table.insert(info, "🔹 Class: "..safeToString(obj.ClassName))
-    table.insert(info, "🔹 Name: "..safeToString(obj.Name))
-    table.insert(info, "🔹 FullPath: "..safeToString(obj:GetFullName()))
-    table.insert(info, "🔹 RobloxID: "..safeToString(obj:GetDebugId()))
-    
-    -- Физические свойства
-    if obj:IsA("BasePart") then
-        table.insert(info, "📏 Position: "..safeToString(obj.Position))
-        table.insert(info, "📐 Size: "..safeToString(obj.Size))
-        table.insert(info, "🧱 Material: "..safeToString(obj.Material))
-        table.insert(info, "🔘 Anchored: "..safeToString(obj.Anchored))
-        table.insert(info, "💥 CanCollide: "..safeToString(obj.CanCollide))
-        table.insert(info, "👁️ Transparency: "..safeToString(obj.Transparency))
-    end
-    
-    -- Для моделей
-    if obj:IsA("Model") then
-        table.insert(info, "🧩 PrimaryPart: "..safeToString(obj.PrimaryPart))
-        table.insert(info, "🧒 Children: "..safeToString(#obj:GetChildren()))
-    end
-    
-    -- Расстояние до игрока
-    local rootPart = obj:IsA("BasePart") and obj or (obj:IsA("Model") and obj.PrimaryPart) or obj:FindFirstChildOfClass("BasePart")
-    if rootPart then
-        local dist = (rootPart.Position - getPlayerPosition()).Magnitude
-        table.insert(info, "📏 Distance: "..string.format("%.1f", dist).."m")
-    end
-    
-    return table.concat(info, "\n")
-end
-
+-- Основная функция сканирования
 local function scanArea()
-    local result = {"=== SCAN RESULTS ==="}
-    local count = 0
+    local result = {"=== ОБЪЕКТЫ В РАДИУСЕ "..radius.."м ==="}
+    local char = player.Character
+    local rootPart = char and char:FindFirstChild("HumanoidRootPart")
     
+    if not rootPart then
+        print("❌ Ошибка: не найден HumanoidRootPart")
+        return
+    end
+
+    local playerPos = rootPart.Position
+
     for _, obj in pairs(workspace:GetDescendants()) do
-        local rootPart = obj:IsA("BasePart") and obj or (obj:IsA("Model") and obj.PrimaryPart) or obj:FindFirstChildOfClass("BasePart")
-        if rootPart and (rootPart.Position - getPlayerPosition()).Magnitude <= radius then
-            local success, info = pcall(getExtendedInfo, obj)
-            table.insert(result, "\n"..(success and info or "🚫 Failed to get info for: "..safeToString(obj.Name)))
-            count = count + 1
+        local objRoot = obj:IsA("BasePart") and obj or obj:FindFirstChildOfClass("BasePart") or obj.PrimaryPart
+        if objRoot and (objRoot.Position - playerPos).Magnitude <= radius then
+            -- Информация о родительском объекте
+            table.insert(result, string.format(
+                "\n🔷 %s (%s) | ID: %s\n   Путь: %s",
+                obj.Name,
+                obj.ClassName,
+                getSafeId(obj),
+                obj:GetFullName()
+            ))
+
+            -- Информация о детях
+            if #obj:GetChildren() > 0 then
+                table.insert(result, "   ├─ Дети:")
+                for _, child in ipairs(obj:GetChildren()) do
+                    table.insert(result, string.format(
+                        "   │  %s (%s) | ID: %s",
+                        child.Name,
+                        child.ClassName,
+                        getSafeId(child)
+                    ))
+                end
+            end
         end
     end
-    
-    table.insert(result, string.format("\n=== Found %d objects in %dm radius ===", count, radius))
-    
+
+    -- Вывод результатов
+    table.insert(result, "\n=== СКАНИРОВАНИЕ ЗАВЕРШЕНО ===")
     local output = table.concat(result, "\n")
-    setclipboard(output)
-    print(output)
-    print("\n[SUCCESS] Data copied to clipboard!")
+    
+    setclipboard(output) -- Копируем в буфер
+    print(output) -- Выводим в консоль
+    print("\n✅ Данные скопированы в буфер обмена!")
 end
 
--- Первый запуск
+-- Автозапуск
 scanArea()

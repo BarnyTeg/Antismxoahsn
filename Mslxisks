@@ -3,83 +3,135 @@ local player = Players.LocalPlayer
 local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
 
--- Настройки логгирования
-local MAX_LOG_ENTRIES = 1000
-local LOG_INTERVAL = 2 -- секунды
-local LOG_TO_CLIPBOARD = true
+-- Настройки
+local MAX_LOG = 500
+local LOG_INTERVAL = 3
+local BLACKLIST = {
+    "RobloxReplicatedStorage",
+    "CoreGui"
+}
 
--- Глобальные переменные
-local ActionLog = {}
-local LastLogTime = os.time()
-local KnownObjects = {}
-
--- Безопасное выполнение
-local function safeCall(func, ...)
-    local success, result = pcall(func, ...)
-    if not success then return nil end
-    return result
-end
-
--- Форматирование значений
-local function formatValue(value)
-    local valueType = typeof(value)
-    
-    if valueType == "table" then
-        return "{...}"
-    elseif valueType == "Instance" then
-        return value:GetFullName().." ("..value.ClassName..")"
-    elseif valueType == "Vector3" then
-        return string.format("(%.1f, %.1f, %.1f)", value.X, value.Y, value.Z)
-    else
-        return tostring(value)
-    end
-end
-
--- Логирование события
-local function logEvent(category, action, details)
-    local timestamp = os.date("%H:%M:%S")
-    local entry = string.format("[%s][%s] %s: %s", timestamp, category, action, details)
-    
-    table.insert(ActionLog, 1, entry)
-    if #ActionLog > MAX_LOG_ENTRIES then
-        table.remove(ActionLog)
-    end
-    
+-- Логирование
+local Log = {}
+local function addLog(cat, event, data)
+    local entry = string.format("[%s][%s] %s: %s",
+        os.date("%H:%M:%S"),
+        cat,
+        event,
+        data
+    )
+    table.insert(Log, 1, entry)
+    if #Log > MAX_LOG then table.remove(Log) end
     print(entry)
+end
+
+-- Безопасный мониторинг
+local function safeHook(obj, callback)
+    pcall(function()
+        if not obj or not obj.Parent then return end
+        for _,v in ipairs(BLACKLIST) do
+            if obj:IsDescendantOf(game:GetService(v)) then return end
+        end
+        callback(obj)
+    end)
+end
+
+-- 1. Мониторинг инвентаря
+local function watchInventory()
+    if not player:FindFirstChild("Backpack") then return end
     
-    -- Автосохранение
-    if os.time() - LastLogTime >= LOG_INTERVAL and LOG_TO_CLIPBOARD then
-        safeCall(function()
-            setclipboard(table.concat(ActionLog, "\n"))
+    local function logItem(action, item)
+        addLog("INVENTORY", action, item.Name.." | "..item.ClassName)
+    end
+
+    player.Backpack.ChildAdded:Connect(function(item)
+        safeHook(item, function(i) logItem("ADD", i) end)
+    end)
+    
+    player.Backpack.ChildRemoved:Connect(function(item)
+        safeHook(item, function(i) logItem("REMOVE", i) end)
+    end)
+end
+
+-- 2. Мониторинг персонажа
+local function watchCharacter()
+    player.CharacterAdded:Connect(function(char)
+        addLog("CHARACTER", "SPAWN", char.Name)
+        
+        local humanoid = char:WaitForChild("Humanoid")
+        humanoid:GetPropertyChangedSignal("Health"):Connect(function()
+            addLog("STATS", "HEALTH", humanoid.Health.."/"..humanoid.MaxHealth)
         end)
-        LastLogTime = os.time()
+    end)
+end
+
+-- 3. Мониторинг физики
+local function watchPhysics()
+    workspace.DescendantAdded:Connect(function(obj)
+        safeHook(obj, function(o)
+            if o:IsA("BasePart") then
+                o.Touched:Connect(function(other)
+                    addLog("PHYSICS", "COLLISION", o.Name.." ↔ "..other.Name)
+                end)
+            end
+        end)
+    end)
+end
+
+-- 4. Мониторинг UI
+local function watchUI()
+    local function setupButton(btn)
+        safeHook(btn, function(b)
+            if b:IsA("TextButton") or b:IsA("ImageButton") then
+                b.MouseButton1Click:Connect(function()
+                    addLog("UI", "CLICK", b:GetFullName())
+                end)
+            end
+        end)
+    end
+
+    player:WaitForChild("PlayerGui").DescendantAdded:Connect(setupButton)
+    for _,btn in ipairs(player.PlayerGui:GetDescendants()) do
+        setupButton(btn)
     end
 end
 
--- 1. Мониторинг сетевых событий
-local function monitorNetwork()
-    local function hookRemote(remote)
-        if remote:IsA("RemoteEvent") then
-            remote.OnClientEvent:Connect(function(...)
-                logEvent("NETWORK", "EVENT: "..remote.Name, remote:GetFullName())
-            end)
-        elseif remote:IsA("RemoteFunction") then
-            local oldInvoke = remote.InvokeServer
-            remote.InvokeServer = function(self, ...)
-                logEvent("NETWORK", "CALL: "..remote.Name, remote:GetFullName())
-                return oldInvoke(self, ...)
-            end
+-- 5. Безопасный мониторинг сетевых событий
+local function watchNetwork()
+    local function logRemote(remote, ...)
+        local args = {...}
+        local strArgs = ""
+        for i,v in ipairs(args) do
+            strArgs = strArgs..(i > 1 and ", " or "")..tostring(v)
         end
+        addLog("NETWORK", remote.ClassName..": "..remote.Name, 
+            "From: "..remote:GetFullName().." | Args: "..strArgs)
     end
 
-    -- Хук существующих объектов
-    for _, obj in ipairs(game:GetDescendants()) do
+    local function hookRemote(remote)
+        safeHook(remote, function(r)
+            if r:IsA("RemoteEvent") then
+                r.OnClientEvent:Connect(function(...)
+                    logRemote(r, ...)
+                end)
+            elseif r:IsA("RemoteFunction") then
+                local old = r.InvokeServer
+                if old then
+                    r.InvokeServer = function(self, ...)
+                        logRemote(r, ...)
+                        return old(self, ...)
+                    end
+                end
+            end
+        end)
+    end
+
+    for _,obj in ipairs(game:GetDescendants()) do
         if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
             hookRemote(obj)
         end
     end
 
-    -- Хук новых объектов
     game.DescendantAdded:Connect(function(obj)
         if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
             hookRemote(obj)
@@ -87,76 +139,21 @@ local function monitorNetwork()
     end)
 end
 
--- 2. Мониторинг инвентаря
-local function monitorInventory()
-    if not player:FindFirstChild("Backpack") then return end
-    
-    player.Backpack.ChildAdded:Connect(function(item)
-        logEvent("INVENTORY", "ADDED", item.Name.." ("..item.ClassName..")")
-    end)
-    
-    player.Backpack.ChildRemoved:Connect(function(item)
-        logEvent("INVENTORY", "REMOVED", item.Name.." ("..item.ClassName..")")
-    end)
-end
+-- Запуск
+watchInventory()
+watchCharacter()
+watchPhysics()
+watchUI()
+watchNetwork()
 
--- 3. Мониторинг персонажа
-local function monitorCharacter()
-    player.CharacterAdded:Connect(function(character)
-        logEvent("CHARACTER", "SPAWNED", character.Name)
-        
-        local humanoid = character:WaitForChild("Humanoid")
-        humanoid:GetPropertyChangedSignal("Health"):Connect(function()
-            logEvent("STATS", "HEALTH", humanoid.Health.."/"..humanoid.MaxHealth)
-        end)
-    end)
-end
+addLog("SYSTEM", "START", "Logger activated")
 
--- 4. Мониторинг физики
-local function monitorPhysics()
-    workspace.DescendantAdded:Connect(function(obj)
-        if obj:IsA("BasePart") then
-            obj.Touched:Connect(function(otherPart)
-                logEvent("PHYSICS", "COLLISION", obj.Name.." ↔ "..otherPart.Name)
-            end)
-        end
-    end)
-end
-
--- 5. Мониторинг интерфейса
-local function monitorGUI()
-    local gui = player:WaitForChild("PlayerGui")
-    
-    local function setupButton(btn)
-        if btn:IsA("TextButton") or btn:IsA("ImageButton") then
-            btn.MouseButton1Click:Connect(function()
-                logEvent("UI", "CLICK", btn:GetFullName())
-            end)
-        end
-    end
-    
-    for _, element in ipairs(gui:GetDescendants()) do
-        setupButton(element)
-    end
-    
-    gui.DescendantAdded:Connect(setupButton)
-end
-
--- Инициализация
-monitorNetwork()
-monitorInventory()
-monitorCharacter()
-monitorPhysics()
-monitorGUI()
-
-logEvent("SYSTEM", "STARTED", "Ultimate Logger Activated")
-
--- Автоочистка логов
+-- Автоочистка
 while true do
-    wait(60)
-    if #ActionLog > MAX_LOG_ENTRIES * 1.5 then
-        for i = #ActionLog, MAX_LOG_ENTRIES, -1 do
-            table.remove(ActionLog, i)
+    wait(LOG_INTERVAL)
+    if #Log > MAX_LOG * 0.9 then
+        for i = MAX_LOG, #Log do
+            Log[i] = nil
         end
     end
 end

@@ -1,124 +1,53 @@
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 local bandage = workspace:WaitForChild("RuntimeItems"):WaitForChild("Bandage")
-local debugLogs = {} -- Инициализируем массив для логов
 
--- 1. Поиск существующих кнопок
-local function findExistingButtons()
-    local logText = "🔍 Найденные элементы управления:\n"
+-- 1. Находим оригинальные кнопки
+local originalTakeButton = player.PlayerGui:FindFirstChild("TakeButton", true)
+local originalUseButton = player.PlayerGui:FindFirstChild("UseButton", true)
+
+-- 2. Функция копирования кнопки
+local function copyButton(original)
+    if not original then return nil end
     
-    -- Проверка ProximityPrompt
-    if bandage:FindFirstChildWhichIsA("ProximityPrompt") then
-        local prompt = bandage:FindFirstChildWhichIsA("ProximityPrompt")
-        logText = logText .. "\n🎯 ProximityPrompt: "..prompt.Name
-        logText = logText .. "\n   Текст: "..prompt.ActionText
-    else
-        logText = logText .. "\n⚠️ ProximityPrompt не найден"
-    end
-
-    -- Проверка GUI элементов
-    pcall(function()
-        local gui = player.PlayerGui:FindFirstChild("BandageUI")
-        if gui then
-            logText = logText .. "\n\n📱 GUI элементы:"
-            for _, element in ipairs(gui:GetDescendants()) do
-                if element:IsA("TextButton") then
-                    logText = logText .. "\n- "..element.Name
-                end
-            end
-        else
-            logText = logText .. "\n⚠️ GUI не найден"
-        end
-    end)
-
-    table.insert(debugLogs, logText)
-    pcall(function() setclipboard(logText) end)
-    print("✅ Данные скопированы!")
+    local copy = original:Clone()
+    copy.Name = original.Name .. "_Copy"
+    copy.Visible = true
+    return copy
 end
 
--- 2. Тестовые кнопки
-local function createTestButtons()
+-- 3. Создаем копии кнопок
+local takeBtn = copyButton(originalTakeButton)
+local useBtn = copyButton(originalUseButton)
+
+-- 4. Размещаем копии в GUI
+if takeBtn and useBtn then
     local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "BandageDebugUI"
+    screenGui.Name = "CopiedButtonsUI"
     screenGui.Parent = player.PlayerGui
-
-    -- Кнопка использования
-    local useBtn = Instance.new("TextButton")
-    useBtn.Name = "MobileUseButton"
-    useBtn.Size = UDim2.new(0.4, 0, 0.08, 0)
-    useBtn.Position = UDim2.new(0.3, 0, 0.8, 0)
-    useBtn.Text = "ИСПОЛЬЗОВАТЬ"
-    useBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
+    
+    -- Позиционирование кнопки "Взять"
+    takeBtn.Position = UDim2.new(0.5, -100, 0.7, 0)
+    takeBtn.Parent = screenGui
+    
+    -- Позиционирование кнопки "Поднять"
+    useBtn.Position = UDim2.new(0.5, -100, 0.8, 0)
     useBtn.Parent = screenGui
-
-    -- Кнопка информации
-    local infoBtn = Instance.new("TextButton")
-    infoBtn.Name = "MobileInfoButton"
-    infoBtn.Size = UDim2.new(0.4, 0, 0.08, 0)
-    infoBtn.Position = UDim2.new(0.3, 0, 0.9, 0)
-    infoBtn.Text = "ИНФО"
-    infoBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-    infoBtn.Parent = screenGui
-
-    -- Обработчики
-    useBtn.MouseButton1Down:Connect(function()
-        local log = "🕹️ Нажата кнопка ИСПОЛЬЗОВАТЬ: " .. os.date("%X")
-        print(log)
-        table.insert(debugLogs, log)
-    end)
-
-    infoBtn.MouseButton1Down:Connect(function()
-        local log = "ℹ️ Нажата кнопка ИНФО: " .. os.date("%X")
-        print(log)
-        table.insert(debugLogs, log)
-    end)
+    
+    -- Логирование
+    print("✅ Кнопки скопированы и размещены!")
+else
+    warn("⚠️ Не удалось найти оригинальные кнопки")
 end
 
--- 3. Автологирование действий
-local function setupAutoLogger()
-    -- Логирование касаний
-    game:GetService("UserInputService").TouchStarted:Connect(function(touch, processed)
-        if not processed then
-            local log = "🖐 Касание: " .. tostring(touch.Position.X) .. ", " .. tostring(touch.Position.Y)
-            print(log)
-            table.insert(debugLogs, log)
-        end
-    end)
-
-    -- Логирование ProximityPrompt
-    if bandage:FindFirstChildWhichIsA("ProximityPrompt") then
-        bandage.ProximityPrompt.Triggered:Connect(function()
-            local log = "⚡ ProximityPrompt активирован: " .. os.date("%X")
-            print(log)
-            table.insert(debugLogs, log)
-        end)
-    end
+-- 5. Дебаг-информация (копируем в буфер обмена)
+local debugInfo = ""
+if originalTakeButton then
+    debugInfo = debugInfo .. "Кнопка 'Взять' найдена: "..originalTakeButton:GetFullName().."\n"
+end
+if originalUseButton then
+    debugInfo = debugInfo .. "Кнопка 'Поднять' найдена: "..originalUseButton:GetFullName().."\n"
 end
 
--- Запуск системы
-findExistingButtons()
-createTestButtons()
-setupAutoLogger()
-
--- Кнопка для копирования логов
-local copyButton = Instance.new("TextButton")
-copyButton.Size = UDim2.new(0.4, 0, 0.08, 0)
-copyButton.Position = UDim2.new(0.3, 0, 0.7, 0)
-copyButton.Text = "КОПИРОВАТЬ ЛОГИ"
-copyButton.BackgroundColor3 = Color3.fromRGB(255, 100, 0)
-copyButton.Parent = player.PlayerGui.BandageDebugUI
-
-copyButton.MouseButton1Down:Connect(function()
-    if #debugLogs > 0 then
-        pcall(function()
-            setclipboard(table.concat(debugLogs, "\n"))
-            copyButton.Text = "✅ СКОПИРОВАНО!"
-            wait(1)
-            copyButton.Text = "КОПИРОВАТЬ ЛОГИ"
-        end)
-    else
-        copyButton.Text = "⚠️ ЛОГИ ПУСТЫ!"
-        wait(1)
-        copyButton.Text = "КОПИРОВАТЬ ЛОГИ"
-    end
-end)
+setclipboard(debugInfo)
+print("📋 Информация о кнопках скопирована в буфер")

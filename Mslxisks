@@ -1,53 +1,14 @@
-local Players = game:GetService("Players")
-local player = Players.LocalPlayer
-local bandage = workspace:WaitForChild("RuntimeItems"):WaitForChild("Bandage")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local remotes = {}
 
--- 1. Находим оригинальные кнопки
-local originalTakeButton = player.PlayerGui:FindFirstChild("TakeButton", true)
-local originalUseButton = player.PlayerGui:FindFirstChild("UseButton", true)
-
--- 2. Функция копирования кнопки
-local function copyButton(original)
-    if not original then return nil end
-    
-    local copy = original:Clone()
-    copy.Name = original.Name .. "_Copy"
-    copy.Visible = true
-    return copy
+-- Логируем все RemoteEvent/RPC
+for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
+    if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
+        table.insert(remotes, remote)
+        remote.OnClientEvent:Connect(function(...)
+            print("📡 Сетевой вызов:", remote.Name, "Аргументы:", ...)
+            setclipboard("Событие: " .. remote.Name .. "\nАргументы: " .. tostring(...))
+        end)
+    end
 end
-
--- 3. Создаем копии кнопок
-local takeBtn = copyButton(originalTakeButton)
-local useBtn = copyButton(originalUseButton)
-
--- 4. Размещаем копии в GUI
-if takeBtn and useBtn then
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "CopiedButtonsUI"
-    screenGui.Parent = player.PlayerGui
-    
-    -- Позиционирование кнопки "Взять"
-    takeBtn.Position = UDim2.new(0.5, -100, 0.7, 0)
-    takeBtn.Parent = screenGui
-    
-    -- Позиционирование кнопки "Поднять"
-    useBtn.Position = UDim2.new(0.5, -100, 0.8, 0)
-    useBtn.Parent = screenGui
-    
-    -- Логирование
-    print("✅ Кнопки скопированы и размещены!")
-else
-    warn("⚠️ Не удалось найти оригинальные кнопки")
-end
-
--- 5. Дебаг-информация (копируем в буфер обмена)
-local debugInfo = ""
-if originalTakeButton then
-    debugInfo = debugInfo .. "Кнопка 'Взять' найдена: "..originalTakeButton:GetFullName().."\n"
-end
-if originalUseButton then
-    debugInfo = debugInfo .. "Кнопка 'Поднять' найдена: "..originalUseButton:GetFullName().."\n"
-end
-
-setclipboard(debugInfo)
-print("📋 Информация о кнопках скопирована в буфер")
+print("✅ Логирование Remotes запущено (" .. #remotes .. " найдено)")

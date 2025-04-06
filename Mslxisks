@@ -1,47 +1,35 @@
-local radius = 15 -- радиус в метрах
+local radius = 15 -- радиус сканирования в метрах
 local player = game:GetService("Players").LocalPlayer
 
--- Безопасное получение ID
-local function getObjectId(obj)
-    local success, id = pcall(function() return obj:GetDebugId(2) end)
-    return success and id or "N/A"
-end
-
--- Безопасная проверка радиуса
-local function isInRadius(obj, centerPos)
-    local success, position = pcall(function()
-        if obj:IsA("BasePart") then
-            return obj.Position
-        elseif obj:IsA("Model") then
-            return obj.PrimaryPart and obj.PrimaryPart.Position or nil
-        else
-            local part = obj:FindFirstChildWhichIsA("BasePart")
-            return part and part.Position or nil
-        end
-    end)
-    return success and position and (position - centerPos).Magnitude <= radius
-end
-
--- Получение информации об объекте
+-- Безопасное получение информации об объекте
 local function getObjectInfo(obj)
-    local info = {
-        "🔷 "..obj.Name.." ("..obj.ClassName..")",
-        "🆔 ID: "..getObjectId(obj),
-        "📁 Путь: "..obj:GetFullName()
-    }
+    local info = {}
     
-    -- Дополнительные свойства
+    -- Основные свойства
+    table.insert(info, "🔷 "..obj.Name.." ("..obj.ClassName..")")
+    
+    -- Пытаемся получить ID (с защитой от ошибок)
+    local success, id = pcall(function() return obj:GetDebugId() end)
+    table.insert(info, "🆔 ID: "..(success and id or "N/A"))
+    
+    table.insert(info, "📁 Путь: "..obj:GetFullName())
+    
+    -- Физические свойства (если есть)
     if obj:IsA("BasePart") then
         table.insert(info, "📍 Позиция: "..tostring(obj.Position))
         table.insert(info, "📏 Размер: "..tostring(obj.Size))
     end
     
-    -- Информация о детях
-    local children = obj:GetChildren()
+    -- Дочерние объекты
+    local children = {}
+    for _, child in pairs(obj:GetChildren()) do
+        table.insert(children, "   ├─ "..child.Name.." ("..child.ClassName..")")
+    end
+    
     if #children > 0 then
         table.insert(info, "🧒 Дети ("..#children.."):")
-        for _, child in ipairs(children) do
-            table.insert(info, "   ├─ "..child.Name.." ("..child.ClassName..") | ID: "..getObjectId(child))
+        for _, childInfo in ipairs(children) do
+            table.insert(info, childInfo)
         end
     end
     
@@ -50,38 +38,61 @@ end
 
 -- Основная функция сканирования
 local function scanArea()
-    local char = player.Character
-    if not char then return end
+    -- Проверяем наличие персонажа
+    if not player.Character then
+        print("❌ Персонаж не найден")
+        return
+    end
     
-    local rootPart = char:FindFirstChild("HumanoidRootPart")
-    if not rootPart then return end
+    local humanoidRoot = player.Character:FindFirstChild("HumanoidRootPart")
+    if not humanoidRoot then
+        print("❌ Не найден HumanoidRootPart")
+        return
+    end
     
-    local playerPos = rootPart.Position
+    local playerPos = humanoidRoot.Position
     local result = {"=== ОБЪЕКТЫ В РАДИУСЕ "..radius.."м ==="}
     local count = 0
     
+    -- Сканируем все объекты
     for _, obj in pairs(workspace:GetDescendants()) do
-        if isInRadius(obj, playerPos) then
-            local success, info = pcall(getObjectInfo, obj)
-            if success then
-                table.insert(result, "\n"..info)
-                count = count + 1
+        local objPos
+        local success = pcall(function()
+            if obj:IsA("BasePart") then
+                objPos = obj.Position
+            elseif obj:IsA("Model") then
+                if obj.PrimaryPart then
+                    objPos = obj.PrimaryPart.Position
+                end
+            else
+                local part = obj:FindFirstChildOfClass("BasePart")
+                if part then
+                    objPos = part.Position
+                end
             end
+        end)
+        
+        if success and objPos and (objPos - playerPos).Magnitude <= radius then
+            local objInfo = getObjectInfo(obj)
+            table.insert(result, "\n"..objInfo)
+            count = count + 1
         end
     end
     
+    -- Формируем итоговый результат
     table.insert(result, "\n=== НАЙДЕНО ОБЪЕКТОВ: "..count.." ===")
     local output = table.concat(result, "\n")
     
+    -- Копируем и выводим
     setclipboard(output)
     print(output)
     print("\n✅ Данные скопированы в буфер обмена!")
 end
 
--- Запуск сканирования
+-- Запускаем сканирование
 scanArea()
 
--- Автоматическое обновление (по желанию)
+-- Опционально: автоматическое обновление каждые 30 секунд
 while true do
     wait(30)
     scanArea()

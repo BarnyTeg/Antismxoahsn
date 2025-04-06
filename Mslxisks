@@ -1,14 +1,37 @@
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local remotes = {}
+local player = Players.LocalPlayer
+local bandage = workspace:WaitForChild("RuntimeItems"):WaitForChild("Bandage")
 
--- Логируем все RemoteEvent/RPC
-for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-    if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
-        table.insert(remotes, remote)
-        remote.OnClientEvent:Connect(function(...)
-            print("📡 Сетевой вызов:", remote.Name, "Аргументы:", ...)
-            setclipboard("Событие: " .. remote.Name .. "\nАргументы: " .. tostring(...))
-        end)
+-- Находим нужный RemoteEvent
+local startDragRemote = ReplicatedStorage:FindFirstChild("RequestStartDrag")
+local stopDragRemote = ReplicatedStorage:FindFirstChild("RequestStopDrag")
+
+local function takeBandage()
+    if not startDragRemote then
+        warn("Не найден RequestStartDrag!")
+        return
+    end
+    
+    -- Эмулируем "взятие" бандажа
+    startDragRemote:FireServer(true, bandage)
+    print("🔄 Отправлен запрос на подбор")
+    
+    -- Через 0.5 сек эмулируем "положить в инвентарь"
+    task.wait(0.5)
+    if stopDragRemote then
+        stopDragRemote:FireServer(true)
+        print("✅ Бандаж 'положен' в инвентарь")
     end
 end
-print("✅ Логирование Remotes запущено (" .. #remotes .. " найдено)")
+
+-- Кнопка для теста (если нужно)
+local screenGui = Instance.new("ScreenGui")
+screenGui.Parent = player.PlayerGui
+
+local button = Instance.new("TextButton")
+button.Text = "ВЗЯТЬ БАНДАЖ"
+button.Size = UDim2.new(0.3, 0, 0.1, 0)
+button.Position = UDim2.new(0.7, 0, 0.8, 0)
+button.Parent = screenGui
+button.MouseButton1Click:Connect(takeBandage)

@@ -54,53 +54,12 @@ local function deepAnalyze(obj)
         end
     end
 
-    -- Скрипты и их соединения
-    for _, descendant in ipairs(obj:GetDescendants()) do
-        if descendant:IsA("Script") then
-            local connections = {}
-            for _, conn in ipairs(getconnections(descendant.Changed)) do
-                table.insert(connections, tostring(conn.Function))
-            end
-            
-            table.insert(result.Scripts, {
-                Name = descendant.Name,
-                Type = descendant.ClassName,
-                Disabled = descendant.Disabled,
-                Connections = connections
-            })
-        end
-    end
-
-    -- Сетевые события
-    for _, descendant in ipairs(obj:GetDescendants()) do
-        if descendant:IsA("RemoteEvent") or descendant:IsA("RemoteFunction") then
-            local connections = {}
-            for _, conn in ipairs(getconnections(descendant.OnClientEvent)) do
-                table.insert(connections, tostring(conn.Function))
-            end
-            
-            table.insert(result.Events, {
-                Name = descendant.Name,
-                Type = descendant.ClassName,
-                Connections = connections
-            })
-        end
-    end
-
     -- Физические взаимодействия
     if obj:FindFirstChildOfClass("TouchTransmitter") then
         table.insert(result.Physics, "TouchTransmitter")
     end
     if obj:FindFirstChildOfClass("ClickDetector") then
         table.insert(result.Physics, "ClickDetector")
-    end
-
-    -- Сетевые свойства
-    if obj:FindFirstChild("NetworkOwner") then
-        table.insert(result.Network, {
-            Type = "NetworkOwner",
-            Value = obj.NetworkOwner.Value
-        })
     end
 
     -- Поиск шаблонов
@@ -117,24 +76,9 @@ local function deepAnalyze(obj)
     return result
 end
 
--- 3. Поиск всех связанных объектов
-local function findRelatedObjects(centerPos)
-    local related = {}
-    
-    -- Ищем физически связанные объекты
-    local region = Region3.new(
-        centerPos - Vector3.new(scanRadius, scanRadius, scanRadius),
-        centerPos + Vector3.new(scanRadius, scanRadius, scanRadius)
-    )
-    local parts = workspace:FindPartsInRegion3(region, nil, math.huge)
-    
-    for _, part in ipairs(parts) do
-        if part.Name == targetName then
-            table.insert(related, part)
-        end
-    end
-    
-    return related
+-- 3. Форматирование Vector3 для вывода
+local function formatVector3(vec)
+    return string.format("(%.2f, %.2f, %.2f)", vec.X, vec.Y, vec.Z)
 end
 
 -- 4. Формирование отчета
@@ -144,8 +88,8 @@ local function generateReport(data)
     -- Базовая информация
     report ..= string.format("🔍 Полный анализ объекта [%s]\n", data.BasicInfo.Name)
     report ..= string.format("🆔 ID: %s | Класс: %s\n", data.BasicInfo.Id, data.BasicInfo.Class)
-    report ..= string.format("📍 Позиция: %s\n", data.BasicInfo.Position)
-    report ..= string.format("📏 Размер: %s | Материал: %s\n\n", data.BasicInfo.Size, data.BasicInfo.Material)
+    report ..= string.format("📍 Позиция: %s\n", formatVector3(data.BasicInfo.Position))
+    report ..= string.format("📏 Размер: %s | Материал: %s\n\n", formatVector3(data.BasicInfo.Size), data.BasicInfo.Material)
     
     -- Атрибуты
     report ..= "🏷️ Атрибуты:\n"
@@ -159,34 +103,10 @@ local function generateReport(data)
         report ..= string.format("- %s (%s) = %s\n", val.Name, val.Type, tostring(val.Value))
     end
     
-    -- Скрипты
-    report ..= "\n📜 Скрипты:\n"
-    for _, script in ipairs(data.Scripts) do
-        report ..= string.format("- %s (%s) %s\n", script.Name, script.Type, script.Disabled and "[Disabled]" or "")
-        for _, conn in ipairs(script.Connections) do
-            report ..= string.format("  ↳ %s\n", conn)
-        end
-    end
-    
-    -- События
-    report ..= "\n📡 Сетевые события:\n"
-    for _, event in ipairs(data.Events) do
-        report ..= string.format("- %s (%s)\n", event.Name, event.Type)
-        for _, conn in ipairs(event.Connections) do
-            report ..= string.format("  ↳ %s\n", conn)
-        end
-    end
-    
     -- Физика
     report ..= "\n🖱️ Физические взаимодействия:\n"
     for _, phys in ipairs(data.Physics) do
         report ..= string.format("- %s\n", phys)
-    end
-    
-    -- Сеть
-    report ..= "\n🌐 Сетевые свойства:\n"
-    for _, net in ipairs(data.Network) do
-        report ..= string.format("- %s = %s\n", net.Type, tostring(net.Value))
     end
     
     -- Шаблоны
@@ -201,19 +121,26 @@ end
 -- 5. Основная функция
 local function runFullAnalysis()
     local root = getPlayerRoot()
-    local objects = findRelatedObjects(root.Position)
+    local region = Region3.new(
+        root.Position - Vector3.new(scanRadius, scanRadius, scanRadius),
+        root.Position + Vector3.new(scanRadius, scanRadius, scanRadius)
+    )
+    local parts = workspace:FindPartsInRegion3(region, nil, math.huge)
     
-    if #objects == 0 then
-        print("❌ Объекты не найдены в радиусе", scanRadius, "метров")
-        return
+    local found = false
+    for _, part in ipairs(parts) do
+        if part.Name == targetName then
+            local analysis = deepAnalyze(part)
+            local report = generateReport(analysis)
+            
+            print(report)
+            setclipboard(report)
+            found = true
+        end
     end
     
-    for _, obj in ipairs(objects) do
-        local analysis = deepAnalyze(obj)
-        local report = generateReport(analysis)
-        
-        print(report)
-        setclipboard(report)
+    if not found then
+        print("❌ Объекты '"..targetName.."' не найдены в радиусе "..scanRadius.."м")
     end
 end
 

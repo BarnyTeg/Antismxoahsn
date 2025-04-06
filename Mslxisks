@@ -1,65 +1,102 @@
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
 local bandage = workspace:WaitForChild("RuntimeItems"):WaitForChild("Bandage")
-local HttpService = game:GetService("HttpService")
-local textToCopy = ""
 
--- Функция для форматирования вывода
-local function addToOutput(text)
-    textToCopy = textToCopy .. text .. "\n"
+-- 1. Поиск существующих кнопок
+local function findExistingButtons()
+    local logText = "🔍 Найденные элементы управления:\n"
+    
+    -- Проверка ProximityPrompt
+    if bandage:FindFirstChildWhichIsA("ProximityPrompt") then
+        local prompt = bandage:FindFirstChildWhichIsA("ProximityPrompt")
+        logText = logText .. "\n🎯 ProximityPrompt: "..prompt.Name
+        logText = logText .. "\n   Текст: "..prompt.ActionText
+    end
+
+    -- Проверка GUI элементов
+    local gui = player.PlayerGui:FindFirstChild("BandageUI")
+    if gui then
+        logText = logText .. "\n\n📱 GUI элементы:"
+        for _, element in ipairs(gui:GetDescendants()) do
+            if element:IsA("TextButton") then
+                logText = logText .. "\n- "..element.Name
+            end
+        end
+    end
+
+    -- Копируем в буфер обмена
+    setclipboard(logText)
+    print("✅ Данные скопированы!")
 end
 
--- Основная функция сканирования
-local function scanScripts(object)
-    addToOutput("🔍 Анализ объекта: " .. object:GetFullName())
-    
-    -- Проверка скриптов
-    for _, script in ipairs(object:GetChildren()) do
-        if script:IsA("Script") or script:IsA("LocalScript") or script:IsA("ModuleScript") then
-            addToOutput("\n📜 Скрипт: " .. script.Name)
-            addToOutput("Тип: " .. script.ClassName)
-            addToOutput("Путь: " .. script:GetFullName())
-            
-            pcall(function()
-                addToOutput("Содержимое:\n" .. script.Source)
-            end)
+-- 2. Тестовые кнопки
+local function createTestButtons()
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "BandageDebugUI"
+    screenGui.Parent = player.PlayerGui
+
+    -- Кнопка использования
+    local useBtn = Instance.new("TextButton")
+    useBtn.Name = "MobileUseButton"
+    useBtn.Size = UDim2.new(0.4, 0, 0.08, 0)
+    useBtn.Position = UDim2.new(0.3, 0, 0.8, 0)
+    useBtn.Text = "ИСПОЛЬЗОВАТЬ"
+    useBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
+    useBtn.Parent = screenGui
+
+    -- Кнопка информации
+    local infoBtn = Instance.new("TextButton")
+    infoBtn.Name = "MobileInfoButton"
+    infoBtn.Size = UDim2.new(0.4, 0, 0.08, 0)
+    infoBtn.Position = UDim2.new(0.3, 0, 0.9, 0)
+    infoBtn.Text = "ИНФО"
+    infoBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+    infoBtn.Parent = screenGui
+
+    -- Обработчики
+    useBtn.MouseButton1Down:Connect(function()
+        print("Попытка использования...")
+        -- Здесь можно добавить тестовое использование
+    end)
+
+    infoBtn.MouseButton1Down:Connect(function()
+        print("Попытка просмотра информации...")
+    end)
+end
+
+-- 3. Автологирование действий
+local function setupAutoLogger()
+    -- Логирование касаний
+    game:GetService("UserInputService").TouchStarted:Connect(function(touch, processed)
+        if not processed then
+            print("🖐 Касание в позиции:", touch.Position)
         end
+    end)
+
+    -- Логирование ProximityPrompt
+    if bandage:FindFirstChildWhichIsA("ProximityPrompt") then
+        bandage.ProximityPrompt.Triggered:Connect(function()
+            print("⚡ ProximityPrompt активирован!")
+        end)
     end
 end
 
--- Сканируем бандаж и все его части
-scanScripts(bandage)
-for _, child in ipairs(bandage:GetDescendants()) do
-    scanScripts(child)
-end
+-- Запуск системы
+findExistingButtons()
+createTestButtons()
+setupAutoLogger()
 
--- Добавляем информацию об атрибутах
-addToOutput("\n📌 Атрибуты:")
-for attr, value in pairs(bandage:GetAttributes()) do
-    addToOutput(attr .. " = " .. tostring(value))
-end
+-- Кнопка для копирования логов
+local copyButton = Instance.new("TextButton")
+copyButton.Size = UDim2.new(0.4, 0, 0.08, 0)
+copyButton.Position = UDim2.new(0.3, 0, 0.7, 0)
+copyButton.Text = "КОПИРОВАТЬ ЛОГИ"
+copyButton.BackgroundColor3 = Color3.fromRGB(255, 100, 0)
+copyButton.Parent = player.PlayerGui.BandageDebugUI
 
--- Копируем в буфер обмена
-pcall(function()
-    setclipboard(textToCopy)
-    print("✅ Все данные скопированы в буфер обмена!")
-end)
-
--- Создаем кнопку для повторного копирования
-local screenGui = Instance.new("ScreenGui")
-screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
-
-local button = Instance.new("TextButton")
-button.Size = UDim2.new(0.6, 0, 0.1, 0)
-button.Position = UDim2.new(0.2, 0, 0.5, 0)
-button.Text = "СКОПИРОВАТЬ ДАННЫЕ"
-button.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-button.TextColor3 = Color3.new(1, 1, 1)
-button.Parent = screenGui
-
-button.MouseButton1Click:Connect(function()
-    pcall(function()
-        setclipboard(textToCopy)
-        button.Text = "ДАННЫЕ СКОПИРОВАНЫ!"
-        wait(1)
-        button.Text = "СКОПИРОВАТЬ ДАННЫЕ"
-    end)
+copyButton.MouseButton1Down:Connect(function()
+    setclipboard(table.concat(debugLogs, "\n"))
+    copyButton.Text = "СКОПИРОВАНО!"
+    wait(1)
+    copyButton.Text = "КОПИРОВАТЬ ЛОГИ"
 end)

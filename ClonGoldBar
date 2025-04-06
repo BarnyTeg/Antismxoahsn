@@ -1,64 +1,84 @@
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
 
--- 1. Найти оригинальный бандаж
-local function findBandage()
-    -- Проверяем возможные места
-    local locations = {
-        ReplicatedStorage,
-        workspace,
-        game:GetService("StarterPack"),
-        game:GetService("StarterGui")
-    }
+-- Найти оригинальный бандаж
+local originalBandage = Workspace:WaitForChild("RuntimeItems"):WaitForChild("Bandage")
+
+-- Функция глубокого копирования
+local function deepCopy(original)
+    local copy = original:Clone()
     
-    for _, location in ipairs(locations) do
-        local bandage = location:FindFirstChild("Bandage") or location:FindFirstChildWhichIsA("Tool")
-        if bandage then
-            return bandage
-        end
-    end
-    return nil
+    -- Генерируем уникальный ID для предотвращения конфликтов
+    copy:SetAttribute("OriginalID", original:GetAttribute("OriginalID") or original:GetDebugId())
+    copy.Name = "Bandage_Copy_" .. os.time()
+    
+    return copy
 end
 
--- 2. Создать копию и добавить в инвентарь
-local function cloneBandageToInventory()
-    local original = findBandage()
-    if not original then
-        warn("⚠️ Бандаж не найден!")
+-- Система добавления в инвентарь
+local function addToInventory()
+    if not originalBandage then
+        warn("❗ Оригинальный бандаж не найден!")
         return
     end
+
+    -- Создаем улучшенную копию
+    local bandageCopy = deepCopy(originalBandage)
     
-    local clone = original:Clone()
-    clone.Name = "Bandage_Copy_" .. os.time() -- Уникальное имя
+    -- Настройка для инвентаря
+    bandageCopy.PrimaryPart = bandageCopy:WaitForChild("Handle")
+    bandageCopy:SetAttribute("IsCustomCopy", true)
     
-    -- Добавляем в инвентарь
-    local backpack = player:WaitForChild("Backpack")
-    clone.Parent = backpack
-    
-    print("✅ Бандаж скопирован в инвентарь!")
+    -- Добавляем функционал лечения
+    local healScript = bandageCopy:FindFirstChild("HealScript") or Instance.new("Script")
+    healScript.Name = "HealScript"
+    healScript.Source = [[
+        local tool = script.Parent
+        local humanoid = tool.Parent:FindFirstChildOfClass("Humanoid")
+        
+        tool.Activated:Connect(function()
+            if humanoid and humanoid.Health < humanoid.MaxHealth then
+                humanoid.Health += 30
+                -- Эффект использования
+                tool.Handle.Transparency = 1
+                task.wait(0.5)
+                tool:Destroy()
+            end
+        end)
+    ]]
+    healScript.Parent = bandageCopy
+
+    -- Добавление в инвентарь
+    local backpack = player:FindFirstChild("Backpack")
+    if backpack then
+        bandageCopy.Parent = backpack
+        print("✅ Бандаж успешно добавлен в инвентарь!")
+    else
+        warn("⚠️ Инвентарь не найден!")
+    end
 end
 
--- 3. Активация по нажатию кнопки на экране (для мобильных устройств)
-local function setupTouchButton()
-    local screenGui = Instance.new("ScreenGui")
+-- Мобильный интерфейс
+local function createMobileUI()
+    local gui = Instance.new("ScreenGui")
     local button = Instance.new("TextButton")
     
-    screenGui.Parent = player.PlayerGui
-    button.Parent = screenGui
+    gui.Name = "BandageSpawnerUI"
+    gui.Parent = player:WaitForChild("PlayerGui")
     
-    -- Настройки кнопки
-    button.Size = UDim2.new(0.2, 0, 0.1, 0)
-    button.Position = UDim2.new(0.8, 0, 0.8, 0)
-    button.Text = "Добавить бандаж"
-    button.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+    button.Size = UDim2.new(0.25, 0, 0.1, 0)
+    button.Position = UDim2.new(0.75, 0, 0.85, 0)
+    button.Text = "Получить бандаж"
+    button.BackgroundColor3 = Color3.fromRGB(52, 152, 219)
+    button.TextColor3 = Color3.new(1, 1, 1)
+    button.Parent = gui
     
-    -- Обработка нажатия
     button.MouseButton1Click:Connect(function()
-        cloneBandageToInventory()
+        addToInventory()
     end)
 end
 
--- Запуск
-setupTouchButton()
-print("Готово! Нажмите кнопку на экране.")
+-- Инициализация
+createMobileUI()
+print("Готово! Нажмите кнопку на экране для получения бандажа.")

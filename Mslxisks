@@ -13,16 +13,156 @@ local function getPlayerRoot()
     return character:WaitForChild("HumanoidRootPart")
 end
 
--- Функция проверки видимости объекта
-local function isVisible(obj)
-    if obj:IsA("BasePart") then
-        return obj.Transparency < 1 and obj:IsDescendantOf(workspace)
+-- Глубокий анализ объекта
+local function deepAnalyze(obj)
+    local result = {
+        Basic = {
+            Name = obj.Name,
+            Class = obj.ClassName,
+            Id = obj:GetDebugId(),
+            Position = obj:IsA("BasePart") and formatVector(obj.Position) or "N/A",
+            Size = obj:IsA("BasePart") and formatVector(obj.Size) or "N/A",
+            Parent = obj.Parent and obj.Parent.Name or "nil"
+        },
+        Attributes = {},
+        Values = {},
+        Scripts = {},
+        Physics = {},
+        Network = {},
+        Templates = {},
+        Connections = {}
+    }
+
+    -- Анализ атрибутов
+    for attr, value in pairs(obj:GetAttributes()) do
+        table.insert(result.Attributes, {
+            Name = attr,
+            Value = tostring(value),
+            Type = typeof(value),
+            Id = obj:GetDebugId().."_"..attr
+        })
     end
-    return true
+
+    -- Анализ дочерних объектов
+    for _, child in ipairs(obj:GetChildren()) do
+        -- Value-объекты
+        if child:IsA("ValueBase") then
+            table.insert(result.Values, {
+                Name = child.Name,
+                Type = child.ClassName,
+                Value = tostring(child.Value),
+                Id = child:GetDebugId()
+            })
+        end
+        
+        -- Сетевые объекты
+        if child:IsA("RemoteEvent") or child:IsA("RemoteFunction") then
+            table.insert(result.Network, {
+                Name = child.Name,
+                Type = child.ClassName,
+                Id = child:GetDebugId()
+            })
+        end
+        
+        -- Физические компоненты
+        if child:IsA("BodyMover") then
+            table.insert(result.Physics, {
+                Name = child.Name,
+                Type = child.ClassName,
+                Id = child:GetDebugId()
+            })
+        end
+    end
+
+    -- Анализ скриптов (только для Script/LocalScript)
+    if obj:IsA("Script") or obj:IsA("LocalScript") then
+        result.Scripts = {
+            {
+                Name = obj.Name,
+                Type = obj.ClassName,
+                Disabled = obj.Disabled,
+                Id = obj:GetDebugId()
+            }
+        }
+    end
+
+    -- Поиск шаблонов в ReplicatedStorage
+    if obj:IsA("BasePart") then
+        local repStorage = game:GetService("ReplicatedStorage")
+        for _, item in ipairs(repStorage:GetDescendants()) do
+            if item.Name == obj.Name and item:IsA("BasePart") then
+                table.insert(result.Templates, {
+                    Path = item:GetFullName(),
+                    Id = item:GetDebugId(),
+                    Size = formatVector(item.Size),
+                    Material = item.Material.Name
+                })
+            end
+        end
+    end
+
+    return result
+end
+
+-- Формирование полного отчета
+local function generateFullReport(data)
+    local report = ""
+    
+    -- Заголовок
+    report ..= string.format("🔍 ПОЛНЫЙ АНАЛИЗ ОБЪЕКТА [%s]\n", data.Basic.Name)
+    report ..= string.format("🆔 ID: %s | Класс: %s\n", data.Basic.Id, data.Basic.Class)
+    report ..= string.format("📍 Позиция: %s\n", data.Basic.Position)
+    report ..= string.format("📏 Размер: %s\n", data.Basic.Size)
+    report ..= string.format("🏠 Родитель: %s\n\n", data.Basic.Parent)
+    
+    -- Секции с данными
+    local sections = {
+        {title = "🏷️ АТРИБУТЫ", data = data.Attributes, func = function(item)
+            return string.format("- %s = %s (%s) [ID: %s]", 
+                item.Name, item.Value, item.Type, item.Id)
+        end},
+        
+        {title = "🔢 ЗНАЧЕНИЯ", data = data.Values, func = function(item)
+            return string.format("- %s (%s) = %s [ID: %s]", 
+                item.Name, item.Type, item.Value, item.Id)
+        end},
+        
+        {title = "📜 СКРИПТЫ", data = data.Scripts, func = function(item)
+            return string.format("- %s (%s) %s [ID: %s]", 
+                item.Name, item.Type, item.Disabled and "[DISABLED]" or "", item.Id)
+        end},
+        
+        {title = "🌐 СЕТЕВЫЕ ОБЪЕКТЫ", data = data.Network, func = function(item)
+            return string.format("- %s (%s) [ID: %s]", 
+                item.Name, item.Type, item.Id)
+        end},
+        
+        {title = "⚙️ ФИЗИЧЕСКИЕ КОМПОНЕНТЫ", data = data.Physics, func = function(item)
+            return string.format("- %s (%s) [ID: %s]", 
+                item.Name, item.Type, item.Id)
+        end},
+        
+        {title = "📦 ШАБЛОНЫ", data = data.Templates, func = function(item)
+            return string.format("- %s\n   ID: %s | Размер: %s | Материал: %s", 
+                item.Path, item.Id, item.Size, item.Material)
+        end}
+    }
+    
+    -- Генерация разделов
+    for _, section in ipairs(sections) do
+        if #section.data > 0 then
+            report ..= "\n" .. section.title .. ":\n"
+            for _, item in ipairs(section.data) do
+                report ..= section.func(item) .. "\n"
+            end
+        end
+    end
+    
+    return report
 end
 
 -- Основная функция сканирования
-local function fullAreaScan()
+local function completeAreaScan()
     local root = getPlayerRoot()
     local centerPos = root.Position
     
@@ -39,55 +179,54 @@ local function fullAreaScan()
     local allObjects = {}
     local uniqueIds = {}
     
-    -- Добавляем все найденные части
+    -- Добавляем все найденные части и их потомков
     for _, part in ipairs(parts) do
-        if not uniqueIds[part:GetDebugId()] and isVisible(part) then
+        if not uniqueIds[part:GetDebugId()] then
             table.insert(allObjects, part)
             uniqueIds[part:GetDebugId()] = true
-        end
-    end
-    
-    -- Добавляем все дочерние объекты
-    for _, part in ipairs(parts) do
-        for _, descendant in ipairs(part:GetDescendants()) do
-            if not uniqueIds[descendant:GetDebugId()] and isVisible(descendant) then
-                table.insert(allObjects, descendant)
-                uniqueIds[descendant:GetDebugId()] = true
+            
+            for _, descendant in ipairs(part:GetDescendants()) do
+                if not uniqueIds[descendant:GetDebugId()] then
+                    table.insert(allObjects, descendant)
+                    uniqueIds[descendant:GetDebugId()] = true
+                end
             end
         end
     end
     
-    -- Сортируем по расстоянию
+    -- Сортируем по расстоянию (если это BasePart)
     table.sort(allObjects, function(a, b)
-        local distA = (a:IsA("BasePart") and (a.Position - centerPos).Magnitude or math.huge)
-        local distB = (b:IsA("BasePart") and (b.Position - centerPos).Magnitude or math.huge)
-        return distA < distB
+        local aDist = a:IsA("BasePart") and (a.Position - centerPos).Magnitude or math.huge
+        local bDist = b:IsA("BasePart") and (b.Position - centerPos).Magnitude or math.huge
+        return aDist < bDist
     end)
     
-    -- Формируем отчет
-    local report = string.format("🔍 ПОЛНЫЙ СКАН РАДИУСА %dм\n", scanRadius)
-    report ..= string.format("📍 Центр сканирования: %s\n\n", formatVector(centerPos))
-    report ..= "НАЙДЕННЫЕ ОБЪЕКТЫ:\n"
-    report ..= string.rep("-", 50) .. "\n"
+    -- Формируем полный отчет
+    local fullReport = string.format("🔍 ПОЛНЫЙ СКАН РАДИУСА %dм\n", scanRadius)
+    fullReport ..= string.format("📍 Центр сканирования: %s\n\n", formatVector(centerPos))
+    fullReport ..= string.format("НАЙДЕНО ОБЪЕКТОВ: %d\n", #allObjects)
+    fullReport ..= string.rep("=", 60) .. "\n\n"
     
     for i, obj in ipairs(allObjects) do
         local dist = obj:IsA("BasePart") and string.format("%.2fм", (obj.Position - centerPos).Magnitude) or "N/A"
-        local size = obj:IsA("BasePart") and formatVector(obj.Size) or "N/A"
         
-        report ..= string.format("%d. %s (%s)\n", i, obj.Name, obj.ClassName)
-        report ..= string.format("   🆔 ID: %s\n", obj:GetDebugId())
-        report ..= string.format("   📍 Позиция: %s\n", obj:IsA("BasePart") and formatVector(obj.Position) or "N/A")
-        report ..= string.format("   📏 Размер: %s\n", size)
-        report ..= string.format("   📐 Дистанция: %s\n", dist)
-        report ..= string.format("   🏠 Родитель: %s\n", obj.Parent and obj.Parent.Name or "nil")
-        report ..= string.rep("-", 50) .. "\n"
+        fullReport ..= string.format("➡️ ОБЪЕКТ %d/%d\n", i, #allObjects)
+        fullReport ..= string.rep("-", 30) .. "\n"
+        fullReport ..= string.format("Название: %s\n", obj.Name)
+        fullReport ..= string.format("Класс: %s\n", obj.ClassName)
+        fullReport ..= string.format("ID: %s\n", obj:GetDebugId())
+        fullReport ..= string.format("Дистанция: %s\n", dist)
+        
+        -- Глубокий анализ для каждого объекта
+        local analysis = deepAnalyze(obj)
+        fullReport ..= generateFullReport(analysis)
+        
+        fullReport ..= "\n" .. string.rep("=", 60) .. "\n\n"
     end
     
-    report ..= string.format("\nИТОГО: %d объектов", #allObjects)
-    
-    print(report)
-    setclipboard(report)
+    print(fullReport)
+    setclipboard(fullReport)
 end
 
 -- Запуск сканирования
-fullAreaScan()
+completeAreaScan()

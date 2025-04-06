@@ -7,74 +7,82 @@ local function getPlayerPosition()
         and player.Character.HumanoidRootPart.Position or Vector3.new(0, 0, 0)
 end
 
-local function safeGet(callback, default)
-    local success, result = pcall(callback)
-    return success and result or default
+local function safeToString(value)
+    local success, result = pcall(function()
+        if typeof(value) == "Instance" then
+            return value:GetFullName()
+        elseif typeof(value) == "Vector3" then
+            return string.format("(%.2f, %.2f, %.2f)", value.X, value.Y, value.Z)
+        elseif typeof(value) == "Color3" then
+            return string.format("(%.2f, %.2f, %.2f)", value.R, value.G, value.B)
+        else
+            return tostring(value)
+        end
+    end)
+    return success and result or "N/A"
 end
 
 local function getExtendedInfo(obj)
     local info = {}
     
     -- Базовые свойства
-    table.insert(info, "🔹 Class: "..obj.ClassName)
-    table.insert(info, "🔹 Name: "..obj.Name)
-    table.insert(info, "🔹 FullPath: "..obj:GetFullName())
-    table.insert(info, "🔹 RobloxID: "..tostring(safeGet(function() return obj:GetDebugId() end, "N/A")))
+    table.insert(info, "🔹 Class: "..safeToString(obj.ClassName))
+    table.insert(info, "🔹 Name: "..safeToString(obj.Name))
+    table.insert(info, "🔹 FullPath: "..safeToString(obj:GetFullName()))
+    table.insert(info, "🔹 RobloxID: "..safeToString(obj:GetDebugId()))
     
     -- Физические свойства
     if obj:IsA("BasePart") then
-        table.insert(info, "📏 Position: "..tostring(obj.Position))
-        table.insert(info, "📐 Size: "..tostring(obj.Size))
-        table.insert(info, "🧱 Material: "..tostring(obj.Material))
-        table.insert(info, "🔘 Anchored: "..tostring(obj.Anchored))
-        table.insert(info, "💥 CanCollide: "..tostring(obj.CanCollide))
-        table.insert(info, "👁️ Transparency: "..tostring(obj.Transparency))
+        table.insert(info, "📏 Position: "..safeToString(obj.Position))
+        table.insert(info, "📐 Size: "..safeToString(obj.Size))
+        table.insert(info, "🧱 Material: "..safeToString(obj.Material))
+        table.insert(info, "🔘 Anchored: "..safeToString(obj.Anchored))
+        table.insert(info, "💥 CanCollide: "..safeToString(obj.CanCollide))
+        table.insert(info, "👁️ Transparency: "..safeToString(obj.Transparency))
     end
     
     -- Для моделей
     if obj:IsA("Model") then
-        table.insert(info, "🧩 PrimaryPart: "..tostring(safeGet(function() return obj.PrimaryPart end, "None")))
-        table.insert(info, "🧒 Children: "..#obj:GetChildren())
+        table.insert(info, "🧩 PrimaryPart: "..safeToString(obj.PrimaryPart))
+        table.insert(info, "🧒 Children: "..safeToString(#obj:GetChildren()))
     end
     
     -- Визуальные свойства
     if obj:IsA("GuiObject") then
-        table.insert(info, "🎨 BackgroundColor: "..tostring(obj.BackgroundColor3))
-    elseif obj:IsA("BasePart") and obj:FindFirstChildOfClass("Texture") then
-        table.insert(info, "🖼️ Textures: "..#obj:GetChildrenOfClass("Texture"))
+        table.insert(info, "🎨 BackgroundColor: "..safeToString(obj.BackgroundColor3))
+    elseif obj:IsA("BasePart") then
+        table.insert(info, "🖼️ TextureCount: "..safeToString(#obj:GetChildrenOfClass("Texture")))
     end
     
     -- Специфичные свойства
     if obj:IsA("Light") then
-        table.insert(info, "💡 Brightness: "..tostring(obj.Brightness))
-        table.insert(info, "🌈 Color: "..tostring(obj.Color))
+        table.insert(info, "💡 Brightness: "..safeToString(obj.Brightness))
+        table.insert(info, "🌈 Color: "..safeToString(obj.Color))
     end
     
     -- Расстояние до игрока
-    local rootPart = safeGet(function()
-        return obj:IsA("BasePart") and obj or obj:FindFirstChildOfClass("BasePart") or obj.PrimaryPart
-    end, nil)
-    
+    local rootPart = obj:IsA("BasePart") and obj or obj:FindFirstChildOfClass("BasePart") or obj.PrimaryPart
     if rootPart then
         local dist = (rootPart.Position - getPlayerPosition()).Magnitude
         table.insert(info, "📏 Distance: "..string.format("%.1f", dist).."m")
     end
     
     -- Дополнительные метаданные
-    table.insert(info, "🕒 CreatedTime: "..tostring(safeGet(function() return obj:GetAttribute("CreatedTime") end, "N/A")))
-    table.insert(info, "🏷️ Tags: "..tostring(safeGet(function() 
-        if game:GetService("CollectionService"):HasTag(obj, "Any") then
-            return table.concat(game:GetService("CollectionService"):GetTags(obj), ", ")
-        end
-        return "None"
-    end, "None")))
+    table.insert(info, "🕒 CreatedTime: "..safeToString(obj:GetAttribute("CreatedTime")))
     
-    -- Дочерние объекты (если включено)
+    -- Теги
+    local tags = {}
+    for _, tag in ipairs(game:GetService("CollectionService"):GetTags(obj)) do
+        table.insert(tags, tag)
+    end
+    table.insert(info, "🏷️ Tags: "..(#tags > 0 and table.concat(tags, ", ") or "None"))
+    
+    -- Дочерние объекты
     if includeChildren and #obj:GetChildren() > 0 then
         table.insert(info, "\n🧒 Children ("..#obj:GetChildren().."):")
         for i, child in ipairs(obj:GetChildren()) do
-            if i <= 5 then -- Ограничиваем количество выводимых дочерних элементов
-                table.insert(info, string.format("  %d. %s (%s)", i, child.Name, child.ClassName))
+            if i <= 5 then
+                table.insert(info, string.format("  %d. %s (%s)", i, safeToString(child.Name), safeToString(child.ClassName)))
             end
         end
         if #obj:GetChildren() > 5 then
@@ -90,13 +98,10 @@ local function scanArea()
     local count = 0
     
     for _, obj in pairs(workspace:GetDescendants()) do
-        local rootPart = safeGet(function()
-            return obj:IsA("BasePart") and obj or obj:FindFirstChildOfClass("BasePart") or obj.PrimaryPart
-        end, nil)
-        
+        local rootPart = obj:IsA("BasePart") and obj or obj:FindFirstChildOfClass("BasePart") or obj.PrimaryPart
         if rootPart and (rootPart.Position - getPlayerPosition()).Magnitude <= radius then
-            local info = safeGet(getExtendedInfo, obj, "🚫 Failed to get info for this object")
-            table.insert(result, "\n"..info)
+            local success, info = pcall(getExtendedInfo, obj)
+            table.insert(result, "\n"..(success and info or "🚫 Failed to get info for this object"))
             count = count + 1
         end
     end

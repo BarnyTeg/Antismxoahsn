@@ -1,52 +1,64 @@
 local Players = game:GetService("Players")
-local HttpService = game:GetService("HttpService")
 local player = Players.LocalPlayer
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local function deepCopy(original)
-    local newObj = Instance.new(original.ClassName)
+-- 1. Найти оригинальный бандаж
+local function findBandage()
+    -- Проверяем возможные места
+    local locations = {
+        ReplicatedStorage,
+        workspace,
+        game:GetService("StarterPack"),
+        game:GetService("StarterGui")
+    }
     
-    -- Копируем публичные свойства
-    for prop, _ in pairs(getproperties(original)) do
-        if not string.find(prop, "__") then -- Игнорируем скрытые
-            pcall(function()
-                newObj[prop] = original[prop]
-            end)
-        end
-    end
-    
-    -- Рекурсивное копирование детей
-    for _, child in ipairs(original:GetChildren()) do
-        deepCopy(child).Parent = newObj
-    end
-    
-    return newObj
-end
-
-local function createCustomBandage()
-    local original = ReplicatedStorage:FindFirstChild("Bandage")
-    if not original then return end
-    
-    local customBandage = deepCopy(original)
-    customBandage.Name = "Bandage_CUSTOM_"..HttpService:GenerateGUID(false)
-    
-    -- Изменяем критичные идентификаторы
-    if customBandage:FindFirstChild("Configuration") then
-        local config = customBandage.Configuration
-        if config:FindFirstChild("ItemId") then
-            config.ItemId.Value = "CUSTOM_"..tostring(os.time())
-        end
-    end
-    
-    return customBandage
-end
-
--- Использование
-game:GetService("UserInputService").InputBegan:Connect(function(input)
-    if input.KeyCode == Enum.KeyCode.F then
-        local bandage = createCustomBandage()
+    for _, location in ipairs(locations) do
+        local bandage = location:FindFirstChild("Bandage") or location:FindFirstChildWhichIsA("Tool")
         if bandage then
-            bandage.Parent = player.Backpack
-            print("Кастомный бандаж создан! ID: "..bandage:GetDebugId())
+            return bandage
         end
     end
-end)
+    return nil
+end
+
+-- 2. Создать копию и добавить в инвентарь
+local function cloneBandageToInventory()
+    local original = findBandage()
+    if not original then
+        warn("⚠️ Бандаж не найден!")
+        return
+    end
+    
+    local clone = original:Clone()
+    clone.Name = "Bandage_Copy_" .. os.time() -- Уникальное имя
+    
+    -- Добавляем в инвентарь
+    local backpack = player:WaitForChild("Backpack")
+    clone.Parent = backpack
+    
+    print("✅ Бандаж скопирован в инвентарь!")
+end
+
+-- 3. Активация по нажатию кнопки на экране (для мобильных устройств)
+local function setupTouchButton()
+    local screenGui = Instance.new("ScreenGui")
+    local button = Instance.new("TextButton")
+    
+    screenGui.Parent = player.PlayerGui
+    button.Parent = screenGui
+    
+    -- Настройки кнопки
+    button.Size = UDim2.new(0.2, 0, 0.1, 0)
+    button.Position = UDim2.new(0.8, 0, 0.8, 0)
+    button.Text = "Добавить бандаж"
+    button.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+    
+    -- Обработка нажатия
+    button.MouseButton1Click:Connect(function()
+        cloneBandageToInventory()
+    end)
+end
+
+-- Запуск
+setupTouchButton()
+print("Готово! Нажмите кнопку на экране.")

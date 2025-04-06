@@ -1,36 +1,65 @@
 local bandage = workspace:WaitForChild("RuntimeItems"):WaitForChild("Bandage")
+local HttpService = game:GetService("HttpService")
+local textToCopy = ""
 
--- Функция для безопасного чтения скриптов
+-- Функция для форматирования вывода
+local function addToOutput(text)
+    textToCopy = textToCopy .. text .. "\n"
+end
+
+-- Основная функция сканирования
 local function scanScripts(object)
-    print("🔍 Анализ объекта:", object:GetFullName())
+    addToOutput("🔍 Анализ объекта: " .. object:GetFullName())
     
-    -- Проверяем все виды скриптов
-    local scriptTypes = {"Script", "LocalScript", "ModuleScript"}
-    
-    for _, scriptType in ipairs(scriptTypes) do
-        for _, script in ipairs(object:GetChildren()) do
-            if script:IsA(scriptType) then
-                print("\n📜 Найден скрипт:")
-                print("   Тип:", script.ClassName)
-                print("   Имя:", script.Name)
-                print("   Путь:", script:GetFullName())
-                
-                -- Безопасное чтение исходного кода
-                pcall(function()
-                    print("   Код:")
-                    print("   " .. string.rep("-", 30))
-                    print(script.Source)
-                    print("   " .. string.rep("-", 30))
-                end)
-            end
+    -- Проверка скриптов
+    for _, script in ipairs(object:GetChildren()) do
+        if script:IsA("Script") or script:IsA("LocalScript") or script:IsA("ModuleScript") then
+            addToOutput("\n📜 Скрипт: " .. script.Name)
+            addToOutput("Тип: " .. script.ClassName)
+            addToOutput("Путь: " .. script:GetFullName())
+            
+            pcall(function()
+                addToOutput("Содержимое:\n" .. script.Source)
+            end)
         end
     end
 end
 
--- Анализируем сам бандаж и все его дочерние объекты
+-- Сканируем бандаж и все его части
 scanScripts(bandage)
 for _, child in ipairs(bandage:GetDescendants()) do
     scanScripts(child)
 end
 
-print("\n✅ Анализ завершен! Проверьте консоль (F9)")
+-- Добавляем информацию об атрибутах
+addToOutput("\n📌 Атрибуты:")
+for attr, value in pairs(bandage:GetAttributes()) do
+    addToOutput(attr .. " = " .. tostring(value))
+end
+
+-- Копируем в буфер обмена
+pcall(function()
+    setclipboard(textToCopy)
+    print("✅ Все данные скопированы в буфер обмена!")
+end)
+
+-- Создаем кнопку для повторного копирования
+local screenGui = Instance.new("ScreenGui")
+screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+
+local button = Instance.new("TextButton")
+button.Size = UDim2.new(0.6, 0, 0.1, 0)
+button.Position = UDim2.new(0.2, 0, 0.5, 0)
+button.Text = "СКОПИРОВАТЬ ДАННЫЕ"
+button.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+button.TextColor3 = Color3.new(1, 1, 1)
+button.Parent = screenGui
+
+button.MouseButton1Click:Connect(function()
+    pcall(function()
+        setclipboard(textToCopy)
+        button.Text = "ДАННЫЕ СКОПИРОВАНЫ!"
+        wait(1)
+        button.Text = "СКОПИРОВАТЬ ДАННЫЕ"
+    end)
+end)

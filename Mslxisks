@@ -3,137 +3,130 @@ local player = Players.LocalPlayer
 local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
 
--- Конфигурация --
-local MAX_LOG_ENTRIES = 2000
+-- Настройки логгирования
+local MAX_LOG_ENTRIES = 1000
+local LOG_INTERVAL = 2 -- секунды
 local LOG_TO_CLIPBOARD = true
-local DEEP_ANALYSIS_INTERVAL = 5 -- секунды
-local BLACKLIST = { -- Объекты которые не логируем
-    "Terrain",
-    "Camera"
-}
 
--- Глобальные переменные --
+-- Глобальные переменные
 local ActionLog = {}
-local LastDeepScan = 0
+local LastLogTime = os.time()
 local KnownObjects = {}
-local HookedRemotes = {}
 
--- Утилиты --
-function safeCall(fn, ...)
-    local success, result = pcall(fn, ...)
-    if not success then return "ERROR: "..tostring(result) end
+-- Безопасное выполнение
+local function safeCall(func, ...)
+    local success, result = pcall(func, ...)
+    if not success then return nil end
     return result
 end
 
-function formatValue(val)
-    local t = typeof(val)
-    if t == "table" then
-        return HttpService:JSONEncode(val)
-    elseif t == "Vector3" then
-        return string.format("(%.1f,%.1f,%.1f)", val.X, val.Y, val.Z)
-    elseif t == "Instance" then
-        return val:GetFullName().." ["..val:GetDebugId().."]"
+-- Форматирование значений
+local function formatValue(value)
+    local valueType = typeof(value)
+    
+    if valueType == "table" then
+        return "{...}"
+    elseif valueType == "Instance" then
+        return value:GetFullName().." ("..value.ClassName..")"
+    elseif valueType == "Vector3" then
+        return string.format("(%.1f, %.1f, %.1f)", value.X, value.Y, value.Z)
     else
-        return tostring(val)
+        return tostring(value)
     end
 end
 
-function logEvent(category, action, details)
-    local entry = string.format("[%s][%s] %s: %s",
-        os.date("%H:%M:%S"),
-        category,
-        action,
-        details
-    )
+-- Логирование события
+local function logEvent(category, action, details)
+    local timestamp = os.date("%H:%M:%S")
+    local entry = string.format("[%s][%s] %s: %s", timestamp, category, action, details)
     
     table.insert(ActionLog, 1, entry)
-    if #ActionLog > MAX_LOG_ENTRIES then table.remove(ActionLog) end
+    if #ActionLog > MAX_LOG_ENTRIES then
+        table.remove(ActionLog)
+    end
     
     print(entry)
-    if LOG_TO_CLIPBOARD then setclipboard(table.concat(ActionLog, "\n")) end
+    
+    -- Автосохранение
+    if os.time() - LastLogTime >= LOG_INTERVAL and LOG_TO_CLIPBOARD then
+        safeCall(function()
+            setclipboard(table.concat(ActionLog, "\n"))
+        end)
+        LastLogTime = os.time()
+    end
 end
 
--- Детекторы --
-function trackRemotes()
+-- 1. Мониторинг сетевых событий
+local function monitorNetwork()
     local function hookRemote(remote)
-        if HookedRemotes[remote] then return end
-        HookedRemotes[remote] = true
-        
         if remote:IsA("RemoteEvent") then
             remote.OnClientEvent:Connect(function(...)
-                local args = {...}
-                logEvent("NETWORK", "EVENT: "..remote.Name, 
-                    formatValue(args).." | "..remote:GetFullName())
+                logEvent("NETWORK", "EVENT: "..remote.Name, remote:GetFullName())
             end)
         elseif remote:IsA("RemoteFunction") then
-            local old = remote.InvokeServer
+            local oldInvoke = remote.InvokeServer
             remote.InvokeServer = function(self, ...)
-                local args = {...}
-                logEvent("NETWORK", "CALL: "..remote.Name, 
-                    formatValue(args).." | "..remote:GetFullName())
-                return old(self, ...)
+                logEvent("NETWORK", "CALL: "..remote.Name, remote:GetFullName())
+                return oldInvoke(self, ...)
             end
         end
     end
 
+    -- Хук существующих объектов
+    for _, obj in ipairs(game:GetDescendants()) do
+        if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
+            hookRemote(obj)
+        end
+    end
+
+    -- Хук новых объектов
     game.DescendantAdded:Connect(function(obj)
-        if (obj:IsA("RemoteEvent") or (obj:IsA("RemoteFunction")) then
+        if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
             hookRemote(obj)
         end
     end)
-
-    for _,remote in ipairs(game:GetDescendants()) do
-        if (remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction")) then
-            hookRemote(remote)
-        end
-    end
 end
 
-function trackCharacter()
-    player.CharacterAdded:Connect(function(char)
-        logEvent("CHARACTER", "SPAWN", char:GetFullName())
-        
-        local humanoid = char:WaitForChild("Humanoid")
-        humanoid:GetPropertyChangedSignal("Health"):Connect(function()
-            logEvent("STATS", "HEALTH", 
-                humanoid.Health.."/"..humanoid.MaxHealth)
-        end)
-        
-        humanoid:GetPropertyChangedSignal("Sit"):Connect(function()
-            logEvent("ANIMATION", humanoid.Sit and "SIT_START" or "SIT_END", "")
-        end)
-    end)
-end
-
-function trackInventory()
+-- 2. Мониторинг инвентаря
+local function monitorInventory()
     if not player:FindFirstChild("Backpack") then return end
     
-    local function logItem(action, item)
-        logEvent("INVENTORY", action, 
-            item.Name.." | "..item:GetFullName())
-    end
-
     player.Backpack.ChildAdded:Connect(function(item)
-        logItem("ADD", item)
+        logEvent("INVENTORY", "ADDED", item.Name.." ("..item.ClassName..")")
     end)
     
     player.Backpack.ChildRemoved:Connect(function(item)
-        logItem("REMOVE", item)
+        logEvent("INVENTORY", "REMOVED", item.Name.." ("..item.ClassName..")")
     end)
 end
 
-function trackPhysics()
+-- 3. Мониторинг персонажа
+local function monitorCharacter()
+    player.CharacterAdded:Connect(function(character)
+        logEvent("CHARACTER", "SPAWNED", character.Name)
+        
+        local humanoid = character:WaitForChild("Humanoid")
+        humanoid:GetPropertyChangedSignal("Health"):Connect(function()
+            logEvent("STATS", "HEALTH", humanoid.Health.."/"..humanoid.MaxHealth)
+        end)
+    end)
+end
+
+-- 4. Мониторинг физики
+local function monitorPhysics()
     workspace.DescendantAdded:Connect(function(obj)
         if obj:IsA("BasePart") then
             obj.Touched:Connect(function(otherPart)
-                logEvent("PHYSICS", "COLLISION",
-                    obj:GetFullName().." ↔ "..otherPart:GetFullName())
+                logEvent("PHYSICS", "COLLISION", obj.Name.." ↔ "..otherPart.Name)
             end)
         end
     end)
 end
 
-function trackUI()
+-- 5. Мониторинг интерфейса
+local function monitorGUI()
+    local gui = player:WaitForChild("PlayerGui")
+    
     local function setupButton(btn)
         if btn:IsA("TextButton") or btn:IsA("ImageButton") then
             btn.MouseButton1Click:Connect(function()
@@ -141,33 +134,29 @@ function trackUI()
             end)
         end
     end
-
-    player:WaitForChild("PlayerGui").DescendantAdded:Connect(function(ui)
-        setupButton(ui)
-    end)
-end
-
-function deepScan()
-    if os.time() - LastDeepScan < DEEP_ANALYSIS_INTERVAL then return end
-    LastDeepScan = os.time()
     
-    for _,obj in ipairs(workspace:GetDescendants()) do
-        if not KnownObjects[obj] and not table.find(BLACKLIST, obj.ClassName) then
-            KnownObjects[obj] = true
-            logEvent("DISCOVER", "NEW_"..obj.ClassName, obj:GetFullName())
-        end
+    for _, element in ipairs(gui:GetDescendants()) do
+        setupButton(element)
     end
+    
+    gui.DescendantAdded:Connect(setupButton)
 end
 
--- Инициализация --
-trackRemotes()
-trackCharacter()
-trackInventory()
-trackPhysics()
-trackUI()
+-- Инициализация
+monitorNetwork()
+monitorInventory()
+monitorCharacter()
+monitorPhysics()
+monitorGUI()
 
 logEvent("SYSTEM", "STARTED", "Ultimate Logger Activated")
 
-RunService.Heartbeat:Connect(function()
-    deepScan()
-end)
+-- Автоочистка логов
+while true do
+    wait(60)
+    if #ActionLog > MAX_LOG_ENTRIES * 1.5 then
+        for i = #ActionLog, MAX_LOG_ENTRIES, -1 do
+            table.remove(ActionLog, i)
+        end
+    end
+end

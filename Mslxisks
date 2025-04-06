@@ -1,69 +1,79 @@
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
--- 1. Находим оригинальную газету
-local original = workspace:FindFirstChild("Part") or workspace:FindFirstChild("Newspaper")
-if not original then
-    print("❌ Оригинальная газета не найдена")
-    return
+-- Параметры газеты (полностью кастомные)
+local NEWSPAPER_DATA = {
+    Name = "IndependentNewspaper",
+    Size = Vector3.new(5, 5, 0.25),
+    Color = Color3.fromRGB(210, 228, 186), -- RGB(0.82, 0.89, 0.73)
+    Material = Enum.Material.Cardboard,
+    Transparency = 0,
+    Anchored = false,
+    CanCollide = true,
+    Elasticity = 0.5,
+    Friction = 0.3
+}
+
+-- Генератор ID в стиле Roblox
+local function generateRobloxId()
+    return "1_"..tostring(math.random(20000, 30000))
 end
 
--- 2. Функция для генерации нового ID в стиле Roblox
-local function generateRobloxStyleId()
-    return "1_"..tostring(math.random(20000, 30000)) -- Диапазон как у оригинальных ID
-end
-
--- 3. Создаем улучшенную копию
-local function createSmartClone(original)
-    -- Основная копия (без шаблонов)
-    local clone = original:Clone()
+-- Создание полностью нового объекта
+local function createFromScratch()
+    -- 1. Основной объект
+    local newspaper = Instance.new("Part")
     
-    -- Удаляем ненужные связи
-    for _, child in ipairs(clone:GetDescendants()) do
-        if child:IsA("Weld") or child:IsA("WeldConstraint") then
-            child:Destroy() -- Удаляем сварки
+    -- 2. Применяем параметры
+    for property, value in pairs(NEWSPAPER_DATA) do
+        newspaper[property] = value
+    end
+    
+    -- 3. Уникальные идентификаторы
+    local objectId = generateRobloxId()
+    newspaper:SetAttribute("UniqueId", objectId)
+    
+    -- 4. Физическая система
+    local bodyForce = Instance.new("BodyForce")
+    bodyForce.Force = Vector3.new(0, newspaper:GetMass() * workspace.Gravity, 0)
+    bodyForce.Parent = newspaper
+    
+    -- 5. Система взаимодействий
+    local clickDetector = Instance.new("ClickDetector")
+    clickDetector.Parent = newspaper
+    clickDetector.MouseClick:Connect(function()
+        print("Газета", objectId, "использована")
+        -- Ваш код взаимодействия
+    end)
+    
+    -- 6. Создаем кастомные шаблоны
+    local templateFolder = Instance.new("Folder")
+    templateFolder.Name = "NewspaperTemplates"
+    templateFolder.Parent = game:GetService("ReplicatedStorage")
+    
+    local mainTemplate = Instance.new("Part")
+    mainTemplate.Name = "MainTemplate"
+    mainTemplate.Size = NEWSPAPER_DATA.Size
+    mainTemplate.Transparency = 0.7
+    mainTemplate:SetAttribute("TemplateId", generateRobloxId())
+    mainTemplate.Parent = templateFolder
+    
+    -- 7. Размещение в мире
+    newspaper.Parent = workspace
+    
+    if player.Character then
+        local root = player.Character:FindFirstChild("HumanoidRootPart")
+        if root then
+            newspaper.Position = root.Position + Vector3.new(0, 0, -3)
         end
     end
     
-    -- Генерируем новые ID для критических элементов
-    clone:SetAttribute("OriginalId", original:GetDebugId())
-    clone:SetAttribute("NewId", generateRobloxStyleId())
-    
-    -- Создаем кастомные шаблоны
-    local customTemplate = Instance.new("Part")
-    customTemplate.Name = "Custom_"..original.Name
-    customTemplate.Size = original.Size
-    customTemplate.Transparency = 0.5 -- Помечаем как шаблон
-    customTemplate:SetAttribute("TemplateId", generateRobloxStyleId())
-    customTemplate.Parent = ReplicatedStorage
-    
-    -- Настраиваем физику
-    clone.Anchored = false
-    clone.CanCollide = true
-    
-    -- Добавляем BodyVelocity для стабильности
-    local bodyVelocity = Instance.new("BodyVelocity")
-    bodyVelocity.Velocity = Vector3.new(0, 0, 0)
-    bodyVelocity.Parent = clone
-    
-    return clone
+    print("✅ Создана автономная газета ID:", objectId)
+    return newspaper
 end
 
--- 4. Создаем и размещаем копию
-local newspaperClone = createSmartClone(original)
-newspaperClone.Parent = workspace
-
--- Позиционируем перед игроком
-if player.Character then
-    local humanoidRootPart = player.Character:FindFirstChild("HumanoidRootPart")
-    if humanoidRootPart then
-        newspaperClone.Position = humanoidRootPart.Position + Vector3.new(0, 0, -3)
-    else
-        newspaperClone.Position = original.Position + Vector3.new(0, 3, 0)
-    end
+-- Создаем 3 уникальные газеты
+for i = 1, 3 do
+    createFromScratch()
+    task.wait(0.3)
 end
-
-print("✅ Умная копия создана!")
-print("Оригинальный ID:", original:GetDebugId())
-print("Новый ID:", newspaperClone:GetAttribute("NewId"))
-print("ID шаблона:", newspaperClone:FindFirstChild("CustomTemplate"):GetAttribute("TemplateId"))

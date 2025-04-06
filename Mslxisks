@@ -13,64 +13,81 @@ local function getPlayerRoot()
     return character:WaitForChild("HumanoidRootPart")
 end
 
--- Упрощенный анализ объекта
-local function quickAnalyze(obj)
-    return {
-        Name = obj.Name,
-        Class = obj.ClassName,
-        Id = obj:GetDebugId(),
-        Position = formatVector(obj.Position),
-        Size = obj:IsA("BasePart") and formatVector(obj.Size) or "N/A",
-        Parent = obj.Parent and obj.Parent.Name or "nil"
-    }
+-- Функция проверки видимости объекта
+local function isVisible(obj)
+    if obj:IsA("BasePart") then
+        return obj.Transparency < 1 and obj:IsDescendantOf(workspace)
+    end
+    return true
 end
 
 -- Основная функция сканирования
-local function scanArea()
+local function fullAreaScan()
     local root = getPlayerRoot()
+    local centerPos = root.Position
+    
+    -- Создаем регион для поиска
     local region = Region3.new(
-        root.Position - Vector3.new(scanRadius, scanRadius, scanRadius),
-        root.Position + Vector3.new(scanRadius, scanRadius, scanRadius)
+        centerPos - Vector3.new(scanRadius, scanRadius, scanRadius),
+        centerPos + Vector3.new(scanRadius, scanRadius, scanRadius)
     )
+    
+    -- Находим все части в регионе
     local parts = workspace:FindPartsInRegion3(region, nil, math.huge)
     
-    local report = "🔍 ОБЪЕКТЫ В РАДИУСЕ "..scanRadius.." МЕТРОВ:\n\n"
-    local objectsFound = 0
-    
-    -- Собираем все объекты в регионе
+    -- Собираем все объекты
     local allObjects = {}
+    local uniqueIds = {}
+    
+    -- Добавляем все найденные части
     for _, part in ipairs(parts) do
-        table.insert(allObjects, part)
+        if not uniqueIds[part:GetDebugId()] and isVisible(part) then
+            table.insert(allObjects, part)
+            uniqueIds[part:GetDebugId()] = true
+        end
+    end
+    
+    -- Добавляем все дочерние объекты
+    for _, part in ipairs(parts) do
         for _, descendant in ipairs(part:GetDescendants()) do
-            table.insert(allObjects, descendant)
+            if not uniqueIds[descendant:GetDebugId()] and isVisible(descendant) then
+                table.insert(allObjects, descendant)
+                uniqueIds[descendant:GetDebugId()] = true
+            end
         end
     end
     
-    -- Анализируем каждый объект
-    for _, obj in ipairs(allObjects) do
-        objectsFound = objectsFound + 1
-        local info = quickAnalyze(obj)
+    -- Сортируем по расстоянию
+    table.sort(allObjects, function(a, b)
+        local distA = (a:IsA("BasePart") and (a.Position - centerPos).Magnitude or math.huge)
+        local distB = (b:IsA("BasePart") and (b.Position - centerPos).Magnitude or math.huge)
+        return distA < distB
+    end)
+    
+    -- Формируем отчет
+    local report = string.format("🔍 ПОЛНЫЙ СКАН РАДИУСА %dм\n", scanRadius)
+    report ..= string.format("📍 Центр сканирования: %s\n\n", formatVector(centerPos))
+    report ..= "НАЙДЕННЫЕ ОБЪЕКТЫ:\n"
+    report ..= string.rep("-", 50) .. "\n"
+    
+    for i, obj in ipairs(allObjects) do
+        local dist = obj:IsA("BasePart") and string.format("%.2fм", (obj.Position - centerPos).Magnitude) or "N/A"
+        local size = obj:IsA("BasePart") and formatVector(obj.Size) or "N/A"
         
-        report ..= string.format("%d. %s (%s)\n", objectsFound, info.Name, info.Class)
-        report ..= string.format("   🆔 ID: %s\n", info.Id)
-        report ..= string.format("   📍 Позиция: %s\n", info.Position)
-        
-        if info.Size ~= "N/A" then
-            report ..= string.format("   📏 Размер: %s\n", info.Size)
-        end
-        
-        report ..= string.format("   🏠 Родитель: %s\n\n", info.Parent)
+        report ..= string.format("%d. %s (%s)\n", i, obj.Name, obj.ClassName)
+        report ..= string.format("   🆔 ID: %s\n", obj:GetDebugId())
+        report ..= string.format("   📍 Позиция: %s\n", obj:IsA("BasePart") and formatVector(obj.Position) or "N/A")
+        report ..= string.format("   📏 Размер: %s\n", size)
+        report ..= string.format("   📐 Дистанция: %s\n", dist)
+        report ..= string.format("   🏠 Родитель: %s\n", obj.Parent and obj.Parent.Name or "nil")
+        report ..= string.rep("-", 50) .. "\n"
     end
     
-    if objectsFound == 0 then
-        report ..= "❌ ОБЪЕКТЫ НЕ НАЙДЕНЫ"
-    else
-        report ..= string.format("НАЙДЕНО ОБЪЕКТОВ: %d", objectsFound)
-    end
+    report ..= string.format("\nИТОГО: %d объектов", #allObjects)
     
     print(report)
     setclipboard(report)
 end
 
 -- Запуск сканирования
-scanArea()
+fullAreaScan()

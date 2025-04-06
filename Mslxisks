@@ -1,125 +1,115 @@
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
-local RunService = game:GetService("RunService")
-local HttpService = game:GetService("HttpService")
 local UserInputService = game:GetService("UserInputService")
+local HttpService = game:GetService("HttpService")
 
--- Настройки логгирования
-local LOG_INTERVAL = 1
-local MAX_LOG_LENGTH = 5000
-local LOG_TO_CLIPBOARD = true
-local LOG_TO_FILE = false
-
--- Глобальный лог
+-- Настройки
+local LOG_LIMIT = 1000 -- Максимум записей в логе
 local ActionLog = {}
-local LastLogTime = os.time()
+local LastActionTime = 0
 
--- Функция для форматирования данных
+-- Форматирование данных
 local function formatValue(value)
     if typeof(value) == "table" then
         return HttpService:JSONEncode(value)
     elseif typeof(value) == "Vector3" then
-        return string.format("(%.2f, %.2f, %.2f)", value.X, value.Y, value.Z)
+        return string.format("(%.1f, %.1f, %.1f)", value.X, value.Y, value.Z)
     else
         return tostring(value)
     end
 end
 
--- Логгирование действия
-local function logAction(category, action, details)
+-- Логирование действия
+local function logAction(type, details)
     local timestamp = os.date("%H:%M:%S")
-    local entry = string.format("[%s][%s] %s: %s", timestamp, category, action, details)
+    local entry = string.format("[%s] %s: %s", timestamp, type, details)
     
-    table.insert(ActionLog, entry)
+    table.insert(ActionLog, 1, entry) -- Добавляем в начало
     
-    if #ActionLog > MAX_LOG_LENGTH then
-        table.remove(ActionLog, 1)
-    end
-    
-    if os.time() - LastLogTime >= LOG_INTERVAL then
-        local fullLog = table.concat(ActionLog, "\n")
-        if LOG_TO_CLIPBOARD then
-            pcall(function() setclipboard(fullLog) end)
-        end
-        if LOG_TO_FILE then
-            pcall(function() writefile("action_log.txt", fullLog) end)
-        end
-        LastLogTime = os.time()
+    if #ActionLog > LOG_LIMIT then
+        table.remove(ActionLog)
     end
     
     print(entry)
+    LastActionTime = os.time()
 end
 
--- Безопасный мониторинг свойств
-local function trackObject(obj)
-    -- Проверяем, поддерживает ли объект свойства
-    if not pcall(function() return obj.GetPropertyChangedSignal end) then
-        return
-    end
-
-    -- Получаем список свойств безопасно
-    local success, properties = pcall(function()
-        local props = {}
-        for _, prop in ipairs(getproperties(obj)) do
-            table.insert(props, prop)
-        end
-        return props
-    end)
-
-    if not success then return end
-
-    -- Отслеживаем изменения свойств
-    for _, prop in ipairs(properties) do
-        if not pcall(function()
-            local oldValue = obj[prop]
-            obj:GetPropertyChangedSignal(prop):Connect(function()
-                local newValue = obj[prop]
-                logAction("PROPERTY", "CHANGE", string.format(
-                    "%s.%s: %s → %s [ID: %s]",
-                    obj.Name, prop, 
-                    formatValue(oldValue), 
-                    formatValue(newValue),
-                    obj:GetDebugId()
-                ))
-                oldValue = newValue
-            end)
-        end) then
-            -- Игнорируем ошибки
-        end
-    end
-end
-
--- Мониторинг изменений свойств объектов
-local function monitorPropertyChanges()
-    -- Отслеживаем новые объекты
-    workspace.DescendantAdded:Connect(function(obj)
-        pcall(trackObject, obj)
-    end)
+-- 1. Мониторинг кликов и касаний
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
     
-    -- Отслеживаем существующие объекты
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        pcall(trackObject, obj)
-    end
-end
-
--- Остальные функции (monitorInputs, monitorNetwork и т.д.) остаются без изменений
--- ...
-
--- Запуск мониторов с обработкой ошибок
-local function safeStart()
-    local monitors = {
-        monitorInputs,
-        monitorPropertyChanges,
-        monitorNetwork,
-        monitorInventory,
-        monitorScripts,
-        monitorPhysics
+    local info = {
+        Type = input.UserInputType.Name,
+        KeyCode = input.KeyCode.Name,
+        Position = input.Position or Vector3.new()
     }
     
-    for _, monitor in ipairs(monitors) do
-        pcall(monitor)
+    logAction("INPUT", string.format("%s | Key: %s | Pos: %s", 
+        info.Type, info.KeyCode, formatValue(info.Position)))
+end)
+
+-- 2. Мониторинг изменений в инвентаре
+if player:FindFirstChild("Backpack") then
+    player.Backpack.ChildAdded:Connect(function(item)
+        logAction("INVENTORY+", string.format("%s (%s)", item.Name, item.ClassName))
+    end)
+    
+    player.Backpack.ChildRemoved:Connect(function(item)
+        logAction("INVENTORY-", string.format("%s (%s)", item.Name, item.ClassName))
+    end)
+end
+
+-- 3. Мониторинг сетевых событий
+for _, obj in ipairs(game:GetDescendants()) do
+    if obj:IsA("RemoteEvent") then
+        obj.OnClientEvent:Connect(function(...)
+            logAction("NETWORK", string.format("%s (%s) | Args: %s", 
+                obj.Name, obj.ClassName, formatValue({...})))
+        end)
+    elseif obj:IsA("RemoteFunction") then
+        local oldInvoke = obj.InvokeServer
+        obj.InvokeServer = function(self, ...)
+            logAction("REMOTE CALL", string.format("%s (%s) | Args: %s", 
+                obj.Name, obj.ClassName, formatValue({...})))
+            return oldInvoke(self, ...)
+        end
     end
 end
 
-safeStart()
-logAction("SYSTEM", "START", "Мониторинг активирован. Все действия записываются.")
+-- 4. Мониторинг изменений персонажа
+player.CharacterAdded:Connect(function(character)
+    logAction("CHARACTER", "Персонаж загружен")
+    
+    local humanoid = character:WaitForChild("Humanoid")
+    humanoid:GetPropertyChangedSignal("Health"):Connect(function()
+        logAction("HEALTH", string.format("HP: %.1f", humanoid.Health))
+    end)
+end)
+
+-- 5. Мониторинг физических взаимодействий
+workspace.DescendantAdded:Connect(function(obj)
+    if obj:IsA("BasePart") then
+        obj.Touched:Connect(function(otherPart)
+            logAction("COLLISION", string.format("%s ↔ %s", obj.Name, otherPart.Name))
+        end)
+    end
+end)
+
+-- 6. Мониторинг GUI-взаимодействий
+local function monitorGui(gui)
+    gui.DescendantAdded:Connect(function(element)
+        if element:IsA("TextButton") or element:IsA("ImageButton") then
+            element.MouseButton1Click:Connect(function()
+                logAction("GUI CLICK", element:GetFullName())
+            end)
+        end
+    end)
+end
+
+for _, gui in ipairs(player:WaitForChild("PlayerGui"):GetDescendants()) do
+    if gui:IsA("ScreenGui") then
+        monitorGui(gui)
+    end
+end
+
+logAction("SYSTEM", "Мониторинг активирован. Все действия записываются.")

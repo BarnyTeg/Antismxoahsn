@@ -1,5 +1,5 @@
-local radius = 15 -- радиус сканирования в метрах
-local includeChildren = true -- включать ли информацию о дочерних объектах
+local radius = 15
+local includeChildren = true
 
 local function getPlayerPosition()
     local player = game:GetService("Players").LocalPlayer
@@ -47,47 +47,11 @@ local function getExtendedInfo(obj)
         table.insert(info, "🧒 Children: "..safeToString(#obj:GetChildren()))
     end
     
-    -- Визуальные свойства
-    if obj:IsA("GuiObject") then
-        table.insert(info, "🎨 BackgroundColor: "..safeToString(obj.BackgroundColor3))
-    elseif obj:IsA("BasePart") then
-        table.insert(info, "🖼️ TextureCount: "..safeToString(#obj:GetChildrenOfClass("Texture")))
-    end
-    
-    -- Специфичные свойства
-    if obj:IsA("Light") then
-        table.insert(info, "💡 Brightness: "..safeToString(obj.Brightness))
-        table.insert(info, "🌈 Color: "..safeToString(obj.Color))
-    end
-    
     -- Расстояние до игрока
-    local rootPart = obj:IsA("BasePart") and obj or obj:FindFirstChildOfClass("BasePart") or obj.PrimaryPart
+    local rootPart = obj:IsA("BasePart") and obj or (obj:IsA("Model") and obj.PrimaryPart) or obj:FindFirstChildOfClass("BasePart")
     if rootPart then
         local dist = (rootPart.Position - getPlayerPosition()).Magnitude
         table.insert(info, "📏 Distance: "..string.format("%.1f", dist).."m")
-    end
-    
-    -- Дополнительные метаданные
-    table.insert(info, "🕒 CreatedTime: "..safeToString(obj:GetAttribute("CreatedTime")))
-    
-    -- Теги
-    local tags = {}
-    for _, tag in ipairs(game:GetService("CollectionService"):GetTags(obj)) do
-        table.insert(tags, tag)
-    end
-    table.insert(info, "🏷️ Tags: "..(#tags > 0 and table.concat(tags, ", ") or "None"))
-    
-    -- Дочерние объекты
-    if includeChildren and #obj:GetChildren() > 0 then
-        table.insert(info, "\n🧒 Children ("..#obj:GetChildren().."):")
-        for i, child in ipairs(obj:GetChildren()) do
-            if i <= 5 then
-                table.insert(info, string.format("  %d. %s (%s)", i, safeToString(child.Name), safeToString(child.ClassName)))
-            end
-        end
-        if #obj:GetChildren() > 5 then
-            table.insert(info, string.format("  ... and %d more", #obj:GetChildren() - 5))
-        end
     end
     
     return table.concat(info, "\n")
@@ -98,10 +62,10 @@ local function scanArea()
     local count = 0
     
     for _, obj in pairs(workspace:GetDescendants()) do
-        local rootPart = obj:IsA("BasePart") and obj or obj:FindFirstChildOfClass("BasePart") or obj.PrimaryPart
+        local rootPart = obj:IsA("BasePart") and obj or (obj:IsA("Model") and obj.PrimaryPart) or obj:FindFirstChildOfClass("BasePart")
         if rootPart and (rootPart.Position - getPlayerPosition()).Magnitude <= radius then
             local success, info = pcall(getExtendedInfo, obj)
-            table.insert(result, "\n"..(success and info or "🚫 Failed to get info for this object"))
+            table.insert(result, "\n"..(success and info or "🚫 Failed to get info for: "..safeToString(obj.Name)))
             count = count + 1
         end
     end
@@ -116,9 +80,3 @@ end
 
 -- Первый запуск
 scanArea()
-
--- Автоматическое обновление (по желанию)
-while true do
-    wait(30)
-    scanArea()
-end

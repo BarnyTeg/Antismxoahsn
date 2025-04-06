@@ -1,54 +1,221 @@
--- Настройки
-local scanRadius = 10 -- радиус в метрах
-local updateDelay = 1 -- задержка между сканированиями (в секундах)
-
--- Сервисы
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
-local clipboard = setclipboard or toclipboard or function(text) print("📋 Буфер недоступен. Вот данные:\n" .. text) end
+local targetName = "Part" -- Название вашего объекта
+local scanRadius = 10 -- Метры
 
--- Функция для поиска объектов
-local function getNearbyObjects(position)
-    local result = "🔍 Объекты в радиусе " .. scanRadius .. " метров:\n\n"
-    local objects = {}
-    
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        if obj:IsA("BasePart") then
-            local distance = (obj.Position - position).Magnitude
-            if distance <= scanRadius then
-                table.insert(objects, {
-                    Name = obj.Name,
-                    Class = obj.ClassName,
-                    Distance = distance,
-                    Id = obj:GetDebugId()
-                })
-            end
+-- 1. Получаем позицию игрока
+local function getPlayerRoot()
+    local character = player.Character or player.CharacterAdded:Wait()
+    return character:WaitForChild("HumanoidRootPart")
+end
+
+-- 2. Расширенный анализ объекта
+local function deepAnalyze(obj)
+    local result = {
+        BasicInfo = {
+            Name = obj.Name,
+            Class = obj.ClassName,
+            Id = obj:GetDebugId(),
+            Position = obj.Position,
+            Size = obj.Size,
+            Color = obj.Color,
+            Material = obj.Material,
+            Transparency = obj.Transparency,
+            Anchored = obj.Anchored,
+            CanCollide = obj.CanCollide
+        },
+        Attributes = {},
+        Values = {},
+        Scripts = {},
+        Events = {},
+        Connections = {},
+        Physics = {},
+        Network = {},
+        Templates = {}
+    }
+
+    -- Атрибуты
+    for attr, value in pairs(obj:GetAttributes()) do
+        table.insert(result.Attributes, {
+            Name = attr,
+            Value = value,
+            Type = typeof(value)
+        })
+    end
+
+    -- Value объекты
+    for _, child in ipairs(obj:GetChildren()) do
+        if child:IsA("ValueBase") then
+            table.insert(result.Values, {
+                Name = child.Name,
+                Type = child.ClassName,
+                Value = child.Value
+            })
         end
     end
 
-    -- Сортировка по расстоянию
-    table.sort(objects, function(a, b) return a.Distance < b.Distance end)
+    -- Скрипты и их соединения
+    for _, descendant in ipairs(obj:GetDescendants()) do
+        if descendant:IsA("Script") then
+            local connections = {}
+            for _, conn in ipairs(getconnections(descendant.Changed)) do
+                table.insert(connections, tostring(conn.Function))
+            end
+            
+            table.insert(result.Scripts, {
+                Name = descendant.Name,
+                Type = descendant.ClassName,
+                Disabled = descendant.Disabled,
+                Connections = connections
+            })
+        end
+    end
 
-    -- Форматирование вывода
-    for _, item in ipairs(objects) do
-        result ..= string.format(
-            "📌 %s (%s)\nID: %s | Дистанция: %.1f м\n\n",
-            item.Name, item.Class, item.Id, item.Distance
-        )
+    -- Сетевые события
+    for _, descendant in ipairs(obj:GetDescendants()) do
+        if descendant:IsA("RemoteEvent") or descendant:IsA("RemoteFunction") then
+            local connections = {}
+            for _, conn in ipairs(getconnections(descendant.OnClientEvent)) do
+                table.insert(connections, tostring(conn.Function))
+            end
+            
+            table.insert(result.Events, {
+                Name = descendant.Name,
+                Type = descendant.ClassName,
+                Connections = connections
+            })
+        end
+    end
+
+    -- Физические взаимодействия
+    if obj:FindFirstChildOfClass("TouchTransmitter") then
+        table.insert(result.Physics, "TouchTransmitter")
+    end
+    if obj:FindFirstChildOfClass("ClickDetector") then
+        table.insert(result.Physics, "ClickDetector")
+    end
+
+    -- Сетевые свойства
+    if obj:FindFirstChild("NetworkOwner") then
+        table.insert(result.Network, {
+            Type = "NetworkOwner",
+            Value = obj.NetworkOwner.Value
+        })
+    end
+
+    -- Поиск шаблонов
+    local repStorage = game:GetService("ReplicatedStorage")
+    for _, item in ipairs(repStorage:GetDescendants()) do
+        if item.Name == obj.Name and item:IsA("BasePart") then
+            table.insert(result.Templates, {
+                Path = item:GetFullName(),
+                Id = item:GetDebugId()
+            })
+        end
     end
 
     return result
 end
 
--- Основной цикл
-while true do
-    if player.Character then
-        local rootPart = player.Character:FindFirstChild("HumanoidRootPart") or player.Character:WaitForChild("HumanoidRootPart")
-        if rootPart then
-            local report = getNearbyObjects(rootPart.Position)
-            print(report) -- Вывод в консоль
-            clipboard(report) -- Копируем в буфер
+-- 3. Поиск всех связанных объектов
+local function findRelatedObjects(centerPos)
+    local related = {}
+    
+    -- Ищем физически связанные объекты
+    local region = Region3.new(
+        centerPos - Vector3.new(scanRadius, scanRadius, scanRadius),
+        centerPos + Vector3.new(scanRadius, scanRadius, scanRadius)
+    )
+    local parts = workspace:FindPartsInRegion3(region, nil, math.huge)
+    
+    for _, part in ipairs(parts) do
+        if part.Name == targetName then
+            table.insert(related, part)
         end
     end
-    task.wait(updateDelay)
+    
+    return related
 end
+
+-- 4. Формирование отчета
+local function generateReport(data)
+    local report = ""
+    
+    -- Базовая информация
+    report ..= string.format("🔍 Полный анализ объекта [%s]\n", data.BasicInfo.Name)
+    report ..= string.format("🆔 ID: %s | Класс: %s\n", data.BasicInfo.Id, data.BasicInfo.Class)
+    report ..= string.format("📍 Позиция: %s\n", data.BasicInfo.Position)
+    report ..= string.format("📏 Размер: %s | Материал: %s\n\n", data.BasicInfo.Size, data.BasicInfo.Material)
+    
+    -- Атрибуты
+    report ..= "🏷️ Атрибуты:\n"
+    for _, attr in ipairs(data.Attributes) do
+        report ..= string.format("- %s = %s (%s)\n", attr.Name, tostring(attr.Value), attr.Type)
+    end
+    
+    -- Value объекты
+    report ..= "\n🔢 Значения:\n"
+    for _, val in ipairs(data.Values) do
+        report ..= string.format("- %s (%s) = %s\n", val.Name, val.Type, tostring(val.Value))
+    end
+    
+    -- Скрипты
+    report ..= "\n📜 Скрипты:\n"
+    for _, script in ipairs(data.Scripts) do
+        report ..= string.format("- %s (%s) %s\n", script.Name, script.Type, script.Disabled and "[Disabled]" or "")
+        for _, conn in ipairs(script.Connections) do
+            report ..= string.format("  ↳ %s\n", conn)
+        end
+    end
+    
+    -- События
+    report ..= "\n📡 Сетевые события:\n"
+    for _, event in ipairs(data.Events) do
+        report ..= string.format("- %s (%s)\n", event.Name, event.Type)
+        for _, conn in ipairs(event.Connections) do
+            report ..= string.format("  ↳ %s\n", conn)
+        end
+    end
+    
+    -- Физика
+    report ..= "\n🖱️ Физические взаимодействия:\n"
+    for _, phys in ipairs(data.Physics) do
+        report ..= string.format("- %s\n", phys)
+    end
+    
+    -- Сеть
+    report ..= "\n🌐 Сетевые свойства:\n"
+    for _, net in ipairs(data.Network) do
+        report ..= string.format("- %s = %s\n", net.Type, tostring(net.Value))
+    end
+    
+    -- Шаблоны
+    report ..= "\n📦 Шаблоны:\n"
+    for _, template in ipairs(data.Templates) do
+        report ..= string.format("- %s (ID: %s)\n", template.Path, template.Id)
+    end
+    
+    return report
+end
+
+-- 5. Основная функция
+local function runFullAnalysis()
+    local root = getPlayerRoot()
+    local objects = findRelatedObjects(root.Position)
+    
+    if #objects == 0 then
+        print("❌ Объекты не найдены в радиусе", scanRadius, "метров")
+        return
+    end
+    
+    for _, obj in ipairs(objects) do
+        local analysis = deepAnalyze(obj)
+        local report = generateReport(analysis)
+        
+        print(report)
+        setclipboard(report)
+    end
+end
+
+-- Запуск анализа
+runFullAnalysis()

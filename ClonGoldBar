@@ -1,115 +1,74 @@
 local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
 local player = Players.LocalPlayer
+local bandageTemplate = workspace:WaitForChild("RuntimeItems"):WaitForChild("Bandage")
 
--- Находим оригинальный бандаж
-local originalBandage = Workspace:WaitForChild("RuntimeItems"):WaitForChild("Bandage")
-
--- Функция создания полноценной копии
-local function createFullBandage()
-    if not originalBandage then
-        warn("Оригинальный бандаж не найден!")
-        return nil
-    end
-
-    -- Создаем копию с сохранением всех свойств
-    local bandageCopy = originalBandage:Clone()
-    bandageCopy.Name = "Bandage_Copy_" .. os.time()
+local function createBandage()
+    -- Создаем копию бандажа
+    local newBandage = bandageTemplate:Clone()
+    
+    -- Настраиваем атрибуты (как у оригинала)
+    newBandage:SetAttribute("Value", 5)
+    newBandage:SetAttribute("IsBeingDragged", false)
     
     -- Делаем его инструментом (Tool)
     local tool = Instance.new("Tool")
-    tool.Name = bandageCopy.Name
+    tool.Name = "Bandage"
     tool.CanBeDropped = true
-    tool.RequiresHandle = true
     
-    -- Переносим все детали в инструмент
-    for _, child in ipairs(bandageCopy:GetChildren()) do
+    -- Переносим все части в инструмент
+    for _, child in ipairs(newBandage:GetChildren()) do
         child.Parent = tool
     end
-    bandageCopy:Destroy()
     
     -- Назначаем Handle (обязательно для Tool)
-    local handle = tool:FindFirstChild("Handle") or tool:FindFirstChildWhichIsA("BasePart")
-    if handle then
-        handle.Name = "Handle"
-    else
-        warn("Не найден Handle для инструмента!")
-        return nil
+    local handle = tool:FindFirstChild("Handle")
+    if not handle then
+        handle = tool:FindFirstChildWhichIsA("BasePart")
+        if handle then
+            handle.Name = "Handle"
+        end
     end
-
-    -- Добавляем функционал лечения
+    
+    -- Добавляем функционал лечения (базовый пример)
     local healScript = Instance.new("Script")
     healScript.Name = "HealScript"
     healScript.Source = [[
         local tool = script.Parent
-        tool.Equipped:Connect(function()
+        tool.Activated:Connect(function()
             local humanoid = tool.Parent:FindFirstChildOfClass("Humanoid")
             if humanoid then
-                tool.Activated:Connect(function()
-                    -- Лечение
-                    humanoid.Health = math.min(humanoid.Health + 30, humanoid.MaxHealth)
-                    
-                    -- Эффект использования
-                    for i = 0, 1, 0.1 do
-                        tool.Handle.Transparency = i
-                        task.wait(0.05)
-                    end
-                    tool:Destroy()
-                end)
+                humanoid.Health = math.min(humanoid.Health + tool:GetAttribute("Value"), humanoid.MaxHealth)
+                tool:Destroy()
             end
         end)
     ]]
     healScript.Parent = tool
     
+    -- Добавляем в инвентарь
+    tool.Parent = player:FindFirstChild("Backpack") or player.Character
+    
     return tool
 end
 
--- Функция появления и подбора
-local function spawnAndPickup()
-    local character = player.Character
-    if not character then
-        player.CharacterAdded:Wait()
-        character = player.Character
-    end
-    
-    local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-    local bandage = createFullBandage()
-    
-    if not bandage then return end
-    
-    -- Появляется перед игроком
-    bandage:PivotTo(humanoidRootPart.CFrame * CFrame.new(0, 0, -2))
-    bandage.Parent = Workspace
-    
-    -- Система автоматического подбора
-    local touchConnection
-    touchConnection = bandage.Handle.Touched:Connect(function(part)
-        local touchedChar = part:FindFirstAncestorOfClass("Model")
-        if touchedChar and touchedChar == character then
-            touchConnection:Disconnect()
-            bandage.Parent = player:FindFirstChild("Backpack") or character
-            print("✅ Бандаж подобран в инвентарь!")
-        end
-    end)
-end
-
--- Мобильный интерфейс
-local function createMobileUI()
+-- Создаем кнопку для мобильных устройств
+local function createMobileButton()
     local gui = Instance.new("ScreenGui")
-    gui.Name = "BandageUI"
-    gui.Parent = player:WaitForChild("PlayerGui")
-    
     local button = Instance.new("TextButton")
+    
+    gui.Parent = player:WaitForChild("PlayerGui")
+    button.Parent = gui
+    
+    -- Настройки кнопки
     button.Size = UDim2.new(0.3, 0, 0.1, 0)
     button.Position = UDim2.new(0.7, 0, 0.8, 0)
     button.Text = "Создать бандаж"
-    button.BackgroundColor3 = Color3.fromRGB(52, 152, 219)
-    button.TextColor3 = Color3.new(1, 1, 1)
-    button.Parent = gui
+    button.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
     
-    button.MouseButton1Click:Connect(spawnAndPickup)
+    -- Обработка нажатия
+    button.MouseButton1Click:Connect(function()
+        createBandage()
+    end)
 end
 
 -- Инициализация
-createMobileUI()
-print("Готово! Нажмите кнопку для создания бандажа.")
+createMobileButton()

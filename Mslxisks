@@ -1,232 +1,182 @@
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
-local scanRadius = 10 -- Метры
+local RunService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
+local UserInputService = game:GetService("UserInputService")
 
--- Функция для форматирования Vector3
-local function formatVector(vec)
-    return string.format("(%.2f, %.2f, %.2f)", vec.X, vec.Y, vec.Z)
+-- Настройки логгирования
+local LOG_INTERVAL = 1 -- сек (интервал сохранения логов)
+local MAX_LOG_LENGTH = 5000 -- макс. строк в логе
+local LOG_TO_CLIPBOARD = true -- копировать в буфер обмена
+local LOG_TO_FILE = false -- сохранять в файл (если возможно)
+
+-- Глобальный лог
+local ActionLog = {}
+local LastLogTime = os.time()
+
+-- Функция для форматирования данных
+local function formatValue(value)
+    if typeof(value) == "table" then
+        return HttpService:JSONEncode(value)
+    elseif typeof(value) == "Vector3" then
+        return string.format("(%.2f, %.2f, %.2f)", value.X, value.Y, value.Z)
+    else
+        return tostring(value)
+    end
 end
 
--- Получение корневой части персонажа
-local function getPlayerRoot()
-    local character = player.Character or player.CharacterAdded:Wait()
-    return character:WaitForChild("HumanoidRootPart")
+-- Логгирование действия
+local function logAction(category, action, details)
+    local timestamp = os.date("%H:%M:%S")
+    local entry = string.format("[%s][%s] %s: %s", timestamp, category, action, details)
+    
+    table.insert(ActionLog, entry)
+    
+    -- Очистка старых записей
+    if #ActionLog > MAX_LOG_LENGTH then
+        table.remove(ActionLog, 1)
+    end
+    
+    -- Автосохранение
+    if os.time() - LastLogTime >= LOG_INTERVAL then
+        local fullLog = table.concat(ActionLog, "\n")
+        if LOG_TO_CLIPBOARD then
+            pcall(function() setclipboard(fullLog) end)
+        end
+        if LOG_TO_FILE then
+            pcall(function() writefile("action_log.txt", fullLog) end)
+        end
+        LastLogTime = os.time()
+    end
+    
+    print(entry)
 end
 
--- Глубокий анализ объекта
-local function deepAnalyze(obj)
-    local result = {
-        Basic = {
-            Name = obj.Name,
-            Class = obj.ClassName,
-            Id = obj:GetDebugId(),
-            Position = obj:IsA("BasePart") and formatVector(obj.Position) or "N/A",
-            Size = obj:IsA("BasePart") and formatVector(obj.Size) or "N/A",
-            Parent = obj.Parent and obj.Parent.Name or "nil"
-        },
-        Attributes = {},
-        Values = {},
-        Scripts = {},
-        Physics = {},
-        Network = {},
-        Templates = {},
-        Connections = {}
-    }
-
-    -- Анализ атрибутов
-    for attr, value in pairs(obj:GetAttributes()) do
-        table.insert(result.Attributes, {
-            Name = attr,
-            Value = tostring(value),
-            Type = typeof(value),
-            Id = obj:GetDebugId().."_"..attr
-        })
-    end
-
-    -- Анализ дочерних объектов
-    for _, child in ipairs(obj:GetChildren()) do
-        -- Value-объекты
-        if child:IsA("ValueBase") then
-            table.insert(result.Values, {
-                Name = child.Name,
-                Type = child.ClassName,
-                Value = tostring(child.Value),
-                Id = child:GetDebugId()
-            })
-        end
+-- Мониторинг кликов и касаний
+local function monitorInputs()
+    UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
         
-        -- Сетевые объекты
-        if child:IsA("RemoteEvent") or child:IsA("RemoteFunction") then
-            table.insert(result.Network, {
-                Name = child.Name,
-                Type = child.ClassName,
-                Id = child:GetDebugId()
-            })
-        end
+        local inputType = input.UserInputType.Name
+        local position = input.Position or Vector3.new(0, 0, 0)
         
-        -- Физические компоненты
-        if child:IsA("BodyMover") then
-            table.insert(result.Physics, {
-                Name = child.Name,
-                Type = child.ClassName,
-                Id = child:GetDebugId()
-            })
-        end
-    end
-
-    -- Анализ скриптов (только для Script/LocalScript)
-    if obj:IsA("Script") or obj:IsA("LocalScript") then
-        result.Scripts = {
-            {
-                Name = obj.Name,
-                Type = obj.ClassName,
-                Disabled = obj.Disabled,
-                Id = obj:GetDebugId()
-            }
-        }
-    end
-
-    -- Поиск шаблонов в ReplicatedStorage
-    if obj:IsA("BasePart") then
-        local repStorage = game:GetService("ReplicatedStorage")
-        for _, item in ipairs(repStorage:GetDescendants()) do
-            if item.Name == obj.Name and item:IsA("BasePart") then
-                table.insert(result.Templates, {
-                    Path = item:GetFullName(),
-                    Id = item:GetDebugId(),
-                    Size = formatVector(item.Size),
-                    Material = item.Material.Name
-                })
-            end
-        end
-    end
-
-    return result
+        logAction("INPUT", inputType, string.format(
+            "Position: %s | KeyCode: %s", 
+            formatValue(position), 
+            input.KeyCode.Name
+        ))
+    end)
 end
 
--- Формирование полного отчета
-local function generateFullReport(data)
-    local report = ""
-    
-    -- Заголовок
-    report ..= string.format("🔍 ПОЛНЫЙ АНАЛИЗ ОБЪЕКТА [%s]\n", data.Basic.Name)
-    report ..= string.format("🆔 ID: %s | Класс: %s\n", data.Basic.Id, data.Basic.Class)
-    report ..= string.format("📍 Позиция: %s\n", data.Basic.Position)
-    report ..= string.format("📏 Размер: %s\n", data.Basic.Size)
-    report ..= string.format("🏠 Родитель: %s\n\n", data.Basic.Parent)
-    
-    -- Секции с данными
-    local sections = {
-        {title = "🏷️ АТРИБУТЫ", data = data.Attributes, func = function(item)
-            return string.format("- %s = %s (%s) [ID: %s]", 
-                item.Name, item.Value, item.Type, item.Id)
-        end},
-        
-        {title = "🔢 ЗНАЧЕНИЯ", data = data.Values, func = function(item)
-            return string.format("- %s (%s) = %s [ID: %s]", 
-                item.Name, item.Type, item.Value, item.Id)
-        end},
-        
-        {title = "📜 СКРИПТЫ", data = data.Scripts, func = function(item)
-            return string.format("- %s (%s) %s [ID: %s]", 
-                item.Name, item.Type, item.Disabled and "[DISABLED]" or "", item.Id)
-        end},
-        
-        {title = "🌐 СЕТЕВЫЕ ОБЪЕКТЫ", data = data.Network, func = function(item)
-            return string.format("- %s (%s) [ID: %s]", 
-                item.Name, item.Type, item.Id)
-        end},
-        
-        {title = "⚙️ ФИЗИЧЕСКИЕ КОМПОНЕНТЫ", data = data.Physics, func = function(item)
-            return string.format("- %s (%s) [ID: %s]", 
-                item.Name, item.Type, item.Id)
-        end},
-        
-        {title = "📦 ШАБЛОНЫ", data = data.Templates, func = function(item)
-            return string.format("- %s\n   ID: %s | Размер: %s | Материал: %s", 
-                item.Path, item.Id, item.Size, item.Material)
-        end}
-    }
-    
-    -- Генерация разделов
-    for _, section in ipairs(sections) do
-        if #section.data > 0 then
-            report ..= "\n" .. section.title .. ":\n"
-            for _, item in ipairs(section.data) do
-                report ..= section.func(item) .. "\n"
+-- Мониторинг изменений свойств объектов
+local function monitorPropertyChanges()
+    local function trackObject(obj)
+        for prop, _ in pairs(getproperties(obj)) do
+            if not pcall(function()
+                local oldValue = obj[prop]
+                
+                -- Следим за изменениями
+                local conn; conn = obj:GetPropertyChangedSignal(prop):Connect(function()
+                    local newValue = obj[prop]
+                    logAction("PROPERTY", "CHANGE", string.format(
+                        "%s.%s: %s → %s [ID: %s]",
+                        obj.Name, prop, 
+                        formatValue(oldValue), 
+                        formatValue(newValue),
+                        obj:GetDebugId()
+                    ))
+                    oldValue = newValue
+                end)
+            end) then
+                -- Игнорируем ошибки
             end
         end
     end
     
-    return report
+    -- Отслеживаем новые объекты
+    workspace.DescendantAdded:Connect(trackObject)
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        trackObject(obj)
+    end
 end
 
--- Основная функция сканирования
-local function completeAreaScan()
-    local root = getPlayerRoot()
-    local centerPos = root.Position
-    
-    -- Создаем регион для поиска
-    local region = Region3.new(
-        centerPos - Vector3.new(scanRadius, scanRadius, scanRadius),
-        centerPos + Vector3.new(scanRadius, scanRadius, scanRadius)
-    )
-    
-    -- Находим все части в регионе
-    local parts = workspace:FindPartsInRegion3(region, nil, math.huge)
-    
-    -- Собираем все объекты
-    local allObjects = {}
-    local uniqueIds = {}
-    
-    -- Добавляем все найденные части и их потомков
-    for _, part in ipairs(parts) do
-        if not uniqueIds[part:GetDebugId()] then
-            table.insert(allObjects, part)
-            uniqueIds[part:GetDebugId()] = true
-            
-            for _, descendant in ipairs(part:GetDescendants()) do
-                if not uniqueIds[descendant:GetDebugId()] then
-                    table.insert(allObjects, descendant)
-                    uniqueIds[descendant:GetDebugId()] = true
-                end
+-- Мониторинг сетевых событий
+local function monitorNetwork()
+    for _, obj in ipairs(game:GetDescendants()) do
+        if obj:IsA("RemoteEvent") then
+            obj.OnClientEvent:Connect(function(...)
+                local args = {...}
+                logAction("NETWORK", "REMOTE_EVENT", string.format(
+                    "%s (ID: %s) | Args: %s",
+                    obj.Name, obj:GetDebugId(), formatValue(args)
+                ))
+            end)
+        elseif obj:IsA("RemoteFunction") then
+            local oldInvoke = obj.InvokeServer
+            obj.InvokeServer = function(self, ...)
+                local args = {...}
+                logAction("NETWORK", "REMOTE_INVOKE", string.format(
+                    "%s (ID: %s) | Args: %s",
+                    obj.Name, obj:GetDebugId(), formatValue(args)
+                ))
+                return oldInvoke(self, ...)
             end
         end
     end
+end
+
+-- Мониторинг изменений в инвентаре (если есть)
+local function monitorInventory()
+    if not player:FindFirstChild("Backpack") then return end
     
-    -- Сортируем по расстоянию (если это BasePart)
-    table.sort(allObjects, function(a, b)
-        local aDist = a:IsA("BasePart") and (a.Position - centerPos).Magnitude or math.huge
-        local bDist = b:IsA("BasePart") and (b.Position - centerPos).Magnitude or math.huge
-        return aDist < bDist
+    player.Backpack.ChildAdded:Connect(function(item)
+        logAction("INVENTORY", "ITEM_ADDED", string.format(
+            "%s (Class: %s, ID: %s)", 
+            item.Name, item.ClassName, item:GetDebugId()
+        ))
     end)
     
-    -- Формируем полный отчет
-    local fullReport = string.format("🔍 ПОЛНЫЙ СКАН РАДИУСА %dм\n", scanRadius)
-    fullReport ..= string.format("📍 Центр сканирования: %s\n\n", formatVector(centerPos))
-    fullReport ..= string.format("НАЙДЕНО ОБЪЕКТОВ: %d\n", #allObjects)
-    fullReport ..= string.rep("=", 60) .. "\n\n"
-    
-    for i, obj in ipairs(allObjects) do
-        local dist = obj:IsA("BasePart") and string.format("%.2fм", (obj.Position - centerPos).Magnitude) or "N/A"
-        
-        fullReport ..= string.format("➡️ ОБЪЕКТ %d/%d\n", i, #allObjects)
-        fullReport ..= string.rep("-", 30) .. "\n"
-        fullReport ..= string.format("Название: %s\n", obj.Name)
-        fullReport ..= string.format("Класс: %s\n", obj.ClassName)
-        fullReport ..= string.format("ID: %s\n", obj:GetDebugId())
-        fullReport ..= string.format("Дистанция: %s\n", dist)
-        
-        -- Глубокий анализ для каждого объекта
-        local analysis = deepAnalyze(obj)
-        fullReport ..= generateFullReport(analysis)
-        
-        fullReport ..= "\n" .. string.rep("=", 60) .. "\n\n"
-    end
-    
-    print(fullReport)
-    setclipboard(fullReport)
+    player.Backpack.ChildRemoved:Connect(function(item)
+        logAction("INVENTORY", "ITEM_REMOVED", string.format(
+            "%s (Class: %s, ID: %s)", 
+            item.Name, item.ClassName, item:GetDebugId()
+        ))
+    end)
 end
 
--- Запуск сканирования
-completeAreaScan()
+-- Мониторинг запуска скриптов
+local function monitorScripts()
+    for _, script in ipairs(game:GetDescendants()) do
+        if script:IsA("Script") or script:IsA("LocalScript") then
+            logAction("SCRIPT", "DETECTED", string.format(
+                "%s (Type: %s, ID: %s, Disabled: %s)", 
+                script.Name, script.ClassName, script:GetDebugId(), script.Disabled
+            ))
+        end
+    end
+end
+
+-- Мониторинг физических взаимодействий
+local function monitorPhysics()
+    workspace.DescendantAdded:Connect(function(obj)
+        if obj:IsA("BasePart") then
+            obj.Touched:Connect(function(otherPart)
+                logAction("PHYSICS", "COLLISION", string.format(
+                    "%s (ID: %s) ↔ %s (ID: %s)", 
+                    obj.Name, obj:GetDebugId(), 
+                    otherPart.Name, otherPart:GetDebugId()
+                ))
+            end)
+        end
+    end)
+end
+
+-- Запуск всех мониторов
+monitorInputs()
+monitorPropertyChanges()
+monitorNetwork()
+monitorInventory()
+monitorScripts()
+monitorPhysics()
+
+logAction("SYSTEM", "START", "Мониторинг активирован. Все действия записываются.")

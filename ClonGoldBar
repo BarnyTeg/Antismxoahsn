@@ -1,84 +1,84 @@
 local Players = game:GetService("Players")
-local player = Players.LocalPlayer
 local Workspace = game:GetService("Workspace")
+local player = Players.LocalPlayer
 
--- Найти оригинальный бандаж
+-- Находим оригинальный бандаж
 local originalBandage = Workspace:WaitForChild("RuntimeItems"):WaitForChild("Bandage")
 
--- Функция глубокого копирования
-local function deepCopy(original)
-    local copy = original:Clone()
-    
-    -- Генерируем уникальный ID для предотвращения конфликтов
-    copy:SetAttribute("OriginalID", original:GetAttribute("OriginalID") or original:GetDebugId())
-    copy.Name = "Bandage_Copy_" .. os.time()
-    
-    return copy
-end
-
--- Система добавления в инвентарь
-local function addToInventory()
+-- Функция создания копии с функционалом
+local function createBandageCopy()
     if not originalBandage then
         warn("❗ Оригинальный бандаж не найден!")
-        return
+        return nil
     end
 
-    -- Создаем улучшенную копию
-    local bandageCopy = deepCopy(originalBandage)
+    -- Создаем копию
+    local copy = originalBandage:Clone()
+    copy.Name = "Bandage_Copy_" .. os.time()
     
-    -- Настройка для инвентаря
-    bandageCopy.PrimaryPart = bandageCopy:WaitForChild("Handle")
-    bandageCopy:SetAttribute("IsCustomCopy", true)
-    
-    -- Добавляем функционал лечения
-    local healScript = bandageCopy:FindFirstChild("HealScript") or Instance.new("Script")
+    -- Добавляем скрипт лечения
+    local healScript = Instance.new("Script")
     healScript.Name = "HealScript"
     healScript.Source = [[
         local tool = script.Parent
-        local humanoid = tool.Parent:FindFirstChildOfClass("Humanoid")
+        local handle = tool:WaitForChild("Handle")
         
         tool.Activated:Connect(function()
-            if humanoid and humanoid.Health < humanoid.MaxHealth then
-                humanoid.Health += 30
+            local humanoid = tool.Parent:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                -- Лечение
+                humanoid.Health = math.min(humanoid.Health + 30, humanoid.MaxHealth)
+                
                 -- Эффект использования
-                tool.Handle.Transparency = 1
-                task.wait(0.5)
+                for i = 1, 0, -0.1 do
+                    handle.Transparency = i
+                    task.wait(0.05)
+                end
                 tool:Destroy()
             end
         end)
     ]]
-    healScript.Parent = bandageCopy
-
-    -- Добавление в инвентарь
-    local backpack = player:FindFirstChild("Backpack")
-    if backpack then
-        bandageCopy.Parent = backpack
-        print("✅ Бандаж успешно добавлен в инвентарь!")
-    else
-        warn("⚠️ Инвентарь не найден!")
-    end
+    healScript.Parent = copy
+    
+    return copy
 end
 
--- Мобильный интерфейс
-local function createMobileUI()
-    local gui = Instance.new("ScreenGui")
-    local button = Instance.new("TextButton")
+-- Функция появления над игроком
+local function spawnAbovePlayer()
+    local character = player.Character or player.CharacterAdded:Wait()
+    local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
     
+    local bandageCopy = createBandageCopy()
+    if not bandageCopy then return end
+    
+    -- Позиционируем над головой
+    bandageCopy:PivotTo(humanoidRootPart.CFrame * CFrame.new(0, 3, 0))
+    bandageCopy.Parent = Workspace
+    
+    -- Делаем физически подбираемым
+    bandageCopy:SetNetworkOwner(player)
+    bandageCopy.Handle.CanCollide = true
+    
+    print("✅ Бандаж появился над игроком!")
+end
+
+-- Создаем кнопку для мобильных устройств
+local function createMobileButton()
+    local gui = Instance.new("ScreenGui")
     gui.Name = "BandageSpawnerUI"
     gui.Parent = player:WaitForChild("PlayerGui")
     
-    button.Size = UDim2.new(0.25, 0, 0.1, 0)
-    button.Position = UDim2.new(0.75, 0, 0.85, 0)
-    button.Text = "Получить бандаж"
-    button.BackgroundColor3 = Color3.fromRGB(52, 152, 219)
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(0.3, 0, 0.1, 0)
+    button.Position = UDim2.new(0.7, 0, 0.8, 0)
+    button.Text = "Создать бандаж"
+    button.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
     button.TextColor3 = Color3.new(1, 1, 1)
     button.Parent = gui
     
-    button.MouseButton1Click:Connect(function()
-        addToInventory()
-    end)
+    button.MouseButton1Click:Connect(spawnAbovePlayer)
 end
 
 -- Инициализация
-createMobileUI()
-print("Готово! Нажмите кнопку на экране для получения бандажа.")
+createMobileButton()
+print("Готово! Нажмите кнопку для создания бандажа над собой.")

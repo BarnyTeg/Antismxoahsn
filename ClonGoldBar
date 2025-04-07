@@ -2,59 +2,75 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 
--- 1. Находим оригинальный бандаж
-local originalBandage = workspace:WaitForChild("RuntimeItems"):WaitForChild("Bandage")
+-- Конфигурация на основе ваших логов
+local CONFIG = {
+    REMOTE_NAMES = {
+        START_DRAG = "RequestStartDrag",
+        STOP_DRAG = "RequestStopDrag"
+    },
+    BANDAGE_NAME = "Bandage",
+    HEAL_AMOUNT = 25
+}
 
--- 2. Создаем копию с уникальным ID
-local bandageCopy = originalBandage:Clone()
-bandageCopy.Name = "Bandage_Copy_"..os.time()
-bandageCopy:SetAttribute("UniqueID", math.random(10000,99999))
-bandageCopy.Parent = workspace
+-- 1. Создание копии бандажа
+local original = workspace:WaitForChild("RuntimeItems"):WaitForChild(CONFIG.BANDAGE_NAME)
+local clone = original:Clone()
+clone.Name = CONFIG.BANDAGE_NAME.."_Copy_"..os.time()
+clone.Parent = workspace
 
--- 3. Эмуляция системных вызовов (из ваших логов)
-local startDrag = ReplicatedStorage:WaitForChild("RequestStartDrag")
-local stopDrag = ReplicatedStorage:WaitForChild("RequestStopDrag")
+-- 2. Инициализация RemoteEvents
+local startDrag = ReplicatedStorage:FindFirstChild(CONFIG.REMOTE_NAMES.START_DRAG)
+local stopDrag = ReplicatedStorage:FindFirstChild(CONFIG.REMOTE_NAMES.STOP_DRAG)
 
--- Функция "Взять в инвентарь" (как в логах)
-local function takeToInventory()
-    startDrag:FireServer(true, bandageCopy.Name, nil)
-    wait(0.5)
-    stopDrag:FireServer(true, "")
-    print("✅ Предмет добавлен в инвентарь (эмуляция логов)")
+-- 3. Функционал для кнопок
+local function setupControls()
+    -- Автоподбор при касании
+    clone.Handle.Touched:Connect(function(part)
+        if part.Parent == player.Character then
+            startDrag:FireServer(true, clone.Name)
+            task.wait(0.5)
+            stopDrag:FireServer(true)
+        end
+    end)
+    
+    -- Ручное управление (если кнопки не найдены)
+    local gui = Instance.new("ScreenGui")
+    gui.Parent = player.PlayerGui
+    
+    local takeBtn = Instance.new("TextButton")
+    takeBtn.Text = "ВЗЯТЬ"
+    takeBtn.Size = UDim2.new(0.2, 0, 0.1, 0)
+    takeBtn.Position = UDim2.new(0.7, 0, 0.7, 0)
+    takeBtn.Parent = gui
+    takeBtn.MouseButton1Click:Connect(function()
+        startDrag:FireServer(true, clone.Name)
+        task.wait(0.5)
+        stopDrag:FireServer(true)
+    end)
+    
+    local useBtn = Instance.new("TextButton")
+    useBtn.Text = "ИСПОЛЬЗОВАТЬ"
+    useBtn.Size = UDim2.new(0.2, 0, 0.1, 0)
+    useBtn.Position = UDim2.new(0.7, 0, 0.85, 0)
+    useBtn.Parent = gui
+    useBtn.MouseButton1Click:Connect(function()
+        startDrag:FireServer(true, clone.Name)
+        local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.Health += CONFIG.HEAL_AMOUNT
+        end
+    end)
 end
 
--- Функция "Поднять в руки"
-local function equipBandage()
-    startDrag:FireServer(true, bandageCopy.Name, nil)
-    print("✋ Предмет в руках (эмуляция лога [19:55:25])")
-end
-for _, remote in ipairs(game:GetService("ReplicatedStorage"):GetDescendants() do
-    if remote:IsA("RemoteEvent") then
-        remote.OnClientEvent:Connect(function(...)
-            print("📡 Событие:", remote.Name, "Аргументы:", ...)
-            setclipboard(remote.Name .. " | " .. table.concat({...}, ", "))
-        end)
-    end
+-- 4. Защита от дублирования
+local function preventDuplicates()
+    startDrag.OnClientEvent:Connect(function(success, itemName, errorMsg)
+        if not success and errorMsg:find("already being dragged") then
+            stopDrag:FireServer(true) -- Сброс состояния
+        end
+    end)
 end
 
--- 4. Тестовые кнопки (для мобильных устройств)
-local gui = Instance.new("ScreenGui")
-gui.Parent = player.PlayerGui
-
-local takeBtn = Instance.new("TextButton")
-takeBtn.Size = UDim2.new(0.3, 0, 0.1, 0)
-takeBtn.Position = UDim2.new(0.5, 0, 0.7, 0)
-takeBtn.Text = "ВЗЯТЬ"
-takeBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
-takeBtn.Parent = gui
-takeBtn.MouseButton1Click:Connect(takeToInventory)
-
-local equipBtn = Instance.new("TextButton")
-equipBtn.Size = UDim2.new(0.3, 0, 0.1, 0)
-equipBtn.Position = UDim2.new(0.5, 0, 0.85, 0)
-equipBtn.Text = "ПОДНЯТЬ"
-equipBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-equipBtn.Parent = gui
-equipBtn.MouseButton1Click:Connect(equipBandage)
-
-print("Готово! Используйте кнопки для теста.")
+setupControls()
+preventDuplicates()
+print("Бандаж клонирован. Используйте кнопки или касание для взаимодействия")

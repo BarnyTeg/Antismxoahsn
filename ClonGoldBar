@@ -2,75 +2,66 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 
--- Конфигурация на основе ваших логов
-local CONFIG = {
-    REMOTE_NAMES = {
-        START_DRAG = "RequestStartDrag",
-        STOP_DRAG = "RequestStopDrag"
-    },
-    BANDAGE_NAME = "Bandage",
-    HEAL_AMOUNT = 25
-}
+-- 1. Находим оригинальный бандаж
+local originalBandage = workspace:WaitForChild("RuntimeItems"):WaitForChild("Bandage")
 
--- 1. Создание копии бандажа
-local original = workspace:WaitForChild("RuntimeItems"):WaitForChild(CONFIG.BANDAGE_NAME)
-local clone = original:Clone()
-clone.Name = CONFIG.BANDAGE_NAME.."_Copy_"..os.time()
-clone.Parent = workspace
+-- 2. Создаем точную копию
+local bandageCopy = originalBandage:Clone()
+bandageCopy.Name = "Bandage_Clone_"..os.time()
 
--- 2. Инициализация RemoteEvents
-local startDrag = ReplicatedStorage:FindFirstChild(CONFIG.REMOTE_NAMES.START_DRAG)
-local stopDrag = ReplicatedStorage:FindFirstChild(CONFIG.REMOTE_NAMES.STOP_DRAG)
+-- 3. Меняем только то, что нужно для уникальности
+bandageCopy:SetAttribute("UniqueID", math.random(100000,999999))
+bandageCopy.Handle:SetAttribute("OriginalID", nil)
 
--- 3. Функционал для кнопок
-local function setupControls()
-    -- Автоподбор при касании
-    clone.Handle.Touched:Connect(function(part)
-        if part.Parent == player.Character then
-            startDrag:FireServer(true, clone.Name)
-            task.wait(0.5)
-            stopDrag:FireServer(true)
+-- 4. Находим ВСЕ связанные скрипты
+local function copyScripts(original, copy)
+    for _, descendant in ipairs(original:GetDescendants()) do
+        if descendant:IsA("Script") or descendant:IsA("LocalScript") then
+            local scriptCopy = descendant:Clone()
+            -- Заменяем ссылки на оригинал в коде скриптов
+            local source = scriptCopy.Source
+            source = source:gsub(original.Name, copy.Name)
+            scriptCopy.Source = source
+            scriptCopy.Parent = copy
+            scriptCopy.Disabled = false
         end
-    end)
-    
-    -- Ручное управление (если кнопки не найдены)
-    local gui = Instance.new("ScreenGui")
-    gui.Parent = player.PlayerGui
-    
-    local takeBtn = Instance.new("TextButton")
-    takeBtn.Text = "ВЗЯТЬ"
-    takeBtn.Size = UDim2.new(0.2, 0, 0.1, 0)
-    takeBtn.Position = UDim2.new(0.7, 0, 0.7, 0)
-    takeBtn.Parent = gui
-    takeBtn.MouseButton1Click:Connect(function()
-        startDrag:FireServer(true, clone.Name)
-        task.wait(0.5)
-        stopDrag:FireServer(true)
-    end)
-    
-    local useBtn = Instance.new("TextButton")
-    useBtn.Text = "ИСПОЛЬЗОВАТЬ"
-    useBtn.Size = UDim2.new(0.2, 0, 0.1, 0)
-    useBtn.Position = UDim2.new(0.7, 0, 0.85, 0)
-    useBtn.Parent = gui
-    useBtn.MouseButton1Click:Connect(function()
-        startDrag:FireServer(true, clone.Name)
-        local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
-        if humanoid then
-            humanoid.Health += CONFIG.HEAL_AMOUNT
-        end
-    end)
+    end
 end
 
--- 4. Защита от дублирования
-local function preventDuplicates()
-    startDrag.OnClientEvent:Connect(function(success, itemName, errorMsg)
-        if not success and errorMsg:find("already being dragged") then
-            stopDrag:FireServer(true) -- Сброс состояния
+-- 5. Копируем оригинальные кнопки интерфейса
+local function cloneUI()
+    local originalUI = player.PlayerGui:FindFirstChild("BandageUI", true)
+    if originalUI then
+        local uiCopy = originalUI:Clone()
+        uiCopy.Name = "BandageUI_Clone"
+        
+        -- Обновляем ссылки в клонированном интерфейсе
+        for _, element in ipairs(uiCopy:GetDescendants()) do
+            if element:IsA("TextButton") then
+                local clickDetector = element:FindFirstChildOfClass("ClickDetector")
+                if clickDetector then
+                    clickDetector:Destroy() -- Удаляем старый обработчик
+                    
+                    -- Подключаем к нашему клону
+                    element.MouseButton1Click:Connect(function()
+                        ReplicatedStorage:FindFirstChild("RequestStartDrag"):FireServer(true, bandageCopy.Name)
+                    end)
+                end
+            end
         end
-    end)
+        
+        uiCopy.Parent = player.PlayerGui
+    end
 end
 
-setupControls()
-preventDuplicates()
-print("Бандаж клонирован. Используйте кнопки или касание для взаимодействия")
+-- 6. Подключаем все механизмы
+copyScripts(originalBandage, bandageCopy)
+cloneUI()
+
+-- 7. Фикс для сетевой синхронизации
+bandageCopy.Handle:SetNetworkOwner(nil)
+bandageCopy.Parent = workspace
+
+print("✅ Точная копия бандажа создана!")
+print("Его имя: "..bandageCopy.Name)
+setclipboard(bandageCopy.Name)

@@ -1,27 +1,25 @@
-local RunService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local runtimeItems = workspace:WaitForChild("RuntimeItems")
+local lastTime = tick()
 
 -- Лог всех Remote'ов
 for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
     if remote:IsA("RemoteEvent") then
         remote.OnClientEvent:Connect(function(...)
             print("[REMOTE] "..remote.Name.." | Аргументы:", ...)
+            print("[TIME] С момента последнего объекта прошло:", math.floor((tick() - lastTime)*1000), "мс")
         end)
     elseif remote:IsA("RemoteFunction") then
         remote.OnClientInvoke = function(...)
             print("[REMOTE FUNC] "..remote.Name.." | Аргументы:", ...)
+            print("[TIME] С момента последнего объекта прошло:", math.floor((tick() - lastTime)*1000), "мс")
         end
     end
 end
 
--- Детектор появления предметов
-runtimeItems.ChildAdded:Connect(function(child)
-    print("[DETECT] Появился объект:", child.Name)
-
-    -- Через 1 кадр выводим все активные Remote'ы (сработавшие в этот момент)
-    RunService.Heartbeat:Wait()
-    print("[!] Предмет появился. Проверь консоль выше на RemoteEvent.")
+-- Детектор появления любых объектов
+runtimeItems.DescendantAdded:Connect(function(child)
+    lastTime = tick()
+    print("[DETECT] Новый объект в RuntimeItems:", child:GetFullName())
 end)
-
-print("Скрипт запущен: следим за появлением объектов и командами")

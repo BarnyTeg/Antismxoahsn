@@ -1,15 +1,42 @@
-local player = game.Players.LocalPlayer
-local buttons = ""
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
 
-for _, gui in ipairs(player.PlayerGui:GetDescendants()) do
-    if gui:IsA("TextButton") then
-        local name = gui.Name:lower()
-        if name:find("bandage") or name:find("take") or name:find("use") then
-            local text = tostring(gui.Text or "Нет текста")
-            buttons = buttons .. "\n" .. gui:GetFullName() .. " | Текст: " .. text
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local radius = 15
+local seenInstances = {}
+
+-- Проверка дистанции
+local function isWithinRadius(pos1, pos2)
+    return (pos1 - pos2).Magnitude <= radius
+end
+
+-- Логика при обнаружении нового объекта
+local function handleNewObject(obj)
+    if not obj:IsA("Instance") or seenInstances[obj] then return end
+    seenInstances[obj] = true
+
+    local root = character:FindFirstChild("HumanoidRootPart")
+    if root and obj:IsDescendantOf(workspace) then
+        local pos = obj:IsA("BasePart") and obj.Position or (obj:FindFirstChildWhichIsA("BasePart") and obj:FindFirstChildWhichIsA("BasePart").Position)
+        if pos and isWithinRadius(root.Position, pos) then
+            print("[Детектировано] Новый объект рядом: "..obj:GetFullName())
+            if obj.Name:lower():find("bandage") then
+                warn("[Обнаружен БАНДАЖ]: "..obj:GetFullName())
+                setclipboard(obj:GetFullName()) -- Быстрый способ скопировать путь
+            end
         end
     end
 end
 
-print("Найденные кнопки:"..buttons)
-pcall(function() setclipboard(buttons) end)
+-- Слежение за добавлением объектов
+workspace.DescendantAdded:Connect(function(obj)
+    task.delay(0.1, function()
+        pcall(function()
+            handleNewObject(obj)
+        end)
+    end)
+end)
+
+print("Система логирования объектов в радиусе "..radius.."м активирована.")

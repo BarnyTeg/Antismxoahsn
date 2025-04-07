@@ -1,14 +1,15 @@
-local success, bandage = pcall(function()
-    return workspace:WaitForChild("RuntimeItems"):WaitForChild("Bandage")
-end)
+local player = game.Players.LocalPlayer
+local buttons = ""
 
-if success and bandage then
-    local attributes = ""
-    for attr, value in pairs(bandage:GetAttributes()) do
-        attributes = attributes .. "\n" .. attr .. " = " .. tostring(value)
+for _, gui in ipairs(player.PlayerGui:GetDescendants()) do
+    if gui:IsA("TextButton") then
+        local name = gui.Name:lower()
+        if name:find("bandage") or name:find("take") or name:find("use") then
+            local text = tostring(gui.Text or "Нет текста")
+            buttons = buttons .. "\n" .. gui:GetFullName() .. " | Текст: " .. text
+        end
     end
-    print("Атрибуты бандажа:"..attributes)
-    pcall(function() setclipboard(attributes) end)
-else
-    warn("Бандаж не найден.")
 end
+
+print("Найденные кнопки:"..buttons)
+pcall(function() setclipboard(buttons) end)

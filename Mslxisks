@@ -1,37 +1,107 @@
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local HttpService = game:GetService("HttpService")
 local player = Players.LocalPlayer
-local bandage = workspace:WaitForChild("RuntimeItems"):WaitForChild("Bandage")
 
--- Находим нужный RemoteEvent
-local startDragRemote = ReplicatedStorage:FindFirstChild("RequestStartDrag")
-local stopDragRemote = ReplicatedStorage:FindFirstChild("RequestStopDrag")
+-- Настройки
+local MAX_LOG_SIZE = 5000  -- Максимальное количество записей
+local AUTO_COPY_INTERVAL = 5  -- Автокопирование каждые 5 секунд
+local LOG_TYPES = {
+    REMOTE_EVENTS = true,
+    PROPERTY_CHANGES = true,
+    INVENTORY_CHANGES = true,
+    TOUCH_INTERACTIONS = true
+}
 
-local function takeBandage()
-    if not startDragRemote then
-        warn("Не найден RequestStartDrag!")
-        return
+-- Переменные
+local logs = {}
+local lastCopyTime = os.time()
+
+-- Функция для добавления лога
+local function addLog(category, event, data)
+    local timestamp = os.date("%H:%M:%S")
+    local logEntry = string.format("[%s][%s] %s: %s", timestamp, category, event, data)
+    table.insert(logs, 1, logEntry)
+    
+    -- Ограничение размера лога
+    if #logs > MAX_LOG_SIZE then
+        table.remove(logs)
     end
     
-    -- Эмулируем "взятие" бандажа
-    startDragRemote:FireServer(true, bandage)
-    print("🔄 Отправлен запрос на подбор")
+    -- Автокопирование
+    if os.time() - lastCopyTime >= AUTO_COPY_INTERVAL then
+        setclipboard(table.concat(logs, "\n"))
+        lastCopyTime = os.time()
+    end
     
-    -- Через 0.5 сек эмулируем "положить в инвентарь"
-    task.wait(0.5)
-    if stopDragRemote then
-        stopDragRemote:FireServer(true)
-        print("✅ Бандаж 'положен' в инвентарь")
+    print(logEntry)
+end
+
+-- 1. Логирование RemoteEvent/RPC
+if LOG_TYPES.REMOTE_EVENTS then
+    for _, remote in ipairs(game:GetDescendants()) do
+        if remote:IsA("RemoteEvent") then
+            remote.OnClientEvent:Connect(function(...)
+                local args = {...}
+                local argsStr = HttpService:JSONEncode(args)
+                addLog("NETWORK", remote.Name, argsStr)
+            end)
+        end
     end
 end
 
--- Кнопка для теста (если нужно)
+-- 2. Логирование изменений свойств
+if LOG_TYPES.PROPERTY_CHANGES then
+    workspace.DescendantAdded:Connect(function(obj)
+        if obj:IsA("BasePart") then
+            for prop, _ in pairs(getproperties(obj)) do
+                local oldValue = obj[prop]
+                obj:GetPropertyChangedSignal(prop):Connect(function()
+                    local newValue = obj[prop]
+                    addLog("PROPERTY", obj.Name, 
+                        string.format("%s: %s → %s", prop, tostring(oldValue), tostring(newValue)))
+                    oldValue = newValue
+                end)
+            end
+        end
+    end)
+end
+
+-- 3. Логирование инвентаря
+if LOG_TYPES.INVENTORY_CHANGES and player:FindFirstChild("Backpack") then
+    player.Backpack.ChildAdded:Connect(function(item)
+        addLog("INVENTORY", "ADDED", item.Name)
+    end)
+    player.Backpack.ChildRemoved:Connect(function(item)
+        addLog("INVENTORY", "REMOVED", item.Name)
+    end)
+end
+
+-- 4. Логирование касаний
+if LOG_TYPES.TOUCH_INTERACTIONS then
+    game:GetService("UserInputService").TouchStarted:Connect(function(touch, processed)
+        if not processed then
+            addLog("TOUCH", "POSITION", string.format("X:%.1f, Y:%.1f", touch.Position.X, touch.Position.Y))
+        end
+    end)
+end
+
+-- Кнопка для копирования логов
 local screenGui = Instance.new("ScreenGui")
 screenGui.Parent = player.PlayerGui
 
-local button = Instance.new("TextButton")
-button.Text = "ВЗЯТЬ БАНДАЖ"
-button.Size = UDim2.new(0.3, 0, 0.1, 0)
-button.Position = UDim2.new(0.7, 0, 0.8, 0)
-button.Parent = screenGui
-button.MouseButton1Click:Connect(takeBandage)
+local copyButton = Instance.new("TextButton")
+copyButton.Size = UDim2.new(0.3, 0, 0.08, 0)
+copyButton.Position = UDim2.new(0.7, 0, 0.9, 0)
+copyButton.Text = "КОПИРОВАТЬ ЛОГИ"
+copyButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+copyButton.Parent = screenGui
+
+copyButton.MouseButton1Click:Connect(function()
+    setclipboard(table.concat(logs, "\n"))
+    copyButton.Text = "✅ СКОПИРОВАНО!"
+    task.delay(1, function()
+        copyButton.Text = "КОПИРОВАТЬ ЛОГИ"
+    end)
+end)
+
+addLog("SYSTEM", "START", "Логирование активировано")

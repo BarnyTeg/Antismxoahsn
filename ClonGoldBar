@@ -28,6 +28,14 @@ local function equipBandage()
     startDrag:FireServer(true, bandageCopy.Name, nil)
     print("✋ Предмет в руках (эмуляция лога [19:55:25])")
 end
+for _, remote in ipairs(game:GetService("ReplicatedStorage"):GetDescendants() do
+    if remote:IsA("RemoteEvent") then
+        remote.OnClientEvent:Connect(function(...)
+            print("📡 Событие:", remote.Name, "Аргументы:", ...)
+            setclipboard(remote.Name .. " | " .. table.concat({...}, ", "))
+        end)
+    end
+end
 
 -- 4. Тестовые кнопки (для мобильных устройств)
 local gui = Instance.new("ScreenGui")

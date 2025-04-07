@@ -1,9 +1,11 @@
-local bandage = workspace:WaitForChild("RuntimeItems"):WaitForChild("Bandage")
-local attributes = ""
+local player = game.Players.LocalPlayer
+local buttons = ""
 
-for attr, value in pairs(bandage:GetAttributes()) do
-    attributes = attributes .. "\n"..attr.." = "..tostring(value)
+for _, gui in ipairs(player.PlayerGui:GetDescendants()) do
+    if gui:IsA("TextButton") and (gui.Name:find("Bandage") or gui.Name:find("Take") or gui.Name:find("Use")) then
+        buttons = buttons .. "\n"..gui:GetFullName().." | Текст: "..gui.Text
+    end
 end
 
-print("Атрибуты бандажа:"..attributes)
-setclipboard(attributes)
+print("Найденные кнопки:"..buttons)
+setclipboard(buttons)

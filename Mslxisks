@@ -1,11 +1,15 @@
-local player = game.Players.LocalPlayer
-local buttons = ""
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local log = ""
 
-for _, gui in ipairs(player.PlayerGui:GetDescendants()) do
-    if gui:IsA("TextButton") and (gui.Name:find("Bandage") or gui.Name:find("Take") or gui.Name:find("Use")) then
-        buttons = buttons .. "\n"..gui:GetFullName().." | Текст: "..gui.Text
+for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
+    if remote:IsA("RemoteEvent") then
+        remote.OnClientEvent:Connect(function(...)
+            local args = {...}
+            log = log .. "\n[REMOTE] "..remote.Name.." | Аргументы: "..table.concat(args, ", ")
+            print(log)
+            setclipboard(log)
+        end)
     end
 end
 
-print("Найденные кнопки:"..buttons)
-setclipboard(buttons)
+print("Логирование Remotes запущено. Нажмите кнопки бандажа и пришлите логи из консоли (F9)")

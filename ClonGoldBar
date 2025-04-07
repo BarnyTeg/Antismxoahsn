@@ -1,74 +1,52 @@
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
-local bandageTemplate = workspace:WaitForChild("RuntimeItems"):WaitForChild("Bandage")
 
-local function createBandage()
-    -- Создаем копию бандажа
-    local newBandage = bandageTemplate:Clone()
-    
-    -- Настраиваем атрибуты (как у оригинала)
-    newBandage:SetAttribute("Value", 5)
-    newBandage:SetAttribute("IsBeingDragged", false)
-    
-    -- Делаем его инструментом (Tool)
-    local tool = Instance.new("Tool")
-    tool.Name = "Bandage"
-    tool.CanBeDropped = true
-    
-    -- Переносим все части в инструмент
-    for _, child in ipairs(newBandage:GetChildren()) do
-        child.Parent = tool
-    end
-    
-    -- Назначаем Handle (обязательно для Tool)
-    local handle = tool:FindFirstChild("Handle")
-    if not handle then
-        handle = tool:FindFirstChildWhichIsA("BasePart")
-        if handle then
-            handle.Name = "Handle"
-        end
-    end
-    
-    -- Добавляем функционал лечения (базовый пример)
-    local healScript = Instance.new("Script")
-    healScript.Name = "HealScript"
-    healScript.Source = [[
-        local tool = script.Parent
-        tool.Activated:Connect(function()
-            local humanoid = tool.Parent:FindFirstChildOfClass("Humanoid")
-            if humanoid then
-                humanoid.Health = math.min(humanoid.Health + tool:GetAttribute("Value"), humanoid.MaxHealth)
-                tool:Destroy()
-            end
-        end)
-    ]]
-    healScript.Parent = tool
-    
-    -- Добавляем в инвентарь
-    tool.Parent = player:FindFirstChild("Backpack") or player.Character
-    
-    return tool
+-- 1. Находим оригинальный бандаж
+local originalBandage = workspace:WaitForChild("RuntimeItems"):WaitForChild("Bandage")
+
+-- 2. Создаем копию с уникальным ID
+local bandageCopy = originalBandage:Clone()
+bandageCopy.Name = "Bandage_Copy_"..os.time()
+bandageCopy:SetAttribute("UniqueID", math.random(10000,99999))
+bandageCopy.Parent = workspace
+
+-- 3. Эмуляция системных вызовов (из ваших логов)
+local startDrag = ReplicatedStorage:WaitForChild("RequestStartDrag")
+local stopDrag = ReplicatedStorage:WaitForChild("RequestStopDrag")
+
+-- Функция "Взять в инвентарь" (как в логах)
+local function takeToInventory()
+    startDrag:FireServer(true, bandageCopy.Name, nil)
+    wait(0.5)
+    stopDrag:FireServer(true, "")
+    print("✅ Предмет добавлен в инвентарь (эмуляция логов)")
 end
 
--- Создаем кнопку для мобильных устройств
-local function createMobileButton()
-    local gui = Instance.new("ScreenGui")
-    local button = Instance.new("TextButton")
-    
-    gui.Parent = player:WaitForChild("PlayerGui")
-    button.Parent = gui
-    
-    -- Настройки кнопки
-    button.Size = UDim2.new(0.3, 0, 0.1, 0)
-    button.Position = UDim2.new(0.7, 0, 0.8, 0)
-    button.Text = "Создать бандаж"
-    button.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-    
-    -- Обработка нажатия
-    button.MouseButton1Click:Connect(function()
-        createBandage()
-    end)
+-- Функция "Поднять в руки"
+local function equipBandage()
+    startDrag:FireServer(true, bandageCopy.Name, nil)
+    print("✋ Предмет в руках (эмуляция лога [19:55:25])")
 end
 
--- Инициализация
-createMobileButton()
+-- 4. Тестовые кнопки (для мобильных устройств)
+local gui = Instance.new("ScreenGui")
+gui.Parent = player.PlayerGui
+
+local takeBtn = Instance.new("TextButton")
+takeBtn.Size = UDim2.new(0.3, 0, 0.1, 0)
+takeBtn.Position = UDim2.new(0.5, 0, 0.7, 0)
+takeBtn.Text = "ВЗЯТЬ"
+takeBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
+takeBtn.Parent = gui
+takeBtn.MouseButton1Click:Connect(takeToInventory)
+
+local equipBtn = Instance.new("TextButton")
+equipBtn.Size = UDim2.new(0.3, 0, 0.1, 0)
+equipBtn.Position = UDim2.new(0.5, 0, 0.85, 0)
+equipBtn.Text = "ПОДНЯТЬ"
+equipBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+equipBtn.Parent = gui
+equipBtn.MouseButton1Click:Connect(equipBandage)
+
+print("Готово! Используйте кнопки для теста.")

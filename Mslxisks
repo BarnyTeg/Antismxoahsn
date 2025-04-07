@@ -1,107 +1,15 @@
-local Players = game:GetService("Players")
-local HttpService = game:GetService("HttpService")
-local player = Players.LocalPlayer
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local log = ""
 
--- Настройки
-local MAX_LOG_SIZE = 5000  -- Максимальное количество записей
-local AUTO_COPY_INTERVAL = 5  -- Автокопирование каждые 5 секунд
-local LOG_TYPES = {
-    REMOTE_EVENTS = true,
-    PROPERTY_CHANGES = true,
-    INVENTORY_CHANGES = true,
-    TOUCH_INTERACTIONS = true
-}
-
--- Переменные
-local logs = {}
-local lastCopyTime = os.time()
-
--- Функция для добавления лога
-local function addLog(category, event, data)
-    local timestamp = os.date("%H:%M:%S")
-    local logEntry = string.format("[%s][%s] %s: %s", timestamp, category, event, data)
-    table.insert(logs, 1, logEntry)
-    
-    -- Ограничение размера лога
-    if #logs > MAX_LOG_SIZE then
-        table.remove(logs)
-    end
-    
-    -- Автокопирование
-    if os.time() - lastCopyTime >= AUTO_COPY_INTERVAL then
-        setclipboard(table.concat(logs, "\n"))
-        lastCopyTime = os.time()
-    end
-    
-    print(logEntry)
-end
-
--- 1. Логирование RemoteEvent/RPC
-if LOG_TYPES.REMOTE_EVENTS then
-    for _, remote in ipairs(game:GetDescendants()) do
-        if remote:IsA("RemoteEvent") then
-            remote.OnClientEvent:Connect(function(...)
-                local args = {...}
-                local argsStr = HttpService:JSONEncode(args)
-                addLog("NETWORK", remote.Name, argsStr)
-            end)
-        end
+for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
+    if remote:IsA("RemoteEvent") then
+        remote.OnClientEvent:Connect(function(...)
+            local args = {...}
+            log = log .. "\n[REMOTE] "..remote.Name.." | Аргументы: "..table.concat(args, ", ")
+            print(log)
+            setclipboard(log)
+        end)
     end
 end
 
--- 2. Логирование изменений свойств
-if LOG_TYPES.PROPERTY_CHANGES then
-    workspace.DescendantAdded:Connect(function(obj)
-        if obj:IsA("BasePart") then
-            for prop, _ in pairs(getproperties(obj)) do
-                local oldValue = obj[prop]
-                obj:GetPropertyChangedSignal(prop):Connect(function()
-                    local newValue = obj[prop]
-                    addLog("PROPERTY", obj.Name, 
-                        string.format("%s: %s → %s", prop, tostring(oldValue), tostring(newValue)))
-                    oldValue = newValue
-                end)
-            end
-        end
-    end)
-end
-
--- 3. Логирование инвентаря
-if LOG_TYPES.INVENTORY_CHANGES and player:FindFirstChild("Backpack") then
-    player.Backpack.ChildAdded:Connect(function(item)
-        addLog("INVENTORY", "ADDED", item.Name)
-    end)
-    player.Backpack.ChildRemoved:Connect(function(item)
-        addLog("INVENTORY", "REMOVED", item.Name)
-    end)
-end
-
--- 4. Логирование касаний
-if LOG_TYPES.TOUCH_INTERACTIONS then
-    game:GetService("UserInputService").TouchStarted:Connect(function(touch, processed)
-        if not processed then
-            addLog("TOUCH", "POSITION", string.format("X:%.1f, Y:%.1f", touch.Position.X, touch.Position.Y))
-        end
-    end)
-end
-
--- Кнопка для копирования логов
-local screenGui = Instance.new("ScreenGui")
-screenGui.Parent = player.PlayerGui
-
-local copyButton = Instance.new("TextButton")
-copyButton.Size = UDim2.new(0.3, 0, 0.08, 0)
-copyButton.Position = UDim2.new(0.7, 0, 0.9, 0)
-copyButton.Text = "КОПИРОВАТЬ ЛОГИ"
-copyButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-copyButton.Parent = screenGui
-
-copyButton.MouseButton1Click:Connect(function()
-    setclipboard(table.concat(logs, "\n"))
-    copyButton.Text = "✅ СКОПИРОВАНО!"
-    task.delay(1, function()
-        copyButton.Text = "КОПИРОВАТЬ ЛОГИ"
-    end)
-end)
-
-addLog("SYSTEM", "START", "Логирование активировано")
+print("Логирование Remotes запущено. Нажмите кнопки бандажа и пришлите логи из консоли (F9)")

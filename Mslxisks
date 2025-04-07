@@ -1,15 +1,9 @@
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local log = ""
+local bandage = workspace:WaitForChild("RuntimeItems"):WaitForChild("Bandage")
+local attributes = ""
 
-for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-    if remote:IsA("RemoteEvent") then
-        remote.OnClientEvent:Connect(function(...)
-            local args = {...}
-            log = log .. "\n[REMOTE] "..remote.Name.." | Аргументы: "..table.concat(args, ", ")
-            print(log)
-            setclipboard(log)
-        end)
-    end
+for attr, value in pairs(bandage:GetAttributes()) do
+    attributes = attributes .. "\n"..attr.." = "..tostring(value)
 end
 
-print("Логирование Remotes запущено. Нажмите кнопки бандажа и пришлите логи из консоли (F9)")
+print("Атрибуты бандажа:"..attributes)
+setclipboard(attributes)

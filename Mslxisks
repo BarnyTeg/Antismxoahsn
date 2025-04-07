@@ -1,19 +1,14 @@
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local log = ""
+local success, bandage = pcall(function()
+    return workspace:WaitForChild("RuntimeItems"):WaitForChild("Bandage")
+end)
 
-for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-    if remote:IsA("RemoteEvent") then
-        remote.OnClientEvent:Connect(function(...)
-            local args = {...}
-            local argStrings = {}
-            for _, v in ipairs(args) do
-                table.insert(argStrings, typeof(v) == "string" and v or tostring(v))
-            end
-            log = log .. "\n[REMOTE] "..remote.Name.." | Аргументы: "..table.concat(argStrings, ", ")
-            print(log)
-            pcall(function() setclipboard(log) end)
-        end)
+if success and bandage then
+    local attributes = ""
+    for attr, value in pairs(bandage:GetAttributes()) do
+        attributes = attributes .. "\n" .. attr .. " = " .. tostring(value)
     end
+    print("Атрибуты бандажа:"..attributes)
+    pcall(function() setclipboard(attributes) end)
+else
+    warn("Бандаж не найден.")
 end
-
-print("Логирование Remotes запущено.")

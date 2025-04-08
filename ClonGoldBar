@@ -1,4 +1,3 @@
-local RS = game:GetService("ReplicatedStorage")
-local remote = RS:WaitForChild("RequestStartDrag")
-
-remote:FireServer(true, nil, "Bandage")
+remote:FireServer(true, "", "Bandage")
+remote:FireServer(true, "Bandage")
+remote:FireServer(true, nil, workspace:FindFirstChild("Bandage"))

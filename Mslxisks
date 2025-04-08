@@ -1,50 +1,179 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
+local ServerStorage = game:GetService("ServerStorage")
+local Players = game:GetService("Players")
 
--- Функция для вывода логов (замени print, если он не работает)
+-- Функция для вывода логов
 local function log(message)
-    print(message) -- Если print не работает, используй свой способ вывода
+    print(message)
 end
 
--- Папка с оригинальным бандажом
-local clonedFolder = ReplicatedStorage:WaitForChild("ClonedItems")
-local clonedBandage = clonedFolder:FindFirstChild("Bandage")
-
-if clonedBandage then
-    -- Клонируем бандаж
-    local newBandage = clonedBandage:Clone()
-    newBandage.Parent = Workspace.RuntimeItems
-    
-    -- Проверяем наличие скриптов в оригинале
-    for _, child in pairs(clonedBandage:GetChildren()) do
+-- Функция для рекурсивного исследования объекта
+local function exploreObject(obj, prefix)
+    for _, child in pairs(obj:GetChildren()) do
+        log(prefix .. child.Name .. " (" .. child.ClassName .. ")")
+        if child:IsA("TextButton") or child:IsA("ImageButton") then
+            log(prefix .. "  - Это кнопка!")
+        end
         if child:IsA("LocalScript") or child:IsA("Script") then
-            log("[+] Найден скрипт в оригинале: " .. child.Name)
-            -- Копируем скрипт в клон и пытаемся его активировать
-            local clonedScript = newBandage:FindFirstChild(child.Name)
-            if clonedScript then
-                if clonedScript:IsA("LocalScript") then
-                    -- Для LocalScript пытаемся "перезапустить" через родителя
-                    clonedScript.Disabled = true
-                    clonedScript.Disabled = false
-                    log("[+] Локальный скрипт " .. child.Name .. " активирован")
-                elseif clonedScript:IsA("Script") then
-                    -- Для серверного скрипта тоже пробуем перезапуск
-                    clonedScript.Disabled = true
-                    clonedScript.Disabled = false
-                    log("[+] Серверный скрипт " .. child.Name .. " активирован")
-                end
+            log(prefix .. "  - Это скрипт!")
+        end
+        if child:IsA("ClickDetector") then
+            log(prefix .. "  - Это ClickDetector!")
+        end
+        exploreObject(child, prefix .. "  - ")
+    end
+end
+
+-- Функция для поиска бандажа
+local function findBandage()
+    log("[+] Проверка ReplicatedStorage:")
+    for _, child in pairs(ReplicatedStorage:GetChildren()) do
+        if child.Name == "Bandage" then
+            log("   - Найден Bandage в ReplicatedStorage")
+            return child
+        end
+        for _, subChild in pairs(child:GetChildren()) do
+            if subChild.Name == "Bandage" then
+                log("   - Найден Bandage в ReplicatedStorage." .. child.Name)
+                return subChild
             end
         end
     end
+
+    log("[+] Проверка Workspace:")
+    for _, child in pairs(Workspace:GetChildren()) do
+        if child.Name == "Bandage" then
+            log("   - Найден Bandage в Workspace")
+            return child
+        end
+        for _, subChild in pairs(child:GetChildren()) do
+            if subChild.Name == "Bandage" then
+                log("   - Найден Bandage в Workspace." .. child.Name)
+                return subChild
+            end
+        end
+    end
+
+    log("[+] Проверка ServerStorage:")
+    for _, child in pairs(ServerStorage:GetChildren()) do
+        if child.Name == "Bandage" then
+            log("   - Найден Bandage в ServerStorage")
+            return child
+        end
+        for _, subChild in pairs(child:GetChildren()) do
+            if subChild.Name == "Bandage" then
+                log("   - Найден Bandage в ServerStorage." .. child.Name)
+                return subChild
+            end
+        end
+    end
+
+    return nil
+end
+
+-- Отслеживание событий в игре
+local player = Players.LocalPlayer
+local humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
+
+-- Отслеживание изменений здоровья
+if humanoid then
+    humanoid:GetPropertyChangedSignal("Health"):Connect(function()
+        log("[EVENT] Здоровье изменилось: " .. humanoid.Health)
+    end)
+end
+
+-- Отслеживание удаления объектов в Workspace.RuntimeItems
+local runtimeItems = Workspace:FindFirstChild("RuntimeItems")
+if runtimeItems then
+    runtimeItems.ChildRemoved:Connect(function(child)
+        log("[EVENT] Объект удалён из RuntimeItems: " .. child.Name)
+    end)
+end
+
+-- Отслеживание RemoteEvent (если бандаж вызывает серверные события)
+for _, child in pairs(ReplicatedStorage:GetChildren()) do
+    if child:IsA("RemoteEvent") then
+        child.OnClientEvent:Connect(function(...)
+            log("[EVENT] Вызван RemoteEvent: " .. child.Name .. " с аргументами: " .. tostring(...))
+        end)
+    end
+end
+
+-- Основной код
+local clonedBandage = findBandage()
+
+if clonedBandage then
+    -- Исследуем структуру оригинального бандажа
+    log("[+] Исследование оригинального Bandage:")
+    exploreObject(clonedBandage, " - ")
+
+    -- Отслеживаем нажатия на кнопки оригинала
+    for _, child in pairs(clonedBandage:GetDescendants()) do
+        if child:IsA("TextButton") or child:IsA("ImageButton") then
+            log("[+] Подключено отслеживание кнопки в оригинале: " .. child.Name)
+            child.MouseButton1Click:Connect(function()
+                log("[EVENT] Нажата кнопка в оригинальном бандаже: " .. child.Name)
+            end)
+        end
+    end
+
+    -- Клонируем бандаж
+    local newBandage = clonedBandage:Clone()
     
-    -- Если есть кнопки, логируем их
-    for _, child in pairs(newBandage:GetChildren()) do
+    -- Проверяем, есть ли папка RuntimeItems, если нет — создаём
+    local runtimeItems = Workspace:FindFirstChild("RuntimeItems")
+    if not runtimeItems then
+        runtimeItems = Instance.new("Folder")
+        runtimeItems.Name = "RuntimeItems"
+        runtimeItems.Parent = Workspace
+    end
+    
+    newBandage.Parent = runtimeItems
+    
+    -- Исследуем клон
+    log("[+] Исследование клонированного Bandage:")
+    exploreObject(newBandage, " - ")
+
+    -- Проверяем наличие скриптов и кнопок в клоне
+    for _, child in pairs(newBandage:GetDescendants()) do
+        if child:IsA("LocalScript") or child:IsA("Script") then
+            log("[+] Найден скрипт в клоне: " .. child.Name)
+            child.Disabled = true
+            child.Disabled = false
+            log("[+] Скрипт " .. child.Name .. " активирован")
+        end
         if child:IsA("TextButton") or child:IsA("ImageButton") then
             log("[+] Найдена кнопка в клоне: " .. child.Name)
+            -- Временно добавляем пустую функцию, чтобы логировать нажатия
+            child.MouseButton1Click:Connect(function()
+                log("[EVENT] Нажата кнопка в клоне: " .. child.Name)
+            end)
         end
     end
     
-    log("[+] Бандаж скопирован в RuntimeItems")
+    log("[+] Бандаж успешно скопирован в Workspace.RuntimeItems")
 else
-    log("[-] Бандаж не найден в ClonedItems")
+    log("[-] Бандаж не найден в игре")
+end
+
+-- Отслеживание изменений в PlayerGui
+log("[+] Проверка PlayerGui:")
+for _, child in pairs(player.PlayerGui:GetChildren()) do
+    log(" - " .. child.Name .. " (" .. child.ClassName .. ")")
+    if child:IsA("ScreenGui") then
+        exploreObject(child, "   - ")
+        -- Отслеживаем добавление новых элементов
+        child.ChildAdded:Connect(function(newChild)
+            log("[EVENT] Добавлен новый элемент в PlayerGui: " .. newChild.Name)
+        end)
+        -- Отслеживаем нажатия на кнопки в PlayerGui
+        for _, guiChild in pairs(child:GetDescendants()) do
+            if guiChild:IsA("TextButton") or guiChild:IsA("ImageButton") then
+                guiChild.MouseButton1Click:Connect(function()
+                    log("[EVENT] Нажата кнопка в PlayerGui: " .. guiChild.Name)
+                end)
+            end
+        end
+    end
 end

@@ -1,12 +1,7 @@
-local Players = game:GetService("Players")
-local player = Players.LocalPlayer
+local MarketplaceService = game:GetService("MarketplaceService")
 
-game.DescendantAdded:Connect(function(desc)
-    if desc:IsA("ProximityPrompt") then
-        desc.Triggered:Connect(function(triggeringPlayer)
-            if triggeringPlayer == player then
-                print("[!] Промпт активирован:", desc.Parent:GetFullName())
-            end
-        end)
+MarketplaceService.PromptProductPurchaseFinished:Connect(function(userId, productId, wasPurchased)
+    if wasPurchased then
+        print("[!] Успешная покупка продукта:", productId)
     end
 end)

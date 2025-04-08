@@ -1,21 +1,13 @@
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Players = game:GetService("Players")
+local RS = game:GetService("ReplicatedStorage")
+local cloned = RS:WaitForChild("ClonedItems")
 
-local clonedItems = ReplicatedStorage:WaitForChild("ClonedItems")
-local bandageTemplate = clonedItems:WaitForChild("Bandage", 10) -- ждём максимум 10 сек
+local bandage = cloned:FindFirstChild("Bandage")
+if bandage then
+	print("Бандаж найден в ClonedItems")
 
-if bandageTemplate then
-    local newBandage = bandageTemplate:Clone()
-    newBandage.Parent = workspace.RuntimeItems
-
-    local player = Players.LocalPlayer
-    local character = player.Character or player.CharacterAdded:Wait()
-    local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-
-    -- появится перед игроком
-    newBandage:SetPrimaryPartCFrame(humanoidRootPart.CFrame * CFrame.new(0, 0, -5))
-    
-    print("[+] Новый бандаж создан в workspace.RuntimeItems")
+	local copy = bandage:Clone()
+	copy.Parent = workspace
+	print("Бандаж создан в Workspace")
 else
-    warn("[!] Bandage не найден в ClonedItems")
+	warn("Бандаж не найден в ClonedItems")
 end

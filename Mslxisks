@@ -1,7 +1,21 @@
-local MarketplaceService = game:GetService("MarketplaceService")
+local RuntimeItems = workspace:WaitForChild("RuntimeItems")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-MarketplaceService.PromptProductPurchaseFinished:Connect(function(userId, productId, wasPurchased)
-    if wasPurchased then
-        print("[!] Успешная покупка продукта:", productId)
-    end
+RuntimeItems.ChildAdded:Connect(function(child)
+	if child.Name:lower():find("bandage") then
+		print("[!] Бандаж найден:", child:GetFullName())
+
+		-- Проверка на существование папки
+		local folder = ReplicatedStorage:FindFirstChild("ClonedItems")
+		if not folder then
+			folder = Instance.new("Folder")
+			folder.Name = "ClonedItems"
+			folder.Parent = ReplicatedStorage
+		end
+
+		-- Клонирование
+		local clone = child:Clone()
+		clone.Parent = folder
+		print("[+] Бандаж клонирован в ReplicatedStorage.ClonedItems")
+	end
 end)

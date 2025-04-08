@@ -1,6 +1,10 @@
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local clonedItem = game.ReplicatedStorage:WaitForChild("ClonedItems"):FindFirstChild("Bandage")
 
-local pickUpRemote = ReplicatedStorage.Remotes.Tool:WaitForChild("PickUpTool")
-
--- Пробуем просто вызвать
-pickUpRemote:FireServer()
+if clonedItem then
+    local newItem = clonedItem:Clone()
+    newItem.Parent = workspace.RuntimeItems
+    newItem:SetPrimaryPartCFrame(workspace.CurrentCamera.CFrame * CFrame.new(0, 0, -5)) -- спавн перед игроком
+    print("[+] Новый бандаж создан в workspace")
+else
+    warn("[!] Клон бандажа не найден")
+end

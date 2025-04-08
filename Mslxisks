@@ -1,9 +1,9 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
--- Функция для вывода информации (замени print на то, что работает в твоём случае)
+-- Функция для вывода логов (замени print, если он не работает)
 local function log(message)
-    print(message) -- Если print не работает, замени на свой способ вывода, например rconsoleprint
+    print(message) -- Если print не работает, используй свой способ вывода
 end
 
 -- Папка с оригинальным бандажом
@@ -11,54 +11,40 @@ local clonedFolder = ReplicatedStorage:WaitForChild("ClonedItems")
 local clonedBandage = clonedFolder:FindFirstChild("Bandage")
 
 if clonedBandage then
-    -- Исследование структуры бандажа
-    log("[+] Исследование бандажа:")
-    log("Имя: " .. clonedBandage.Name)
-    log("Класс: " .. clonedBandage.ClassName)
-    
-    for _, child in pairs(clonedBandage:GetChildren()) do
-        log(" - " .. child.Name .. " (" .. child.ClassName .. ")")
-        if child:IsA("TextButton") or child:IsA("ImageButton") then
-            log("   - Это кнопка!")
-        end
-    end
-    
-    -- Клонирование
+    -- Клонируем бандаж
     local newBandage = clonedBandage:Clone()
     newBandage.Parent = Workspace.RuntimeItems
     
-    -- Поиск кнопки в клоне
-    local button = nil
-    for _, child in pairs(newBandage:GetChildren()) do
-        if child:IsA("TextButton") or child:IsA("ImageButton") then
-            button = child
-            log("[+] Найдена кнопка: " .. button.Name)
-            break
+    -- Проверяем наличие скриптов в оригинале
+    for _, child in pairs(clonedBandage:GetChildren()) do
+        if child:IsA("LocalScript") or child:IsA("Script") then
+            log("[+] Найден скрипт в оригинале: " .. child.Name)
+            -- Копируем скрипт в клон и пытаемся его активировать
+            local clonedScript = newBandage:FindFirstChild(child.Name)
+            if clonedScript then
+                if clonedScript:IsA("LocalScript") then
+                    -- Для LocalScript пытаемся "перезапустить" через родителя
+                    clonedScript.Disabled = true
+                    clonedScript.Disabled = false
+                    log("[+] Локальный скрипт " .. child.Name .. " активирован")
+                elseif clonedScript:IsA("Script") then
+                    -- Для серверного скрипта тоже пробуем перезапуск
+                    clonedScript.Disabled = true
+                    clonedScript.Disabled = false
+                    log("[+] Серверный скрипт " .. child.Name .. " активирован")
+                end
+            end
         end
     end
     
-    if button then
-        -- Привязка функции к кнопке
-        button.MouseButton1Click:Connect(function()
-            local player = game.Players.LocalPlayer
-            if player then
-                log(player.Name .. " использовал бандаж!")
-                -- Предполагаемая логика бандажа: восстановление здоровья
-                local humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
-                if humanoid and humanoid.Health < humanoid.MaxHealth then
-                    humanoid.Health = math.min(humanoid.Health + 20, humanoid.MaxHealth)
-                    log("Здоровье восстановлено на 20")
-                end
-                -- Удаляем бандаж после использования
-                newBandage:Destroy()
-                log("Бандаж удалён")
-            end
-        end)
-    else
-        log("[-] Кнопка не найдена в клоне")
+    -- Если есть кнопки, логируем их
+    for _, child in pairs(newBandage:GetChildren()) do
+        if child:IsA("TextButton") or child:IsA("ImageButton") then
+            log("[+] Найдена кнопка в клоне: " .. child.Name)
+        end
     end
     
-    log("[+] Бандаж успешно клонирован в RuntimeItems")
+    log("[+] Бандаж скопирован в RuntimeItems")
 else
     log("[-] Бандаж не найден в ClonedItems")
 end

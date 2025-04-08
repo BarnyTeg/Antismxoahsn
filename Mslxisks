@@ -1,5 +1,7 @@
-local runtimeItems = workspace:WaitForChild("RuntimeItems")
-
-runtimeItems.ChildAdded:Connect(function(child)
-    print("[!] Новый объект в RuntimeItems:", child.Name)
-end)
+for _, remote in ipairs(game:GetDescendants()) do
+    if remote:IsA("RemoteEvent") then
+        remote.OnClientEvent:Connect(function(...)
+            print("[REMOTE]", remote:GetFullName(), "| Аргументы:", ...)
+        end)
+    end
+end

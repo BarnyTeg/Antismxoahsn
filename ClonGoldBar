@@ -1,22 +1,94 @@
-local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+local ServerStorage = game:GetService("ServerStorage")
 
--- Создаём папку, если её нет
-local clonedFolder = ReplicatedStorage:FindFirstChild("ClonedItems") or Instance.new("Folder", ReplicatedStorage)
-clonedFolder.Name = "ClonedItems"
+-- Функция для вывода логов
+local function log(message)
+    print(message) -- Если print не работает, замени на свой способ вывода, например rconsoleprint
+end
 
--- Следим за появлением бандажа
-Workspace.RuntimeItems.ChildAdded:Connect(function(child)
-    if child.Name == "Bandage" then
-        print("[!] Бандаж найден: " .. child:GetFullName())
-
-        -- Проверка на повторное добавление
-        if not clonedFolder:FindFirstChild("Bandage") then
-            local clone = child:Clone()
-            clone.Parent = clonedFolder
-            print("[+] Бандаж клонирован в ReplicatedStorage.ClonedItems")
-        else
-            print("[-] Бандаж уже клонирован ранее.")
+-- Функция для поиска бандажа
+local function findBandage()
+    -- Проверяем ReplicatedStorage
+    log("[+] Проверка ReplicatedStorage:")
+    for _, child in pairs(ReplicatedStorage:GetChildren()) do
+        if child.Name == "Bandage" then
+            log("   - Найден Bandage в ReplicatedStorage")
+            return child
+        end
+        for _, subChild in pairs(child:GetChildren()) do
+            if subChild.Name == "Bandage" then
+                log("   - Найден Bandage в ReplicatedStorage." .. child.Name)
+                return subChild
+            end
         end
     end
-end)
+
+    -- Проверяем Workspace
+    log("[+] Проверка Workspace:")
+    for _, child in pairs(Workspace:GetChildren()) do
+        if child.Name == "Bandage" then
+            log("   - Найден Bandage в Workspace")
+            return child
+        end
+        for _, subChild in pairs(child:GetChildren()) do
+            if subChild.Name == "Bandage" then
+                log("   - Найден Bandage в Workspace." .. child.Name)
+                return subChild
+            end
+        end
+    end
+
+    -- Проверяем ServerStorage
+    log("[+] Проверка ServerStorage:")
+    for _, child in pairs(ServerStorage:GetChildren()) do
+        if child.Name == "Bandage" then
+            log("   - Найден Bandage в ServerStorage")
+            return child
+        end
+        for _, subChild in pairs(child:GetChildren()) do
+            if subChild.Name == "Bandage" then
+                log("   - Найден Bandage в ServerStorage." .. child.Name)
+                return subChild
+            end
+        end
+    end
+
+    return nil
+end
+
+-- Основной код
+local clonedBandage = findBandage()
+
+if clonedBandage then
+    -- Клонируем бандаж
+    local newBandage = clonedBandage:Clone()
+    
+    -- Проверяем, есть ли папка RuntimeItems, если нет — создаём
+    local runtimeItems = Workspace:FindFirstChild("RuntimeItems")
+    if not runtimeItems then
+        runtimeItems = Instance.new("Folder")
+        runtimeItems.Name = "RuntimeItems"
+        runtimeItems.Parent = Workspace
+    end
+    
+    newBandage.Parent = runtimeItems
+    
+    -- Проверяем наличие скриптов и кнопок в клоне
+    for _, child in pairs(newBandage:GetChildren()) do
+        if child:IsA("LocalScript") or child:IsA("Script") then
+            log("[+] Найден скрипт в клоне: " .. child.Name)
+            -- Пытаемся перезапустить скрипт
+            child.Disabled = true
+            child.Disabled = false
+            log("[+] Скрипт " .. child.Name .. " активирован")
+        end
+        if child:IsA("TextButton") or child:IsA("ImageButton") then
+            log("[+] Найдена кнопка в клоне: " .. child.Name)
+        end
+    end
+    
+    log("[+] Бандаж успешно скопирован в Workspace.RuntimeItems")
+else
+    log("[-] Бандаж не найден в игре")
+end

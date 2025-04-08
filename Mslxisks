@@ -30,16 +30,20 @@ local function exploreObject(obj, prefix)
                 log("[EVENT] Воспроизведён звук: " .. child.Name .. " в " .. obj.Name)
             end)
         end
-        if child:IsA("Animation") then
-            log(prefix .. "  - Это анимация!")
+        -- Отслеживаем изменения свойств с проверкой
+        pcall(function()
+            child:GetPropertyChangedSignal("Visible"):Connect(function()
+                log("[EVENT] Изменено свойство Visible у " .. child.Name .. ": " .. tostring(child.Visible))
+            end)
+        end)
+        -- Проверяем, есть ли свойство Position
+        if child:IsA("BasePart") or child:IsA("Model") then
+            pcall(function()
+                child:GetPropertyChangedSignal("Position"):Connect(function()
+                    log("[EVENT] Изменено свойство Position у " .. child.Name .. ": " .. tostring(child.Position))
+                end)
+            end)
         end
-        -- Отслеживаем изменения свойств
-        child:GetPropertyChangedSignal("Visible"):Connect(function()
-            log("[EVENT] Изменено свойство Visible у " .. child.Name .. ": " .. tostring(child.Visible))
-        end)
-        child:GetPropertyChangedSignal("Position"):Connect(function()
-            log("[EVENT] Изменено свойство Position у " .. child.Name .. ": " .. tostring(child.Position))
-        end)
         exploreObject(child, prefix .. "  - ")
     end
 end
@@ -61,17 +65,25 @@ local function findBandage()
     end
 
     log("[+] Проверка Workspace:")
-    for _, child in pairs(Workspace:GetChildren()) do
-        if child.Name == "Bandage" then
-            log("   - Найден Bandage в Workspace")
-            return child
-        end
-        for _, subChild in pairs(child:GetChildren()) do
-            if subChild.Name == "Bandage" then
-                log("   - Найден Bandage в Workspace." .. child.Name)
-                return subChild
+    local success, result = pcall(function()
+        for _, child in pairs(Workspace:GetChildren()) do
+            if child.Name == "Bandage" then
+                log("   - Найден Bandage в Workspace")
+                return child
+            end
+            for _, subChild in pairs(child:GetChildren()) do
+                if subChild.Name == "Bandage" then
+                    log("   - Найден Bandage в Workspace." .. child.Name)
+                    return subChild
+                end
             end
         end
+        return nil
+    end)
+    if success and result then
+        return result
+    elseif not success then
+        log("[ERROR] Ошибка при проверке Workspace: " .. result)
     end
 
     log("[+] Проверка ServerStorage:")
@@ -187,17 +199,6 @@ for _, child in pairs(player.PlayerGui:GetChildren()) do
         end)
         child.ChildRemoved:Connect(function(newChild)
             log("[EVENT] Удалён элемент из PlayerGui: " .. newChild.Name)
-        end)
-    end
-end
-
--- Отслеживание анимаций игрока
-local humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
-if humanoid then
-    local animator = humanoid:FindFirstChild("Animator")
-    if animator then
-        animator.AnimationPlayed:Connect(function(animationTrack)
-            log("[EVENT] Воспроизведена анимация: " .. animationTrack.Animation.Name)
         end)
     end
 end

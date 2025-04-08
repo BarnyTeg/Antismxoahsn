@@ -1,9 +1,11 @@
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local remote = ReplicatedStorage:FindFirstChild("RequestStartDrag")
+local RS = game:GetService("ReplicatedStorage")
+local all = ""
 
-if remote and remote:IsA("RemoteEvent") then
-    remote:FireServer(true, nil, "Bandage")
-    print("Вызов RequestStartDrag отправлен")
-else
-    warn("Remote 'RequestStartDrag' не найден")
+for _, obj in ipairs(RS:GetDescendants()) do
+    if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
+        all = all .. obj:GetFullName().." ["..obj.ClassName.."]\n"
+    end
 end
+
+print("ВСЕ Remote объекты:\n"..all)
+setclipboard(all)

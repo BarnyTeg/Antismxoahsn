@@ -1,10 +1,12 @@
-local Players = game:GetService("Players")
-local lp = Players.LocalPlayer
+local runtimeItems = workspace:WaitForChild("RuntimeItems")
 
-lp.Chatted:Connect(function(msg)
-    print("[CHAT] Игрок ввёл команду:", msg)
-end)
-
-lp.CharacterAdded:Connect(function(char)
-    print("[CHAR] Новый персонаж:", char)
+runtimeItems.ChildAdded:Connect(function(child)
+    print("[!] Новый объект в RuntimeItems:", child.Name)
+    task.wait(0.2)
+    for _, attr in ipairs(child:GetAttributes()) do
+        print("   Атрибут:", attr, "=", child:GetAttribute(attr))
+    end
+    for _, sub in ipairs(child:GetChildren()) do
+        print("   Содержит объект:", sub.Name, sub.ClassName)
+    end
 end)

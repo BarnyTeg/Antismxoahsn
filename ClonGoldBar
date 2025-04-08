@@ -1,3 +1,7 @@
-remote:FireServer(true, "", "Bandage")
-remote:FireServer(true, "Bandage")
-remote:FireServer(true, nil, workspace:FindFirstChild("Bandage"))
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+-- Пробуем вызвать RequestStartDrag вручную
+local remote = ReplicatedStorage.Shared.Remotes:WaitForChild("RequestStartDrag")
+
+-- Параметры: [true, "Bandage", nil] — как в логах
+remote:FireServer(true, "Bandage", nil)

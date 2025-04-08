@@ -1,13 +1,48 @@
-local RS = game:GetService("ReplicatedStorage")
-local cloned = RS:WaitForChild("ClonedItems")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local RuntimeItems = workspace:WaitForChild("RuntimeItems")
+local ClonedItemsFolder = ReplicatedStorage:FindFirstChild("ClonedItems") or Instance.new("Folder", ReplicatedStorage)
+ClonedItemsFolder.Name = "ClonedItems"
 
-local bandage = cloned:FindFirstChild("Bandage")
-if bandage then
-	print("Бандаж найден в ClonedItems")
+local cloned = false
 
-	local copy = bandage:Clone()
-	copy.Parent = workspace
-	print("Бандаж создан в Workspace")
-else
-	warn("Бандаж не найден в ClonedItems")
+-- Отслеживаем появление бандажа
+RuntimeItems.ChildAdded:Connect(function(child)
+    if child.Name == "Bandage" and not cloned then
+        cloned = true
+        print("[!] Бандаж найден: ", child:GetFullName())
+        
+        -- Подождём, пока объект полностью загрузится
+        child.AncestryChanged:Wait()
+        task.wait(0.1)
+        
+        local clone = child:Clone()
+        clone.Parent = ClonedItemsFolder
+        print("[+] Бандаж клонирован в ReplicatedStorage.ClonedItems")
+    end
+end)
+
+-- Функция для клонирования бандажа в RuntimeItems
+local function spawnBandage(player)
+    local clonedBandage = ClonedItemsFolder:FindFirstChild("Bandage")
+    if clonedBandage then
+        local bandageClone = clonedBandage:Clone()
+        bandageClone.Parent = RuntimeItems
+        print("[+] Бандаж клонирован обратно в RuntimeItems для игрока: ", player.Name)
+    else
+        print("[!] Клонированный бандаж не найден в ReplicatedStorage.ClonedItems!")
+    end
 end
+
+-- Пример: создадим RemoteEvent для клонирования по команде от игрока
+local Remote = Instance.new("RemoteEvent")
+Remote.Name = "CloneBandageEvent"
+Remote.Parent = ReplicatedStorage
+
+Remote.OnServerEvent:Connect(function(player)
+    print("[!] Запрос на клонирование бандажа от игрока: ", player.Name)
+    spawnBandage(player)
+end)
+
+print("[+] Скрипт успешно запущен.")

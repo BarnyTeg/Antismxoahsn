@@ -1,1 +1,4 @@
-ReplicatedStorage.SpawnItem:FireServer("Bandage")
+local RS = game:GetService("ReplicatedStorage")
+local remote = RS:WaitForChild("RequestStartDrag")
+
+remote:FireServer(true, nil, "Bandage")

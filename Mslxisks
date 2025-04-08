@@ -1,10 +1,18 @@
-workspace.RuntimeItems.ChildAdded:Connect(function(child)
-	if child.Name == "Bandage" then
-		task.wait(0.3) -- подождём пока появится
-		local dragEvent = game.ReplicatedStorage.Shared.Remotes:FindFirstChild("RequestStartDrag")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local dragEvent = ReplicatedStorage.Shared.Remotes:FindFirstChild("RequestStartDrag")
+local runtimeItems = workspace:WaitForChild("RuntimeItems")
+
+local function isRealItem(obj)
+	-- Проверка на наличие ключевых компонентов
+	return obj:FindFirstChild("Handle") and obj:FindFirstChild("ObjectInfo")
+end
+
+runtimeItems.ChildAdded:Connect(function(child)
+	if child.Name == "Bandage" and isRealItem(child) then
+		task.wait(0.3)
+		print("[+] Настоящий бандаж найден:", child)
 		if dragEvent then
-			dragEvent:FireServer(true, "Bandage", nil)
-			print("[+] Бандаж найден и подобран!")
+			dragEvent:FireServer(true, child.Name, nil)
 		end
 	end
 end)

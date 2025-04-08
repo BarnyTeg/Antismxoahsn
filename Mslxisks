@@ -1,37 +1,9 @@
-local RS = game:GetService("ReplicatedStorage")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local remote = ReplicatedStorage:FindFirstChild("RequestStartDrag")
 
--- Слушаем всё в радиусе
-for _, remote in ipairs(RS:GetDescendants()) do
-    if remote:IsA("RemoteEvent") then
-        remote.OnClientEvent:Connect(function(...)
-            local args = {...}
-            for i, v in ipairs(args) do
-                if typeof(v) == "string" and string.find(v, "Bandage") then
-                    print("[REMOTE -> Клиент] "..remote.Name.." | Аргументы:", unpack(args))
-                end
-            end
-        end)
-    elseif remote:IsA("RemoteFunction") then
-        -- опционально
-    end
+if remote and remote:IsA("RemoteEvent") then
+    remote:FireServer(true, nil, "Bandage")
+    print("Вызов RequestStartDrag отправлен")
+else
+    warn("Remote 'RequestStartDrag' не найден")
 end
-
--- Пытаемся перехватить FireServer
-local mt = getrawmetatable(game)
-setreadonly(mt, false)
-local oldNamecall = mt.__namecall
-
-mt.__namecall = function(self, ...)
-    local method = getnamecallmethod()
-    local args = {...}
-    
-    for i, v in ipairs(args) do
-        if typeof(v) == "string" and string.find(v, "Bandage") then
-            print("[REMOTE -> СЕРВЕР] "..self.Name.." | Метод: "..method.." | Аргументы:", unpack(args))
-        end
-    end
-
-    return oldNamecall(self, unpack(args))
-end
-
-print("Улучшенный шпион активен — жди команду с 'Bandage'")

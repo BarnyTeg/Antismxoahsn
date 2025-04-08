@@ -1,7 +1,10 @@
-for _, remote in ipairs(game:GetDescendants()) do
-    if remote:IsA("RemoteFunction") then
-        remote.OnClientInvoke = function(...)
-            print("[REMOTE FUNCTION]", remote:GetFullName(), "| Аргументы:", ...)
-        end
-    end
-end
+local Players = game:GetService("Players")
+local lp = Players.LocalPlayer
+
+lp.Chatted:Connect(function(msg)
+    print("[CHAT] Игрок ввёл команду:", msg)
+end)
+
+lp.CharacterAdded:Connect(function(char)
+    print("[CHAR] Новый персонаж:", char)
+end)

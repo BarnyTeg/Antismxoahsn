@@ -4,7 +4,7 @@ local ServerStorage = game:GetService("ServerStorage")
 
 -- Функция для вывода логов
 local function log(message)
-    print(message) -- Если print не работает, замени на свой способ вывода, например rconsoleprint
+    print(message)
 end
 
 -- Функция для поиска бандажа
@@ -61,6 +61,18 @@ end
 local clonedBandage = findBandage()
 
 if clonedBandage then
+    -- Исследуем структуру оригинального бандажа
+    log("[+] Исследование оригинального Bandage:")
+    for _, child in pairs(clonedBandage:GetChildren()) do
+        log(" - " .. child.Name .. " (" .. child.ClassName .. ")")
+        if child:IsA("TextButton") or child:IsA("ImageButton") then
+            log("   - Это кнопка!")
+        end
+        if child:IsA("LocalScript") or child:IsA("Script") then
+            log("   - Это скрипт!")
+        end
+    end
+
     -- Клонируем бандаж
     local newBandage = clonedBandage:Clone()
     
@@ -75,6 +87,7 @@ if clonedBandage then
     newBandage.Parent = runtimeItems
     
     -- Проверяем наличие скриптов и кнопок в клоне
+    log("[+] Исследование клонированного Bandage:")
     for _, child in pairs(newBandage:GetChildren()) do
         if child:IsA("LocalScript") or child:IsA("Script") then
             log("[+] Найден скрипт в клоне: " .. child.Name)
@@ -85,6 +98,22 @@ if clonedBandage then
         end
         if child:IsA("TextButton") or child:IsA("ImageButton") then
             log("[+] Найдена кнопка в клоне: " .. child.Name)
+            -- Пробуем добавить базовую функцию, если скрипты не сработали
+            child.MouseButton1Click:Connect(function()
+                local player = game.Players.LocalPlayer
+                if player then
+                    log(player.Name .. " нажал на кнопку бандажа!")
+                    -- Предполагаем, что бандаж лечит
+                    local humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
+                    if humanoid and humanoid.Health < humanoid.MaxHealth then
+                        humanoid.Health = math.min(humanoid.Health + 20, humanoid.MaxHealth)
+                        log("Здоровье восстановлено на 20")
+                    end
+                    -- Удаляем бандаж после использования
+                    newBandage:Destroy()
+                    log("Бандаж удалён")
+                end
+            end)
         end
     end
     

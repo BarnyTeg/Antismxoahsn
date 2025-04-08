@@ -1,48 +1,22 @@
-local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Players = game:GetService("Players")
-local RuntimeItems = workspace:WaitForChild("RuntimeItems")
-local ClonedItemsFolder = ReplicatedStorage:FindFirstChild("ClonedItems") or Instance.new("Folder", ReplicatedStorage)
-ClonedItemsFolder.Name = "ClonedItems"
 
-local cloned = false
+-- Создаём папку, если её нет
+local clonedFolder = ReplicatedStorage:FindFirstChild("ClonedItems") or Instance.new("Folder", ReplicatedStorage)
+clonedFolder.Name = "ClonedItems"
 
--- Отслеживаем появление бандажа
-RuntimeItems.ChildAdded:Connect(function(child)
-    if child.Name == "Bandage" and not cloned then
-        cloned = true
-        print("[!] Бандаж найден: ", child:GetFullName())
-        
-        -- Подождём, пока объект полностью загрузится
-        child.AncestryChanged:Wait()
-        task.wait(0.1)
-        
-        local clone = child:Clone()
-        clone.Parent = ClonedItemsFolder
-        print("[+] Бандаж клонирован в ReplicatedStorage.ClonedItems")
+-- Следим за появлением бандажа
+Workspace.RuntimeItems.ChildAdded:Connect(function(child)
+    if child.Name == "Bandage" then
+        print("[!] Бандаж найден: " .. child:GetFullName())
+
+        -- Проверка на повторное добавление
+        if not clonedFolder:FindFirstChild("Bandage") then
+            local clone = child:Clone()
+            clone.Parent = clonedFolder
+            print("[+] Бандаж клонирован в ReplicatedStorage.ClonedItems")
+        else
+            print("[-] Бандаж уже клонирован ранее.")
+        end
     end
 end)
-
--- Функция для клонирования бандажа в RuntimeItems
-local function spawnBandage(player)
-    local clonedBandage = ClonedItemsFolder:FindFirstChild("Bandage")
-    if clonedBandage then
-        local bandageClone = clonedBandage:Clone()
-        bandageClone.Parent = RuntimeItems
-        print("[+] Бандаж клонирован обратно в RuntimeItems для игрока: ", player.Name)
-    else
-        print("[!] Клонированный бандаж не найден в ReplicatedStorage.ClonedItems!")
-    end
-end
-
--- Пример: создадим RemoteEvent для клонирования по команде от игрока
-local Remote = Instance.new("RemoteEvent")
-Remote.Name = "CloneBandageEvent"
-Remote.Parent = ReplicatedStorage
-
-Remote.OnServerEvent:Connect(function(player)
-    print("[!] Запрос на клонирование бандажа от игрока: ", player.Name)
-    spawnBandage(player)
-end)
-
-print("[+] Скрипт успешно запущен.")

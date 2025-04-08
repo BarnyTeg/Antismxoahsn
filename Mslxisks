@@ -1,28 +1,5 @@
-local allRemotes = ""
+local runtimeItems = workspace:WaitForChild("RuntimeItems")
 
-local function scan(container)
-    for _, obj in ipairs(container:GetDescendants()) do
-        if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
-            allRemotes = allRemotes .. obj:GetFullName().." ["..obj.ClassName.."]\n"
-        end
-    end
-end
-
--- Области, где могут быть спрятаны Remote'ы
-local areas = {
-    game:GetService("ReplicatedStorage"),
-    game:GetService("Players").LocalPlayer:WaitForChild("PlayerScripts"),
-    game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui"),
-    game:GetService("StarterPlayer"),
-    game:GetService("StarterGui"),
-    game:GetService("StarterPack"),
-    game:GetService("Workspace"),
-    game
-}
-
-for _, area in ipairs(areas) do
-    pcall(function() scan(area) end)
-end
-
-print("ВСЕ Remote'ы во всей игре:\n"..allRemotes)
-setclipboard(allRemotes)
+runtimeItems.ChildAdded:Connect(function(child)
+    print("[!] Новый объект в RuntimeItems:", child.Name)
+end)

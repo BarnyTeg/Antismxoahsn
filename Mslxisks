@@ -1,24 +1,37 @@
 local RS = game:GetService("ReplicatedStorage")
-local bandageDetected = false
 
--- Ловим появление Bandage
-workspace.RuntimeItems.DescendantAdded:Connect(function(obj)
-    if obj.Name == "Bandage" then
-        print("[DETECT] Bandage появился в мире!")
-        bandageDetected = true
-    end
-end)
-
--- Следим за всеми RemoteEvent
+-- Слушаем всё в радиусе
 for _, remote in ipairs(RS:GetDescendants()) do
     if remote:IsA("RemoteEvent") then
-        local original = remote.FireServer
-        remote.FireServer = function(self, ...)
+        remote.OnClientEvent:Connect(function(...)
             local args = {...}
-            print("[REMOTE] " .. self.Name .. " | Аргументы:", unpack(args))
-            return original(self, unpack(args))
-        end
+            for i, v in ipairs(args) do
+                if typeof(v) == "string" and string.find(v, "Bandage") then
+                    print("[REMOTE -> Клиент] "..remote.Name.." | Аргументы:", unpack(args))
+                end
+            end
+        end)
+    elseif remote:IsA("RemoteFunction") then
+        -- опционально
     end
 end
 
-print("Скрипт шпионаж активен — жди появления Bandage и команд к нему.")
+-- Пытаемся перехватить FireServer
+local mt = getrawmetatable(game)
+setreadonly(mt, false)
+local oldNamecall = mt.__namecall
+
+mt.__namecall = function(self, ...)
+    local method = getnamecallmethod()
+    local args = {...}
+    
+    for i, v in ipairs(args) do
+        if typeof(v) == "string" and string.find(v, "Bandage") then
+            print("[REMOTE -> СЕРВЕР] "..self.Name.." | Метод: "..method.." | Аргументы:", unpack(args))
+        end
+    end
+
+    return oldNamecall(self, unpack(args))
+end
+
+print("Улучшенный шпион активен — жди команду с 'Bandage'")

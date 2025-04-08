@@ -14,13 +14,32 @@ local function exploreObject(obj, prefix)
         log(prefix .. child.Name .. " (" .. child.ClassName .. ")")
         if child:IsA("TextButton") or child:IsA("ImageButton") then
             log(prefix .. "  - Это кнопка!")
-        end
-        if child:IsA("LocalScript") or child:IsA("Script") then
-            log(prefix .. "  - Это скрипт!")
+            child.MouseButton1Click:Connect(function()
+                log("[EVENT] Нажата кнопка: " .. child.Name .. " в " .. obj.Name)
+            end)
         end
         if child:IsA("ClickDetector") then
             log(prefix .. "  - Это ClickDetector!")
+            child.MouseClick:Connect(function(player)
+                log("[EVENT] Клик по ClickDetector в " .. obj.Name .. " от игрока " .. player.Name)
+            end)
         end
+        if child:IsA("Sound") then
+            log(prefix .. "  - Это звук!")
+            child.Played:Connect(function()
+                log("[EVENT] Воспроизведён звук: " .. child.Name .. " в " .. obj.Name)
+            end)
+        end
+        if child:IsA("Animation") then
+            log(prefix .. "  - Это анимация!")
+        end
+        -- Отслеживаем изменения свойств
+        child:GetPropertyChangedSignal("Visible"):Connect(function()
+            log("[EVENT] Изменено свойство Visible у " .. child.Name .. ": " .. tostring(child.Visible))
+        end)
+        child:GetPropertyChangedSignal("Position"):Connect(function()
+            log("[EVENT] Изменено свойство Position у " .. child.Name .. ": " .. tostring(child.Position))
+        end)
         exploreObject(child, prefix .. "  - ")
     end
 end
@@ -72,31 +91,34 @@ local function findBandage()
     return nil
 end
 
--- Отслеживание событий в игре
+-- Отслеживание глобальных событий
 local player = Players.LocalPlayer
 local humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
 
--- Отслеживание изменений здоровья
+-- Отслеживание здоровья
 if humanoid then
     humanoid:GetPropertyChangedSignal("Health"):Connect(function()
         log("[EVENT] Здоровье изменилось: " .. humanoid.Health)
     end)
 end
 
--- Отслеживание удаления объектов в Workspace.RuntimeItems
-local runtimeItems = Workspace:FindFirstChild("RuntimeItems")
-if runtimeItems then
-    runtimeItems.ChildRemoved:Connect(function(child)
-        log("[EVENT] Объект удалён из RuntimeItems: " .. child.Name)
-    end)
-end
+-- Отслеживание появления и удаления объектов в Workspace
+Workspace.ChildAdded:Connect(function(child)
+    log("[EVENT] Добавлен объект в Workspace: " .. child.Name)
+end)
+Workspace.ChildRemoved:Connect(function(child)
+    log("[EVENT] Удалён объект из Workspace: " .. child.Name)
+end)
 
--- Отслеживание RemoteEvent (если бандаж вызывает серверные события)
+-- Отслеживание RemoteEvent и RemoteFunction
 for _, child in pairs(ReplicatedStorage:GetChildren()) do
     if child:IsA("RemoteEvent") then
         child.OnClientEvent:Connect(function(...)
             log("[EVENT] Вызван RemoteEvent: " .. child.Name .. " с аргументами: " .. tostring(...))
         end)
+    end
+    if child:IsA("RemoteFunction") then
+        log("[+] Найден RemoteFunction: " .. child.Name)
     end
 end
 
@@ -108,15 +130,13 @@ if clonedBandage then
     log("[+] Исследование оригинального Bandage:")
     exploreObject(clonedBandage, " - ")
 
-    -- Отслеживаем нажатия на кнопки оригинала
-    for _, child in pairs(clonedBandage:GetDescendants()) do
-        if child:IsA("TextButton") or child:IsA("ImageButton") then
-            log("[+] Подключено отслеживание кнопки в оригинале: " .. child.Name)
-            child.MouseButton1Click:Connect(function()
-                log("[EVENT] Нажата кнопка в оригинальном бандаже: " .. child.Name)
-            end)
-        end
-    end
+    -- Отслеживаем изменения оригинала
+    clonedBandage.ChildAdded:Connect(function(child)
+        log("[EVENT] Добавлен дочерний элемент в оригинальный Bandage: " .. child.Name)
+    end)
+    clonedBandage.ChildRemoved:Connect(function(child)
+        log("[EVENT] Удалён дочерний элемент из оригинального Bandage: " .. child.Name)
+    end)
 
     -- Клонируем бандаж
     local newBandage = clonedBandage:Clone()
@@ -145,7 +165,6 @@ if clonedBandage then
         end
         if child:IsA("TextButton") or child:IsA("ImageButton") then
             log("[+] Найдена кнопка в клоне: " .. child.Name)
-            -- Временно добавляем пустую функцию, чтобы логировать нажатия
             child.MouseButton1Click:Connect(function()
                 log("[EVENT] Нажата кнопка в клоне: " .. child.Name)
             end)
@@ -157,23 +176,28 @@ else
     log("[-] Бандаж не найден в игре")
 end
 
--- Отслеживание изменений в PlayerGui
+-- Отслеживание PlayerGui
 log("[+] Проверка PlayerGui:")
 for _, child in pairs(player.PlayerGui:GetChildren()) do
     log(" - " .. child.Name .. " (" .. child.ClassName .. ")")
     if child:IsA("ScreenGui") then
         exploreObject(child, "   - ")
-        -- Отслеживаем добавление новых элементов
         child.ChildAdded:Connect(function(newChild)
             log("[EVENT] Добавлен новый элемент в PlayerGui: " .. newChild.Name)
         end)
-        -- Отслеживаем нажатия на кнопки в PlayerGui
-        for _, guiChild in pairs(child:GetDescendants()) do
-            if guiChild:IsA("TextButton") or guiChild:IsA("ImageButton") then
-                guiChild.MouseButton1Click:Connect(function()
-                    log("[EVENT] Нажата кнопка в PlayerGui: " .. guiChild.Name)
-                end)
-            end
-        end
+        child.ChildRemoved:Connect(function(newChild)
+            log("[EVENT] Удалён элемент из PlayerGui: " .. newChild.Name)
+        end)
+    end
+end
+
+-- Отслеживание анимаций игрока
+local humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
+if humanoid then
+    local animator = humanoid:FindFirstChild("Animator")
+    if animator then
+        animator.AnimationPlayed:Connect(function(animationTrack)
+            log("[EVENT] Воспроизведена анимация: " .. animationTrack.Animation.Name)
+        end)
     end
 end

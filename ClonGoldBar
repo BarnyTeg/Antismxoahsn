@@ -1,7 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
--- Пробуем вызвать RequestStartDrag вручную
-local remote = ReplicatedStorage.Shared.Remotes:WaitForChild("RequestStartDrag")
+local pickUpRemote = ReplicatedStorage.Remotes.Tool:WaitForChild("PickUpTool")
 
--- Параметры: [true, "Bandage", nil] — как в логах
-remote:FireServer(true, "Bandage", nil)
+-- Пробуем просто вызвать
+pickUpRemote:FireServer()

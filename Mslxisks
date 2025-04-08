@@ -1,14 +1,64 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
--- Папка, где хранится клон
+-- Функция для вывода информации (замени print на то, что работает в твоём случае)
+local function log(message)
+    print(message) -- Если print не работает, замени на свой способ вывода, например rconsoleprint
+end
+
+-- Папка с оригинальным бандажом
 local clonedFolder = ReplicatedStorage:WaitForChild("ClonedItems")
 local clonedBandage = clonedFolder:FindFirstChild("Bandage")
 
 if clonedBandage then
+    -- Исследование структуры бандажа
+    log("[+] Исследование бандажа:")
+    log("Имя: " .. clonedBandage.Name)
+    log("Класс: " .. clonedBandage.ClassName)
+    
+    for _, child in pairs(clonedBandage:GetChildren()) do
+        log(" - " .. child.Name .. " (" .. child.ClassName .. ")")
+        if child:IsA("TextButton") or child:IsA("ImageButton") then
+            log("   - Это кнопка!")
+        end
+    end
+    
+    -- Клонирование
     local newBandage = clonedBandage:Clone()
     newBandage.Parent = Workspace.RuntimeItems
-    print("[+] Бандаж успешно вставлен в RuntimeItems")
+    
+    -- Поиск кнопки в клоне
+    local button = nil
+    for _, child in pairs(newBandage:GetChildren()) do
+        if child:IsA("TextButton") or child:IsA("ImageButton") then
+            button = child
+            log("[+] Найдена кнопка: " .. button.Name)
+            break
+        end
+    end
+    
+    if button then
+        -- Привязка функции к кнопке
+        button.MouseButton1Click:Connect(function()
+            local player = game.Players.LocalPlayer
+            if player then
+                log(player.Name .. " использовал бандаж!")
+                -- Предполагаемая логика бандажа: восстановление здоровья
+                local humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
+                if humanoid and humanoid.Health < humanoid.MaxHealth then
+                    humanoid.Health = math.min(humanoid.Health + 20, humanoid.MaxHealth)
+                    log("Здоровье восстановлено на 20")
+                end
+                -- Удаляем бандаж после использования
+                newBandage:Destroy()
+                log("Бандаж удалён")
+            end
+        end)
+    else
+        log("[-] Кнопка не найдена в клоне")
+    end
+    
+    log("[+] Бандаж успешно клонирован в RuntimeItems")
 else
-    warn("[-] Клонированный бандаж не найден в ClonedItems")
+    log("[-] Бандаж не найден в ClonedItems")
 end

@@ -1,18 +1,36 @@
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local dragEvent = ReplicatedStorage.Shared.Remotes:FindFirstChild("RequestStartDrag")
-local runtimeItems = workspace:WaitForChild("RuntimeItems")
+-- Сканирует все RemoteEvent и RemoteFunction в игре и логирует их активность
 
-local function isRealItem(obj)
-	-- Проверка на наличие ключевых компонентов
-	return obj:FindFirstChild("Handle") and obj:FindFirstChild("ObjectInfo")
+local remotes = {}
+local function scan(obj)
+    if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
+        table.insert(remotes, obj)
+    end
+    for _, child in pairs(obj:GetChildren()) do
+        scan(child)
+    end
 end
 
-runtimeItems.ChildAdded:Connect(function(child)
-	if child.Name == "Bandage" and isRealItem(child) then
-		task.wait(0.3)
-		print("[+] Настоящий бандаж найден:", child)
-		if dragEvent then
-			dragEvent:FireServer(true, child.Name, nil)
-		end
-	end
-end)
+scan(game.ReplicatedStorage)
+scan(game:GetService("Players").LocalPlayer)
+
+-- Логируем RemoteEvent
+for _, remote in ipairs(remotes) do
+    if remote:IsA("RemoteEvent") then
+        remote.OnClientEvent:Connect(function(...)
+            print("[RemoteEvent] "..remote:GetFullName(), ...)
+        end)
+    elseif remote:IsA("RemoteFunction") then
+        local mt = getrawmetatable(game)
+        setreadonly(mt, false)
+        local oldInvoke = mt.__namecall
+        mt.__namecall = function(self, ...)
+            local method = getnamecallmethod()
+            if self:IsA("RemoteFunction") and method == "InvokeServer" then
+                print("[RemoteFunction] "..self:GetFullName(), ...)
+            end
+            return oldInvoke(self, ...)
+        end
+    end
+end
+
+print("[!] Логгер активен. Жди появление бандажа и смотри в консоль.")

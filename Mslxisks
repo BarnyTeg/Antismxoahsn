@@ -1,12 +1,10 @@
-local runtimeItems = workspace:WaitForChild("RuntimeItems")
-
-runtimeItems.ChildAdded:Connect(function(child)
-    print("[!] Новый объект в RuntimeItems:", child.Name)
-    task.wait(0.2)
-    for _, attr in ipairs(child:GetAttributes()) do
-        print("   Атрибут:", attr, "=", child:GetAttribute(attr))
-    end
-    for _, sub in ipairs(child:GetChildren()) do
-        print("   Содержит объект:", sub.Name, sub.ClassName)
-    end
+workspace.RuntimeItems.ChildAdded:Connect(function(child)
+	if child.Name == "Bandage" then
+		task.wait(0.3) -- подождём пока появится
+		local dragEvent = game.ReplicatedStorage.Shared.Remotes:FindFirstChild("RequestStartDrag")
+		if dragEvent then
+			dragEvent:FireServer(true, "Bandage", nil)
+			print("[+] Бандаж найден и подобран!")
+		end
+	end
 end)

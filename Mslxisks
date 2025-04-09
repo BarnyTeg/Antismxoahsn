@@ -1,65 +1,6 @@
-local player = game:GetService("Players").LocalPlayer
-local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-local workspace = game:GetService("Workspace")
-local replicated = game:GetService("ReplicatedStorage")
-
--- Настройки
-local radius = 25 -- Радиус
-local damage = 1000 -- Урон (чтоб ваншотить всех)
-local cooldown = 0.05 -- Чаще бьём
-
--- Поиск врагов
-local function getEnemies()
-    local enemies = {}
-    if not hrp then return enemies end
-    for _, v in pairs(workspace:GetDescendants()) do -- Глубокий поиск
-        if v:FindFirstChild("Humanoid") and v ~= player.Character then
-            local enemyHRP = v:FindFirstChild("HumanoidRootPart") or v:FindFirstChild("Torso")
-            if enemyHRP and (enemyHRP.Position - hrp.Position).Magnitude <= radius then
-                table.insert(enemies, v)
-            end
-        end
-    end
-    return enemies
-end
-
--- Нанесение урона
-local function damageEnemy(enemy)
-    local humanoid = enemy:FindFirstChild("Humanoid")
-    if humanoid and humanoid.Health > 0 then
-        humanoid:TakeDamage(damage) -- Прямой урон
-        -- Ищем RemoteEvent
-        local remote = nil
-        for _, v in pairs(replicated:GetDescendants()) do
-            if v:IsA("RemoteEvent") and (v.Name:lower():find("damage") or v.Name:lower():find("hit") or v.Name:lower():find("kill")) then
-                remote = v
-                break
-            end
-        end
-        if remote then
-            for i = 1, 5 do -- Спамим 5 раз для верности
-                remote:FireServer(enemy.Humanoid, damage)
-            end
-            print("Долблю " .. enemy.Name .. " через " .. remote.Name)
-        end
+for _, v in pairs(game:GetService("ReplicatedStorage"):GetDescendants()) do
+    if v:IsA("RemoteEvent") then
+        print(v.Name .. " (" .. v:GetFullName() .. ")")
     end
 end
-
--- Запуск
-spawn(function()
-    while wait(cooldown) do
-        if not hrp then
-            hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-            if not hrp then continue end
-        end
-        local enemies = getEnemies()
-        for _, enemy in pairs(enemies) do
-            damageEnemy(enemy)
-        end
-        if #enemies > 0 then
-            print("Мочу " .. #enemies .. " врагов!")
-        end
-    end
-end)
-
-print("Килл аура 2.0 запущена! Радиус: " .. radius)
+print("Список готов, кидай мне!")

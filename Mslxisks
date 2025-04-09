@@ -8,60 +8,95 @@ local radius = 25 -- Радиус
 local damage = 1000 -- Урон
 local cooldown = 0.05 -- Задержка
 
--- Поиск врагов
+-- Шаг 1: Поиск врагов
 local function getEnemies()
     local enemies = {}
-    if not hrp then return enemies end
+    if not hrp then
+        print("Где твой перс? Жду HumanoidRootPart!")
+        return enemies
+    end
     for _, v in pairs(workspace:GetDescendants()) do
         if v:FindFirstChild("Humanoid") and v ~= player.Character then
             local enemyHRP = v:FindFirstChild("HumanoidRootPart") or v:FindFirstChild("Torso")
             if enemyHRP and (enemyHRP.Position - hrp.Position).Magnitude <= radius then
                 table.insert(enemies, v)
+                print("Найден враг: " .. v.Name .. " (" .. v:GetFullName() .. ")")
             end
         end
     end
+    print("Всего врагов в радиусе: " .. #enemies)
     return enemies
 end
 
--- Нанесение урона через RemoteEvent
-local function damageEnemy(enemy)
-    local humanoid = enemy:FindFirstChild("Humanoid")
-    if humanoid and humanoid.Health > 0 then
-        local shootRemote = replicated.Remotes.Weapon:FindFirstChild("Shoot")
-        local replicateShot = replicated.Remotes.Weapon:FindFirstChild("ReplicateShot")
-        local ragdollFlop = replicated.Shared.Remotes:FindFirstChild("RagdollFlop")
+-- Шаг 2: Тест RemoteEvent
+local function testRemoteEvents(enemy)
+    local remotes = {
+        ["Shoot"] = replicated.Remotes.Weapon:FindFirstChild("Shoot"),
+        ["ReplicateShot"] = replicated.Remotes.Weapon:FindFirstChild("ReplicateShot"),
+        ["RagdollFlop"] = replicated.Shared.Remotes:FindFirstChild("RagdollFlop")
+    }
+    local workingRemote = nil
 
-        if shootRemote then
-            shootRemote:FireServer(enemy, damage) -- Пробуем как выстрел
-            print("Бью " .. enemy.Name .. " через Shoot")
-        elseif replicateShot then
-            replicateShot:FireServer(enemy, damage) -- Репликация урона
-            print("Бью " .. enemy.Name .. " через ReplicateShot")
-        elseif ragdollFlop then
-            ragdollFlop:FireServer(enemy) -- Пробуем рэгдолл как смерть
-            print("Бью " .. enemy.Name .. " через RagdollFlop")
-        else
-            humanoid:TakeDamage(damage) -- Fallback
-            print("Shoot не нашёл, юзаю клиентский урон")
+    if enemy and enemy:FindFirstChild("Humanoid") then
+        for name, remote in pairs(remotes) do
+            if remote then
+                remote:FireServer(enemy.Humanoid, damage) -- Тест с Humanoid
+                print("Тест " .. name .. " на " .. enemy.Name)
+                wait(1) -- Ждём реакции
+                if enemy.Humanoid.Health <= 0 then
+                    workingRemote = remote
+                    print(name .. " сработал! Враг " .. enemy.Name .. " мёртв!")
+                    break
+                end
+            end
         end
     end
+    return workingRemote
 end
 
--- Запуск
-spawn(function()
-    while wait(cooldown) do
-        if not hrp then
-            hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-            if not hrp then continue end
-        end
-        local enemies = getEnemies()
-        for _, enemy in pairs(enemies) do
-            damageEnemy(enemy)
-        end
-        if #enemies > 0 then
-            print("Мочу " .. #enemies .. " врагов!")
-        end
-    end
-end)
+-- Шаг 3: Килл аура
+local function startKillAura()
+    local enemies = getEnemies()
+    local testEnemy = enemies[1] -- Берём первого врага для теста
+    local remote = nil
 
-print("Килл аура 4.0 запущена! Использую Shoot и другие ивенты!")
+    if testEnemy then
+        remote = testRemoteEvents(testEnemy)
+    else
+        print("Врагов не нашёл, стой ближе к зомбакам!")
+    end
+
+    if not remote then
+        print("Ни один RemoteEvent не сработал, юзаю Shoot по умолчанию")
+        remote = replicated.Remotes.Weapon:FindFirstChild("Shoot")
+    end
+
+    -- Запуск ауры
+    spawn(function()
+        while wait(cooldown) do
+            if not hrp then
+                hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                if not hrp then continue end
+            end
+            local currentEnemies = getEnemies()
+            for _, enemy in pairs(currentEnemies) do
+                if enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
+                    if remote then
+                        remote:FireServer(enemy.Humanoid, damage)
+                        print("Мочу " .. enemy.Name .. " через " .. remote.Name)
+                    else
+                        enemy.Humanoid:TakeDamage(damage) -- Fallback
+                        print("Remote не нашёл, бью клиентски " .. enemy.Name)
+                    end
+                end
+            end
+            if #currentEnemies > 0 then
+                print("Валю " .. #currentEnemies .. " врагов!")
+            end
+        end
+    end)
+end
+
+-- Старт
+print("Запускаю килл ауру 5.0 — всё в одном!")
+startKillAura()

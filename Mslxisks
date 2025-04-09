@@ -1,6 +1,22 @@
-for _, v in pairs(game:GetService("ReplicatedStorage"):GetDescendants()) do
+local replicated = game:GetService("ReplicatedStorage")
+local list = {}
+
+-- Собираем все RemoteEvent
+for _, v in pairs(replicated:GetDescendants()) do
     if v:IsA("RemoteEvent") then
+        table.insert(list, v.Name .. " (" .. v:GetFullName() .. ")")
         print(v.Name .. " (" .. v:GetFullName() .. ")")
     end
 end
-print("Список готов, кидай мне!")
+
+-- Формируем строку
+local result = table.concat(list, "\n")
+print("Найдено " .. #list .. " RemoteEvent!")
+
+-- Копируем в буфер обмена
+if setclipboard then
+    setclipboard(result)
+    print("Список скопирован в буфер обмена! Вставляй мне Ctrl+V!")
+else
+    print("Твой эксплойт не поддерживает setclipboard, копируй вручную из консоли!")
+end

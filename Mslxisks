@@ -1,6 +1,5 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
-local ServerStorage = game:GetService("ServerStorage")
 local Players = game:GetService("Players")
 
 -- Функция для вывода логов
@@ -8,148 +7,29 @@ local function log(message)
     print(message)
 end
 
--- Функция для рекурсивного исследования объекта
-local function exploreObject(obj, prefix)
-    for _, child in pairs(obj:GetChildren()) do
-        log(prefix .. child.Name .. " (" .. child.ClassName .. ")")
-        if child:IsA("TextButton") or child:IsA("ImageButton") then
-            log(prefix .. "  - Это кнопка!")
-            child.MouseButton1Click:Connect(function()
-                log("[EVENT] Нажата кнопка: " .. child.Name .. " в " .. obj.Name)
-            end)
-        end
-        if child:IsA("ClickDetector") then
-            log(prefix .. "  - Это ClickDetector!")
-            child.MouseClick:Connect(function(player)
-                log("[EVENT] Клик по ClickDetector в " .. obj.Name .. " от игрока " .. player.Name)
-            end)
-        end
-        if child:IsA("Sound") then
-            log(prefix .. "  - Это звук!")
-            child.Played:Connect(function()
-                log("[EVENT] Воспроизведён звук: " .. child.Name .. " в " .. obj.Name)
-            end)
-        end
-        -- Отслеживаем изменения свойств с проверкой
-        pcall(function()
-            child:GetPropertyChangedSignal("Visible"):Connect(function()
-                log("[EVENT] Изменено свойство Visible у " .. child.Name .. ": " .. tostring(child.Visible))
-            end)
-        end)
-        -- Проверяем, есть ли свойство Position
-        if child:IsA("BasePart") or child:IsA("Model") then
-            pcall(function()
-                child:GetPropertyChangedSignal("Position"):Connect(function()
-                    log("[EVENT] Изменено свойство Position у " .. child.Name .. ": " .. tostring(child.Position))
-                end)
-            end)
-        end
-        exploreObject(child, prefix .. "  - ")
-    end
-end
-
 -- Функция для поиска бандажа
 local function findBandage()
-    log("[+] Проверка ReplicatedStorage:")
-    for _, child in pairs(ReplicatedStorage:GetChildren()) do
-        if child.Name == "Bandage" then
-            log("   - Найден Bandage в ReplicatedStorage")
-            return child
-        end
-        for _, subChild in pairs(child:GetChildren()) do
-            if subChild.Name == "Bandage" then
-                log("   - Найден Bandage в ReplicatedStorage." .. child.Name)
-                return subChild
-            end
-        end
-    end
-
     log("[+] Проверка Workspace:")
-    local success, result = pcall(function()
-        for _, child in pairs(Workspace:GetChildren()) do
-            if child.Name == "Bandage" then
-                log("   - Найден Bandage в Workspace")
-                return child
-            end
-            for _, subChild in pairs(child:GetChildren()) do
-                if subChild.Name == "Bandage" then
-                    log("   - Найден Bandage в Workspace." .. child.Name)
-                    return subChild
-                end
-            end
-        end
-        return nil
-    end)
-    if success and result then
-        return result
-    elseif not success then
-        log("[ERROR] Ошибка при проверке Workspace: " .. result)
-    end
-
-    log("[+] Проверка ServerStorage:")
-    for _, child in pairs(ServerStorage:GetChildren()) do
+    for _, child in pairs(Workspace:GetChildren()) do
         if child.Name == "Bandage" then
-            log("   - Найден Bandage в ServerStorage")
+            log("   - Найден Bandage в Workspace")
             return child
         end
         for _, subChild in pairs(child:GetChildren()) do
             if subChild.Name == "Bandage" then
-                log("   - Найден Bandage в ServerStorage." .. child.Name)
+                log("   - Найден Bandage в Workspace." .. child.Name)
                 return subChild
             end
         end
     end
-
     return nil
-end
-
--- Отслеживание глобальных событий
-local player = Players.LocalPlayer
-local humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
-
--- Отслеживание здоровья
-if humanoid then
-    humanoid:GetPropertyChangedSignal("Health"):Connect(function()
-        log("[EVENT] Здоровье изменилось: " .. humanoid.Health)
-    end)
-end
-
--- Отслеживание появления и удаления объектов в Workspace
-Workspace.ChildAdded:Connect(function(child)
-    log("[EVENT] Добавлен объект в Workspace: " .. child.Name)
-end)
-Workspace.ChildRemoved:Connect(function(child)
-    log("[EVENT] Удалён объект из Workspace: " .. child.Name)
-end)
-
--- Отслеживание RemoteEvent и RemoteFunction
-for _, child in pairs(ReplicatedStorage:GetChildren()) do
-    if child:IsA("RemoteEvent") then
-        child.OnClientEvent:Connect(function(...)
-            log("[EVENT] Вызван RemoteEvent: " .. child.Name .. " с аргументами: " .. tostring(...))
-        end)
-    end
-    if child:IsA("RemoteFunction") then
-        log("[+] Найден RemoteFunction: " .. child.Name)
-    end
 end
 
 -- Основной код
 local clonedBandage = findBandage()
+local player = Players.LocalPlayer
 
 if clonedBandage then
-    -- Исследуем структуру оригинального бандажа
-    log("[+] Исследование оригинального Bandage:")
-    exploreObject(clonedBandage, " - ")
-
-    -- Отслеживаем изменения оригинала
-    clonedBandage.ChildAdded:Connect(function(child)
-        log("[EVENT] Добавлен дочерний элемент в оригинальный Bandage: " .. child.Name)
-    end)
-    clonedBandage.ChildRemoved:Connect(function(child)
-        log("[EVENT] Удалён дочерний элемент из оригинального Bandage: " .. child.Name)
-    end)
-
     -- Клонируем бандаж
     local newBandage = clonedBandage:Clone()
     
@@ -162,43 +42,72 @@ if clonedBandage then
     end
     
     newBandage.Parent = runtimeItems
-    
-    -- Исследуем клон
-    log("[+] Исследование клонированного Bandage:")
-    exploreObject(newBandage, " - ")
+    log("[+] Бандаж успешно скопирован в Workspace.RuntimeItems")
 
-    -- Проверяем наличие скриптов и кнопок в клоне
-    for _, child in pairs(newBandage:GetDescendants()) do
-        if child:IsA("LocalScript") or child:IsA("Script") then
-            log("[+] Найден скрипт в клоне: " .. child.Name)
-            child.Disabled = true
-            child.Disabled = false
-            log("[+] Скрипт " .. child.Name .. " активирован")
+    -- Ищем кнопки в PlayerGui, которые могут быть связаны с бандажом
+    log("[+] Проверка PlayerGui на наличие кнопок:")
+    local foundButton = nil
+    for _, gui in pairs(player.PlayerGui:GetChildren()) do
+        if gui:IsA("ScreenGui") then
+            for _, child in pairs(gui:GetDescendants()) do
+                if (child:IsA("TextButton") or child:IsA("ImageButton")) and child.Name:lower():find("bandage") then
+                    log(" - Найдена кнопка в PlayerGui: " .. child.Name)
+                    foundButton = child
+                    -- Логируем нажатия на оригинальную кнопку
+                    child.MouseButton1Click:Connect(function()
+                        log("[EVENT] Нажата кнопка в PlayerGui: " .. child.Name)
+                    end)
+                end
+            end
         end
+    end
+
+    -- Ищем кнопки в клоне
+    log("[+] Проверка клонированного Bandage на наличие кнопок:")
+    for _, child in pairs(newBandage:GetDescendants()) do
         if child:IsA("TextButton") or child:IsA("ImageButton") then
-            log("[+] Найдена кнопка в клоне: " .. child.Name)
+            log(" - Найдена кнопка в клоне: " .. child.Name)
+            foundButton = child
             child.MouseButton1Click:Connect(function()
                 log("[EVENT] Нажата кнопка в клоне: " .. child.Name)
+                -- Добавляем базовую механику: лечение и удаление
+                local humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
+                if humanoid and humanoid.Health < humanoid.MaxHealth then
+                    humanoid.Health = math.min(humanoid.Health + 20, humanoid.MaxHealth)
+                    log("[EVENT] Здоровье восстановлено на 20")
+                end
+                newBandage:Destroy()
+                log("[EVENT] Бандаж удалён")
             end)
         end
     end
-    
-    log("[+] Бандаж успешно скопирован в Workspace.RuntimeItems")
+
+    -- Если кнопок нет, добавляем ClickDetector
+    if not foundButton then
+        log("[+] Кнопки не найдены, добавляем ClickDetector")
+        local clickDetector = Instance.new("ClickDetector")
+        clickDetector.MaxActivationDistance = 10
+        clickDetector.Parent = newBandage
+        clickDetector.MouseClick:Connect(function(player)
+            log("[EVENT] Клик по бандажу!")
+            local humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
+            if humanoid and humanoid.Health < humanoid.MaxHealth then
+                humanoid.Health = math.min(humanoid.Health + 20, humanoid.MaxHealth)
+                log("[EVENT] Здоровье восстановлено на 20")
+            end
+            newBandage:Destroy()
+            log("[EVENT] Бандаж удалён")
+        end)
+    end
 else
     log("[-] Бандаж не найден в игре")
 end
 
--- Отслеживание PlayerGui
-log("[+] Проверка PlayerGui:")
-for _, child in pairs(player.PlayerGui:GetChildren()) do
-    log(" - " .. child.Name .. " (" .. child.ClassName .. ")")
-    if child:IsA("ScreenGui") then
-        exploreObject(child, "   - ")
-        child.ChildAdded:Connect(function(newChild)
-            log("[EVENT] Добавлен новый элемент в PlayerGui: " .. newChild.Name)
-        end)
-        child.ChildRemoved:Connect(function(newChild)
-            log("[EVENT] Удалён элемент из PlayerGui: " .. newChild.Name)
+-- Отслеживание RemoteEvent для понимания серверных механик
+for _, child in pairs(ReplicatedStorage:GetChildren()) do
+    if child:IsA("RemoteEvent") then
+        child.OnClientEvent:Connect(function(...)
+            log("[EVENT] Вызван RemoteEvent: " .. child.Name .. " с аргументами: " .. tostring(...))
         end)
     end
 end

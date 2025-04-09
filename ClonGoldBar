@@ -1,6 +1,5 @@
 -- Получаем сервисы
 local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
 
 -- Получаем локального игрока
 local player = Players.LocalPlayer
@@ -12,17 +11,6 @@ local function notify(title, message)
         Text = message,
         Duration = 5
     })
-end
-
--- Функция для удаления сварок (Welds), чтобы избежать залипания
-local function removeWelds(tool)
-    if tool:FindFirstChild("Handle") then
-        for _, weld in pairs(tool.Handle:GetDescendants()) do
-            if weld:IsA("Weld") or weld:IsA("WeldConstraint") then
-                weld:Destroy()
-            end
-        end
-    end
 end
 
 -- Функция для дюпа бандажа
@@ -49,8 +37,8 @@ local function dupeBandage()
         end
     end
 
+    -- Проверяем, не экипирован ли бандаж
     if not bandage then
-        -- Проверяем, не экипирован ли бандаж
         for _, tool in pairs(player.Character:GetChildren()) do
             if tool:IsA("Tool") and tool.Name:lower() == "bandage" then
                 bandage = tool
@@ -66,7 +54,7 @@ local function dupeBandage()
 
     -- Убираем бандаж из руки, если он экипирован
     if bandage.Parent == player.Character then
-        bandage.Parent = backpack -- Возвращаем в инвентарь
+        bandage.Parent = backpack
         wait(0.1) -- Даем время на обработку
     end
 
@@ -77,44 +65,11 @@ local function dupeBandage()
         return
     end
 
-    -- Удаляем сварки, чтобы избежать залипания
-    removeWelds(clonedBandage)
-
-    -- Помещаем клонированный бандаж в мир
-    clonedBandage.Parent = Workspace
-    local root = player.Character:FindFirstChild("HumanoidRootPart")
-    if root and clonedBandage:FindFirstChild("Handle") then
-        -- Позиционируем бандаж рядом с игроком
-        clonedBandage.Handle.CFrame = root.CFrame + Vector3.new(2, 2, 2)
-        clonedBandage.Handle.Anchored = true -- Фиксируем, чтобы не упал
-    else
-        notify("Error", "Failed to position the cloned bandage!")
-        return
-    end
+    -- Добавляем клонированный бандаж в инвентарь
+    clonedBandage.Parent = backpack
 
     -- Уведомляем
-    notify("Dupe Bandage", "Bandage cloned and dropped! Attempting to refresh...")
-
-    -- Пробуем обновить персонажа без убийства
-    local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
-    if humanoid then
-        -- Сохраняем текущую позицию
-        local originalCFrame = player.Character.HumanoidRootPart.CFrame
-        -- Перемещаем персонажа на мгновение в "никуда", чтобы сбросить состояние
-        player.Character.HumanoidRootPart.CFrame = CFrame.new(Vector3.new(0, 10000, 0))
-        wait(0.1)
-        -- Возвращаем персонажа обратно
-        player.Character.HumanoidRootPart.CFrame = originalCFrame
-    end
-
-    -- Разанкориваем бандаж, чтобы его можно было подобрать
-    if clonedBandage and clonedBandage:FindFirstChild("Handle") then
-        clonedBandage.Handle.Anchored = false
-    end
-
-    -- Уведомляем о следующем шаге
-    wait(1)
-    notify("Dupe Bandage", "Refresh complete! Try picking up the cloned bandage.")
+    notify("Dupe Bandage", "Bandage duplicated! Check your inventory.")
 end
 
 -- Запускаем дюп

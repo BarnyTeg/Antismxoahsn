@@ -1,123 +1,94 @@
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+-- Получаем сервисы
+local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
-local ServerStorage = game:GetService("ServerStorage")
 
--- Функция для вывода логов
-local function log(message)
-    print(message)
+-- Получаем локального игрока
+local player = Players.LocalPlayer
+
+-- Функция для уведомлений
+local function notify(title, message)
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = title,
+        Text = message,
+        Duration = 5
+    })
 end
 
--- Функция для поиска бандажа
-local function findBandage()
-    -- Проверяем ReplicatedStorage
-    log("[+] Проверка ReplicatedStorage:")
-    for _, child in pairs(ReplicatedStorage:GetChildren()) do
-        if child.Name == "Bandage" then
-            log("   - Найден Bandage в ReplicatedStorage")
-            return child
-        end
-        for _, subChild in pairs(child:GetChildren()) do
-            if subChild.Name == "Bandage" then
-                log("   - Найден Bandage в ReplicatedStorage." .. child.Name)
-                return subChild
-            end
+-- Функция для дюпа бандажа
+local function dupeBandage()
+    -- Проверяем, есть ли персонаж
+    if not player.Character then
+        notify("Error", "You need a character to use this script!")
+        return
+    end
+
+    -- Проверяем, есть ли инвентарь (Backpack)
+    local backpack = player:FindFirstChildOfClass("Backpack")
+    if not backpack then
+        notify("Error", "No backpack found!")
+        return
+    end
+
+    -- Ищем бандаж в инвентаре
+    local bandage = nil
+    for _, tool in pairs(backpack:GetChildren()) do
+        if tool:IsA("Tool") and tool.Name:lower() == "bandage" then -- Ищем предмет с именем "Bandage" (регистр не важен)
+            bandage = tool
+            break
         end
     end
 
-    -- Проверяем Workspace
-    log("[+] Проверка Workspace:")
-    for _, child in pairs(Workspace:GetChildren()) do
-        if child.Name == "Bandage" then
-            log("   - Найден Bandage в Workspace")
-            return child
-        end
-        for _, subChild in pairs(child:GetChildren()) do
-            if subChild.Name == "Bandage" then
-                log("   - Найден Bandage в Workspace." .. child.Name)
-                return subChild
+    if not bandage then
+        notify("Error", "No bandage found in your inventory!")
+        return
+    end
+
+    -- Делаем бандаж сбрасываемым
+    bandage.CanBeDropped = true
+
+    -- Экипируем бандаж
+    bandage.Parent = player.Character
+    wait(0.1) -- Небольшая задержка для корректной обработки
+
+    -- Сбрасываем бандаж в мир
+    local droppedBandage = nil
+    for _, tool in pairs(player.Character:GetChildren()) do
+        if tool:IsA("Tool") and tool.Name:lower() == "bandage" then
+            tool.Parent = Workspace
+            droppedBandage = tool
+            -- Позиционируем бандаж рядом с игроком
+            local root = player.Character:FindFirstChild("HumanoidRootPart")
+            if root and tool:FindFirstChild("Handle") then
+                tool.Handle.CFrame = root.CFrame + Vector3.new(0, 5, 0) -- Чуть выше игрока
             end
+            break
         end
     end
 
-    -- Проверяем ServerStorage
-    log("[+] Проверка ServerStorage:")
-    for _, child in pairs(ServerStorage:GetChildren()) do
-        if child.Name == "Bandage" then
-            log("   - Найден Bandage в ServerStorage")
-            return child
-        end
-        for _, subChild in pairs(child:GetChildren()) do
-            if subChild.Name == "Bandage" then
-                log("   - Найден Bandage в ServerStorage." .. child.Name)
-                return subChild
-            end
-        end
+    if not droppedBandage then
+        notify("Error", "Failed to drop the bandage!")
+        return
     end
 
-    return nil
+    -- Уведомляем
+    notify("Dupe Bandage", "Bandage dropped! Refreshing character...")
+
+    -- Сбрасываем состояние персонажа без убийства
+    local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+    local root = player.Character:FindFirstChild("HumanoidRootPart")
+    if humanoid and root then
+        -- Сохраняем текущую позицию
+        local originalCFrame = root.CFrame
+        -- Перемещаем персонажа в "никуда" и обратно, чтобы обновить состояние
+        root.CFrame = CFrame.new(Vector3.new(0, 10000, 0)) -- Временное перемещение
+        wait(0.5)
+        root.CFrame = originalCFrame -- Возвращаем на место
+    end
+
+    -- Уведомляем о следующем шаге
+    wait(1)
+    notify("Dupe Bandage", "Character refreshed! Try picking up the dropped bandage.")
 end
 
--- Основной код
-local clonedBandage = findBandage()
-
-if clonedBandage then
-    -- Исследуем структуру оригинального бандажа
-    log("[+] Исследование оригинального Bandage:")
-    for _, child in pairs(clonedBandage:GetChildren()) do
-        log(" - " .. child.Name .. " (" .. child.ClassName .. ")")
-        if child:IsA("TextButton") or child:IsA("ImageButton") then
-            log("   - Это кнопка!")
-        end
-        if child:IsA("LocalScript") or child:IsA("Script") then
-            log("   - Это скрипт!")
-        end
-    end
-
-    -- Клонируем бандаж
-    local newBandage = clonedBandage:Clone()
-    
-    -- Проверяем, есть ли папка RuntimeItems, если нет — создаём
-    local runtimeItems = Workspace:FindFirstChild("RuntimeItems")
-    if not runtimeItems then
-        runtimeItems = Instance.new("Folder")
-        runtimeItems.Name = "RuntimeItems"
-        runtimeItems.Parent = Workspace
-    end
-    
-    newBandage.Parent = runtimeItems
-    
-    -- Проверяем наличие скриптов и кнопок в клоне
-    log("[+] Исследование клонированного Bandage:")
-    for _, child in pairs(newBandage:GetChildren()) do
-        if child:IsA("LocalScript") or child:IsA("Script") then
-            log("[+] Найден скрипт в клоне: " .. child.Name)
-            -- Пытаемся перезапустить скрипт
-            child.Disabled = true
-            child.Disabled = false
-            log("[+] Скрипт " .. child.Name .. " активирован")
-        end
-        if child:IsA("TextButton") or child:IsA("ImageButton") then
-            log("[+] Найдена кнопка в клоне: " .. child.Name)
-            -- Пробуем добавить базовую функцию, если скрипты не сработали
-            child.MouseButton1Click:Connect(function()
-                local player = game.Players.LocalPlayer
-                if player then
-                    log(player.Name .. " нажал на кнопку бандажа!")
-                    -- Предполагаем, что бандаж лечит
-                    local humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
-                    if humanoid and humanoid.Health < humanoid.MaxHealth then
-                        humanoid.Health = math.min(humanoid.Health + 20, humanoid.MaxHealth)
-                        log("Здоровье восстановлено на 20")
-                    end
-                    -- Удаляем бандаж после использования
-                    newBandage:Destroy()
-                    log("Бандаж удалён")
-                end
-            end)
-        end
-    end
-    
-    log("[+] Бандаж успешно скопирован в Workspace.RuntimeItems")
-else
-    log("[-] Бандаж не найден в игре")
-end
+-- Запускаем дюп
+dupeBandage()

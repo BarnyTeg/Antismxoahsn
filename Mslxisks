@@ -1,81 +1,29 @@
--- Получаем сервисы
-local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
+-- Поиск bonds в Players.LocalPlayer
+local player = game:GetService("Players").LocalPlayer
+local bondValue = nil
 
--- Получаем локального игрока
-local player = Players.LocalPlayer
-
--- Функция для уведомлений (простая версия)
-local function notify(title, message)
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = title,
-        Text = message,
-        Duration = 5
-    })
-end
-
--- Основная функция дюпа
-local function dupeTools()
-    -- Проверяем, есть ли персонаж
-    if not player.Character then
-        notify("Error", "You need a character to use this script!")
-        return
-    end
-
-    -- Проверяем, есть ли инвентарь (Backpack)
-    local backpack = player:FindFirstChildOfClass("Backpack")
-    if not backpack then
-        notify("Error", "No backpack found!")
-        return
-    end
-
-    -- Собираем все инструменты
-    local tools = {}
-    for _, tool in pairs(backpack:GetChildren()) do
-        if tool:IsA("Tool") then
-            table.insert(tools, tool)
+for _, v in pairs(player:GetDescendants()) do
+    if v:IsA("IntValue") or v:IsA("NumberValue") then
+        if v.Name:lower():find("bond") then
+            bondValue = v
+            print("Нашёл bonds: " .. v:GetFullName() .. " = " .. v.Value)
+            break
         end
     end
-
-    if #tools == 0 then
-        notify("Error", "No tools found in your inventory!")
-        return
-    end
-
-    -- Делаем инструменты сбрасываемыми
-    for _, tool in pairs(tools) do
-        tool.CanBeDropped = true
-    end
-
-    -- Сбрасываем инструменты в мир
-    for _, tool in pairs(tools) do
-        tool.Parent = player.Character -- Экипируем инструмент
-    end
-    wait(0.1) -- Небольшая задержка
-    for _, tool in pairs(player.Character:GetChildren()) do
-        if tool:IsA("Tool") then
-            tool.Parent = Workspace -- Сбрасываем в мир
-            -- Позиционируем инструмент рядом с игроком
-            local root = player.Character:FindFirstChild("HumanoidRootPart")
-            if root and tool:FindFirstChild("Handle") then
-                tool.Handle.CFrame = root.CFrame + Vector3.new(0, 5, 0) -- Чуть выше игрока
-            end
-        end
-    end
-
-    -- Уведомляем
-    notify("Dupe", "Tools dropped! Refreshing character...")
-
-    -- Убиваем персонажа, чтобы обновить инвентарь
-    local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
-    if humanoid then
-        humanoid:TakeDamage(humanoid.MaxHealth) -- Убиваем персонажа
-    end
-
-    -- Ждем респавна
-    wait(3) -- Даем время на возрождение
-    notify("Dupe", "Character refreshed! Try picking up the dropped tools.")
 end
 
--- Запускаем дюп
-dupeTools()
+if bondValue then
+    bondValue.Value = 99999 -- Накручиваем до 99999
+    print("Накрутил bonds до " .. bondValue.Value)
+else
+    print("Не нашёл bonds в LocalPlayer, ищем дальше...")
+end
+
+-- Если в UI (например, "Bonds: 110")
+for _, v in pairs(player.PlayerGui:GetDescendants()) do
+    if v:IsA("TextLabel") and v.Text:find("Bonds") then
+        v.Text = "Bonds: 99999"
+        print("Сменил UI на 99999")
+        break
+    end
+end

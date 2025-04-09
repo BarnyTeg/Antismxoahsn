@@ -1,29 +1,60 @@
--- Поиск bonds в Players.LocalPlayer
 local player = game:GetService("Players").LocalPlayer
-local bondValue = nil
+local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+local workspace = game:GetService("Workspace")
 
-for _, v in pairs(player:GetDescendants()) do
-    if v:IsA("IntValue") or v:IsA("NumberValue") then
-        if v.Name:lower():find("bond") then
-            bondValue = v
-            print("Нашёл bonds: " .. v:GetFullName() .. " = " .. v.Value)
+-- Функция для телепорта всех GoldBar к тебе
+local function bringGoldBars()
+    if not hrp then print("Где твой перс, чувак?"); return end
+    local found = false
+    for _, v in pairs(workspace.RuntimeItems:GetChildren()) do
+        if v.Name == "GoldBar" and v:FindFirstChild("Part") then
+            v.Part.CFrame = hrp.CFrame + Vector3.new(math.random(-5, 5), 5, math.random(-5, 5)) -- Разброс вокруг тебя
+            found = true
+        end
+    end
+    if found then
+        print("Притянул все GoldBar к тебе, собирай!")
+    else
+        print("Ни одного GoldBar не нашёл, может, карта пустая?")
+    end
+end
+
+-- Автосбор через TouchInterest
+local function autoCollectGoldBars()
+    if not hrp then return end
+    for _, v in pairs(workspace.RuntimeItems:GetChildren()) do
+        if v.Name == "GoldBar" and v:FindFirstChild("Part") and v.Part:FindFirstChild("TouchInterest") then
+            hrp.CFrame = v.Part.CFrame -- Телепорт к каждому GoldBar
+            wait(0.1) -- Ждём, чтоб сервер словил сбор
+        end
+    end
+    print("Пробежался по всем GoldBar, чекни bonds!")
+end
+
+-- Поиск RemoteEvent для спама (пример)
+local function spamRemote()
+    local remote = nil
+    for _, v in pairs(game:GetService("ReplicatedStorage"):GetDescendants()) do
+        if v:IsA("RemoteEvent") and v.Name:lower():find("collect") or v.Name:find("Gold") then
+            remote = v
             break
         end
     end
-end
-
-if bondValue then
-    bondValue.Value = 99999 -- Накручиваем до 99999
-    print("Накрутил bonds до " .. bondValue.Value)
-else
-    print("Не нашёл bonds в LocalPlayer, ищем дальше...")
-end
-
--- Если в UI (например, "Bonds: 110")
-for _, v in pairs(player.PlayerGui:GetDescendants()) do
-    if v:IsA("TextLabel") and v.Text:find("Bonds") then
-        v.Text = "Bonds: 99999"
-        print("Сменил UI на 99999")
-        break
+    if remote then
+        for i = 1, 50 do
+            remote:FireServer("GoldBar") -- Спамим сбор GoldBar
+            wait(0.05)
+        end
+        print("Заспамил RemoteEvent, смотри, сколько bonds!")
+    else
+        print("Не нашёл RemoteEvent, ищи вручную в ReplicatedStorage!")
     end
+end
+
+-- Выполняем всё разом
+while true do
+    bringGoldBars() -- Тащим GoldBar к тебе
+    autoCollectGoldBars() -- Автосбор
+    spamRemote() -- Спам события
+    wait(1) -- Пауза, чтоб не лагало
 end

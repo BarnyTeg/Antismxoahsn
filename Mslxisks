@@ -1,113 +1,81 @@
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Workspace = game:GetService("Workspace")
+-- Получаем сервисы
 local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
 
--- Функция для вывода логов
-local function log(message)
-    print(message)
-end
-
--- Функция для поиска бандажа
-local function findBandage()
-    log("[+] Проверка Workspace:")
-    for _, child in pairs(Workspace:GetChildren()) do
-        if child.Name == "Bandage" then
-            log("   - Найден Bandage в Workspace")
-            return child
-        end
-        for _, subChild in pairs(child:GetChildren()) do
-            if subChild.Name == "Bandage" then
-                log("   - Найден Bandage в Workspace." .. child.Name)
-                return subChild
-            end
-        end
-    end
-    return nil
-end
-
--- Основной код
-local clonedBandage = findBandage()
+-- Получаем локального игрока
 local player = Players.LocalPlayer
 
-if clonedBandage then
-    -- Клонируем бандаж
-    local newBandage = clonedBandage:Clone()
-    
-    -- Проверяем, есть ли папка RuntimeItems, если нет — создаём
-    local runtimeItems = Workspace:FindFirstChild("RuntimeItems")
-    if not runtimeItems then
-        runtimeItems = Instance.new("Folder")
-        runtimeItems.Name = "RuntimeItems"
-        runtimeItems.Parent = Workspace
-    end
-    
-    newBandage.Parent = runtimeItems
-    log("[+] Бандаж успешно скопирован в Workspace.RuntimeItems")
+-- Функция для уведомлений (простая версия)
+local function notify(title, message)
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = title,
+        Text = message,
+        Duration = 5
+    })
+end
 
-    -- Ищем кнопки в PlayerGui, которые могут быть связаны с бандажом
-    log("[+] Проверка PlayerGui на наличие кнопок:")
-    local foundButton = nil
-    for _, gui in pairs(player.PlayerGui:GetChildren()) do
-        if gui:IsA("ScreenGui") then
-            for _, child in pairs(gui:GetDescendants()) do
-                if (child:IsA("TextButton") or child:IsA("ImageButton")) and child.Name:lower():find("bandage") then
-                    log(" - Найдена кнопка в PlayerGui: " .. child.Name)
-                    foundButton = child
-                    -- Логируем нажатия на оригинальную кнопку
-                    child.MouseButton1Click:Connect(function()
-                        log("[EVENT] Нажата кнопка в PlayerGui: " .. child.Name)
-                    end)
-                end
+-- Основная функция дюпа
+local function dupeTools()
+    -- Проверяем, есть ли персонаж
+    if not player.Character then
+        notify("Error", "You need a character to use this script!")
+        return
+    end
+
+    -- Проверяем, есть ли инвентарь (Backpack)
+    local backpack = player:FindFirstChildOfClass("Backpack")
+    if not backpack then
+        notify("Error", "No backpack found!")
+        return
+    end
+
+    -- Собираем все инструменты
+    local tools = {}
+    for _, tool in pairs(backpack:GetChildren()) do
+        if tool:IsA("Tool") then
+            table.insert(tools, tool)
+        end
+    end
+
+    if #tools == 0 then
+        notify("Error", "No tools found in your inventory!")
+        return
+    end
+
+    -- Делаем инструменты сбрасываемыми
+    for _, tool in pairs(tools) do
+        tool.CanBeDropped = true
+    end
+
+    -- Сбрасываем инструменты в мир
+    for _, tool in pairs(tools) do
+        tool.Parent = player.Character -- Экипируем инструмент
+    end
+    wait(0.1) -- Небольшая задержка
+    for _, tool in pairs(player.Character:GetChildren()) do
+        if tool:IsA("Tool") then
+            tool.Parent = Workspace -- Сбрасываем в мир
+            -- Позиционируем инструмент рядом с игроком
+            local root = player.Character:FindFirstChild("HumanoidRootPart")
+            if root and tool:FindFirstChild("Handle") then
+                tool.Handle.CFrame = root.CFrame + Vector3.new(0, 5, 0) -- Чуть выше игрока
             end
         end
     end
 
-    -- Ищем кнопки в клоне
-    log("[+] Проверка клонированного Bandage на наличие кнопок:")
-    for _, child in pairs(newBandage:GetDescendants()) do
-        if child:IsA("TextButton") or child:IsA("ImageButton") then
-            log(" - Найдена кнопка в клоне: " .. child.Name)
-            foundButton = child
-            child.MouseButton1Click:Connect(function()
-                log("[EVENT] Нажата кнопка в клоне: " .. child.Name)
-                -- Добавляем базовую механику: лечение и удаление
-                local humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
-                if humanoid and humanoid.Health < humanoid.MaxHealth then
-                    humanoid.Health = math.min(humanoid.Health + 20, humanoid.MaxHealth)
-                    log("[EVENT] Здоровье восстановлено на 20")
-                end
-                newBandage:Destroy()
-                log("[EVENT] Бандаж удалён")
-            end)
-        end
+    -- Уведомляем
+    notify("Dupe", "Tools dropped! Refreshing character...")
+
+    -- Убиваем персонажа, чтобы обновить инвентарь
+    local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        humanoid:TakeDamage(humanoid.MaxHealth) -- Убиваем персонажа
     end
 
-    -- Если кнопок нет, добавляем ClickDetector
-    if not foundButton then
-        log("[+] Кнопки не найдены, добавляем ClickDetector")
-        local clickDetector = Instance.new("ClickDetector")
-        clickDetector.MaxActivationDistance = 10
-        clickDetector.Parent = newBandage
-        clickDetector.MouseClick:Connect(function(player)
-            log("[EVENT] Клик по бандажу!")
-            local humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
-            if humanoid and humanoid.Health < humanoid.MaxHealth then
-                humanoid.Health = math.min(humanoid.Health + 20, humanoid.MaxHealth)
-                log("[EVENT] Здоровье восстановлено на 20")
-            end
-            newBandage:Destroy()
-            log("[EVENT] Бандаж удалён")
-        end)
-    end
-else
-    log("[-] Бандаж не найден в игре")
+    -- Ждем респавна
+    wait(3) -- Даем время на возрождение
+    notify("Dupe", "Character refreshed! Try picking up the dropped tools.")
 end
 
--- Отслеживание RemoteEvent для понимания серверных механик
-for _, child in pairs(ReplicatedStorage:GetChildren()) do
-    if child:IsA("RemoteEvent") then
-        child.OnClientEvent:Connect(function(...)
-            log("[EVENT] Вызван RemoteEvent: " .. child.Name .. " с аргументами: " .. tostring(...))
-        end)
-    end
-end
+-- Запускаем дюп
+dupeTools()

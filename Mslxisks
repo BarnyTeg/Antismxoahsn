@@ -1,22 +1,67 @@
+local player = game:GetService("Players").LocalPlayer
+local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+local workspace = game:GetService("Workspace")
 local replicated = game:GetService("ReplicatedStorage")
-local list = {}
 
--- Собираем все RemoteEvent
-for _, v in pairs(replicated:GetDescendants()) do
-    if v:IsA("RemoteEvent") then
-        table.insert(list, v.Name .. " (" .. v:GetFullName() .. ")")
-        print(v.Name .. " (" .. v:GetFullName() .. ")")
+-- Настройки
+local radius = 25 -- Радиус
+local damage = 1000 -- Урон
+local cooldown = 0.05 -- Задержка
+
+-- Поиск врагов
+local function getEnemies()
+    local enemies = {}
+    if not hrp then return enemies end
+    for _, v in pairs(workspace:GetDescendants()) do
+        if v:FindFirstChild("Humanoid") and v ~= player.Character then
+            local enemyHRP = v:FindFirstChild("HumanoidRootPart") or v:FindFirstChild("Torso")
+            if enemyHRP and (enemyHRP.Position - hrp.Position).Magnitude <= radius then
+                table.insert(enemies, v)
+            end
+        end
+    end
+    return enemies
+end
+
+-- Нанесение урона через RemoteEvent
+local function damageEnemy(enemy)
+    local humanoid = enemy:FindFirstChild("Humanoid")
+    if humanoid and humanoid.Health > 0 then
+        local shootRemote = replicated.Remotes.Weapon:FindFirstChild("Shoot")
+        local replicateShot = replicated.Remotes.Weapon:FindFirstChild("ReplicateShot")
+        local ragdollFlop = replicated.Shared.Remotes:FindFirstChild("RagdollFlop")
+
+        if shootRemote then
+            shootRemote:FireServer(enemy, damage) -- Пробуем как выстрел
+            print("Бью " .. enemy.Name .. " через Shoot")
+        elseif replicateShot then
+            replicateShot:FireServer(enemy, damage) -- Репликация урона
+            print("Бью " .. enemy.Name .. " через ReplicateShot")
+        elseif ragdollFlop then
+            ragdollFlop:FireServer(enemy) -- Пробуем рэгдолл как смерть
+            print("Бью " .. enemy.Name .. " через RagdollFlop")
+        else
+            humanoid:TakeDamage(damage) -- Fallback
+            print("Shoot не нашёл, юзаю клиентский урон")
+        end
     end
 end
 
--- Формируем строку
-local result = table.concat(list, "\n")
-print("Найдено " .. #list .. " RemoteEvent!")
+-- Запуск
+spawn(function()
+    while wait(cooldown) do
+        if not hrp then
+            hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+            if not hrp then continue end
+        end
+        local enemies = getEnemies()
+        for _, enemy in pairs(enemies) do
+            damageEnemy(enemy)
+        end
+        if #enemies > 0 then
+            print("Мочу " .. #enemies .. " врагов!")
+        end
+    end
+end)
 
--- Копируем в буфер обмена
-if setclipboard then
-    setclipboard(result)
-    print("Список скопирован в буфер обмена! Вставляй мне Ctrl+V!")
-else
-    print("Твой эксплойт не поддерживает setclipboard, копируй вручную из консоли!")
-end
+print("Килл аура 4.0 запущена! Использую Shoot и другие ивенты!")

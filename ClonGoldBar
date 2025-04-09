@@ -1,76 +1,35 @@
--- Получаем сервисы
-local Players = game:GetService("Players")
+-- Функция для клонирования объектов в workspace
+addcmd('dupe', {'clone'}, function(args, speaker)
+    local targetName = args[1] -- Имя объекта для дюпа
+    local amount = tonumber(args[2]) or 1 -- Количество копий
+    local found = false
 
--- Получаем локального игрока
-local player = Players.LocalPlayer
-
--- Функция для уведомлений
-local function notify(title, message)
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = title,
-        Text = message,
-        Duration = 5
-    })
-end
-
--- Функция для дюпа бандажа
-local function dupeBandage()
-    -- Проверяем, есть ли персонаж
-    if not player.Character then
-        notify("Error", "You need a character to use this script!")
-        return
-    end
-
-    -- Проверяем, есть ли инвентарь (Backpack)
-    local backpack = player:FindFirstChildOfClass("Backpack")
-    if not backpack then
-        notify("Error", "No backpack found!")
-        return
-    end
-
-    -- Ищем бандаж в инвентаре
-    local bandage = nil
-    for _, tool in pairs(backpack:GetChildren()) do
-        if tool:IsA("Tool") and tool.Name:lower() == "bandage" then
-            bandage = tool
-            break
+    -- Проверка инструментов у игрока
+    local tool = speaker.Character:FindFirstChildOfClass("Tool") or speaker:FindFirstChildOfClass("Backpack"):FindFirstChildOfClass("Tool")
+    if tool and (not targetName or targetName:lower() == "tool") then
+        for i = 1, amount do
+            local clone = tool:Clone()
+            clone.Parent = speaker:FindFirstChildOfClass("Backpack") -- Клон в инвентарь
+            notify('Dupe Success', 'Cloned tool: ' .. clone.Name .. ' (local only)')
         end
-    end
-
-    -- Проверяем, не экипирован ли бандаж
-    if not bandage then
-        for _, tool in pairs(player.Character:GetChildren()) do
-            if tool:IsA("Tool") and tool.Name:lower() == "bandage" then
-                bandage = tool
+        found = true
+    else
+        -- Поиск объекта в workspace
+        for _, v in pairs(game:GetService("Workspace"):GetDescendants()) do
+            if v:IsA("BasePart") and (not targetName or v.Name:lower() == targetName:lower()) then
+                for i = 1, amount do
+                    local clone = v:Clone()
+                    clone.Parent = game:GetService("Workspace")
+                    clone.Position = v.Position + Vector3.new(math.random(-3, 3), math.random(0, 3), math.random(-3, 3))
+                    notify('Dupe Success', 'Cloned ' .. v.Name .. ' at new position (local only)')
+                end
+                found = true
                 break
             end
         end
     end
 
-    if not bandage then
-        notify("Error", "No bandage found in your inventory or equipped!")
-        return
+    if not found then
+        notify('Dupe Failed', 'No matching object or tool found')
     end
-
-    -- Убираем бандаж из руки, если он экипирован
-    if bandage.Parent == player.Character then
-        bandage.Parent = backpack
-        wait(0.1) -- Даем время на обработку
-    end
-
-    -- Клонируем бандаж
-    local clonedBandage = bandage:Clone()
-    if not clonedBandage then
-        notify("Error", "Failed to clone the bandage!")
-        return
-    end
-
-    -- Добавляем клонированный бандаж в инвентарь
-    clonedBandage.Parent = backpack
-
-    -- Уведомляем
-    notify("Dupe Bandage", "Bandage duplicated! Check your inventory.")
-end
-
--- Запускаем дюп
-dupeBandage()
+end)

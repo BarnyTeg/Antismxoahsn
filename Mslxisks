@@ -2,20 +2,24 @@ local player = game:GetService("Players").LocalPlayer
 local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 local workspace = game:GetService("Workspace")
 
--- Функция для телепорта всех GoldBar к тебе
+-- Функция для телепорта GoldBar к тебе
 local function bringGoldBars()
     if not hrp then print("Где твой перс, чувак?"); return end
     local found = false
     for _, v in pairs(workspace.RuntimeItems:GetChildren()) do
-        if v.Name == "GoldBar" and v:FindFirstChild("Part") then
-            v.Part.CFrame = hrp.CFrame + Vector3.new(math.random(-5, 5), 5, math.random(-5, 5)) -- Разброс вокруг тебя
-            found = true
+        if v.Name == "GoldBar" and v:IsA("Model") then
+            -- Ищем PrimaryPart или любой BasePart внутри модели
+            local part = v.PrimaryPart or v:FindFirstChildWhichIsA("BasePart")
+            if part then
+                part.CFrame = hrp.CFrame + Vector3.new(math.random(-5, 5), 5, math.random(-5, 5))
+                found = true
+            end
         end
     end
     if found then
         print("Притянул все GoldBar к тебе, собирай!")
     else
-        print("Ни одного GoldBar не нашёл, может, карта пустая?")
+        print("GoldBar не нашёл, хотя путь верный. Проверь структуру!")
     end
 end
 
@@ -23,38 +27,41 @@ end
 local function autoCollectGoldBars()
     if not hrp then return end
     for _, v in pairs(workspace.RuntimeItems:GetChildren()) do
-        if v.Name == "GoldBar" and v:FindFirstChild("Part") and v.Part:FindFirstChild("TouchInterest") then
-            hrp.CFrame = v.Part.CFrame -- Телепорт к каждому GoldBar
-            wait(0.1) -- Ждём, чтоб сервер словил сбор
+        if v.Name == "GoldBar" and v:IsA("Model") then
+            local part = v.PrimaryPart or v:FindFirstChildWhichIsA("BasePart")
+            if part and part:FindFirstChild("TouchInterest") then
+                hrp.CFrame = part.CFrame -- Телепорт к GoldBar
+                wait(0.1) -- Ждём, чтоб триггер сработал
+            end
         end
     end
-    print("Пробежался по всем GoldBar, чекни bonds!")
+    print("Пробежался по GoldBar, чекни bonds!")
 end
 
--- Поиск RemoteEvent для спама (пример)
+-- Спам RemoteEvent (поиск вручную)
 local function spamRemote()
     local remote = nil
     for _, v in pairs(game:GetService("ReplicatedStorage"):GetDescendants()) do
-        if v:IsA("RemoteEvent") and v.Name:lower():find("collect") or v.Name:find("Gold") then
+        if v:IsA("RemoteEvent") and (v.Name:lower():find("collect") or v.Name:find("gold")) then
             remote = v
             break
         end
     end
     if remote then
         for i = 1, 50 do
-            remote:FireServer("GoldBar") -- Спамим сбор GoldBar
+            remote:FireServer("GoldBar") -- Спамим сбор
             wait(0.05)
         end
-        print("Заспамил RemoteEvent, смотри, сколько bonds!")
+        print("Заспамил RemoteEvent, смотри bonds!")
     else
-        print("Не нашёл RemoteEvent, ищи вручную в ReplicatedStorage!")
+        print("RemoteEvent не нашёл. Ищи в ReplicatedStorage через Dex!")
     end
 end
 
--- Выполняем всё разом
+-- Запуск
 while true do
-    bringGoldBars() -- Тащим GoldBar к тебе
+    bringGoldBars() -- Тащим GoldBar
     autoCollectGoldBars() -- Автосбор
     spamRemote() -- Спам события
-    wait(1) -- Пауза, чтоб не лагало
+    wait(1) -- Пауза
 end

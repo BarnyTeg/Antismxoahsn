@@ -1,17 +1,17 @@
+-- SpiderXHub Kill Aura для Dead Rails
 local player = game:GetService("Players").LocalPlayer
 local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 local workspace = game:GetService("Workspace")
 
--- Настройки килл ауры
-local radius = 20 -- Радиус действия (в студсах)
-local damage = 100 -- Урон (должен убивать с одного удара)
-local cooldown = 0.1 -- Задержка между ударами
+-- Настройки ауры
+local radius = 25 -- Радиус (студсы)
+local damage = 100 -- Урон (ваншотит большинство мобов)
+local cooldown = 0.2 -- Задержка между тиками
 
--- Функция для поиска врагов
+-- Поиск врагов
 local function getEnemies()
     local enemies = {}
     for _, v in pairs(workspace:GetChildren()) do
-        -- Ищем мобов по имени или humanoid
         if v:FindFirstChild("Humanoid") and v ~= player.Character then
             local enemyHRP = v:FindFirstChild("HumanoidRootPart") or v:FindFirstChild("Torso")
             if enemyHRP and (enemyHRP.Position - hrp.Position).Magnitude <= radius then
@@ -22,18 +22,22 @@ local function getEnemies()
     return enemies
 end
 
--- Функция для нанесения урона
+-- Нанесение урона (прямой метод + поиск RemoteEvent)
 local function damageEnemy(enemy)
     local humanoid = enemy:FindFirstChild("Humanoid")
     if humanoid and humanoid.Health > 0 then
-        -- Пробуем нанести урон через RemoteEvent или напрямую
-        humanoid:TakeDamage(damage)
-        -- Если есть RemoteEvent для урона, можно добавить сюда
-        -- Например: remote:FireServer(enemy, damage)
+        humanoid:TakeDamage(damage) -- Прямой урон (если сервер не блочит)
+        -- Пробуем через RemoteEvent
+        local remote = game:GetService("ReplicatedStorage"):FindFirstChild("Damage") or
+                       game:GetService("ReplicatedStorage"):FindFirstChild("Hit") or
+                       game:GetService("ReplicatedStorage"):FindFirstChild("TakeDamage")
+        if remote and remote:IsA("RemoteEvent") then
+            remote:FireServer(enemy, damage) -- Спамим серверу
+        end
     end
 end
 
--- Основной цикл килл ауры
+-- Запуск ауры
 spawn(function()
     while wait(cooldown) do
         if not hrp then
@@ -43,12 +47,12 @@ spawn(function()
         local enemies = getEnemies()
         for _, enemy in pairs(enemies) do
             damageEnemy(enemy)
-            print("Враг " .. enemy.Name .. " получил пиздец!")
+            print("Замочил " .. enemy.Name)
         end
         if #enemies > 0 then
-            print("Убил " .. #enemies .. " врагов вокруг!")
+            print("Убил " .. #enemies .. " врагов!")
         end
     end
 end)
 
-print("Килл аура запущена! Радиус: " .. radius .. ", Урон: " .. damage)
+print("Килл аура запущена! Радиус: " .. radius)

@@ -14,6 +14,17 @@ local function notify(title, message)
     })
 end
 
+-- Функция для удаления сварок (Welds), чтобы избежать залипания
+local function removeWelds(tool)
+    if tool:FindFirstChild("Handle") then
+        for _, weld in pairs(tool.Handle:GetDescendants()) do
+            if weld:IsA("Weld") or weld:IsA("WeldConstraint") then
+                weld:Destroy()
+            end
+        end
+    end
+end
+
 -- Функция для дюпа бандажа
 local function dupeBandage()
     -- Проверяем, есть ли персонаж
@@ -32,62 +43,78 @@ local function dupeBandage()
     -- Ищем бандаж в инвентаре
     local bandage = nil
     for _, tool in pairs(backpack:GetChildren()) do
-        if tool:IsA("Tool") and tool.Name:lower() == "bandage" then -- Ищем предмет с именем "Bandage" (регистр не важен)
+        if tool:IsA("Tool") and tool.Name:lower() == "bandage" then
             bandage = tool
             break
         end
     end
 
     if not bandage then
-        notify("Error", "No bandage found in your inventory!")
-        return
-    end
-
-    -- Делаем бандаж сбрасываемым
-    bandage.CanBeDropped = true
-
-    -- Экипируем бандаж
-    bandage.Parent = player.Character
-    wait(0.1) -- Небольшая задержка для корректной обработки
-
-    -- Сбрасываем бандаж в мир
-    local droppedBandage = nil
-    for _, tool in pairs(player.Character:GetChildren()) do
-        if tool:IsA("Tool") and tool.Name:lower() == "bandage" then
-            tool.Parent = Workspace
-            droppedBandage = tool
-            -- Позиционируем бандаж рядом с игроком
-            local root = player.Character:FindFirstChild("HumanoidRootPart")
-            if root and tool:FindFirstChild("Handle") then
-                tool.Handle.CFrame = root.CFrame + Vector3.new(0, 5, 0) -- Чуть выше игрока
+        -- Проверяем, не экипирован ли бандаж
+        for _, tool in pairs(player.Character:GetChildren()) do
+            if tool:IsA("Tool") and tool.Name:lower() == "bandage" then
+                bandage = tool
+                break
             end
-            break
         end
     end
 
-    if not droppedBandage then
-        notify("Error", "Failed to drop the bandage!")
+    if not bandage then
+        notify("Error", "No bandage found in your inventory or equipped!")
+        return
+    end
+
+    -- Убираем бандаж из руки, если он экипирован
+    if bandage.Parent == player.Character then
+        bandage.Parent = backpack -- Возвращаем в инвентарь
+        wait(0.1) -- Даем время на обработку
+    end
+
+    -- Клонируем бандаж
+    local clonedBandage = bandage:Clone()
+    if not clonedBandage then
+        notify("Error", "Failed to clone the bandage!")
+        return
+    end
+
+    -- Удаляем сварки, чтобы избежать залипания
+    removeWelds(clonedBandage)
+
+    -- Помещаем клонированный бандаж в мир
+    clonedBandage.Parent = Workspace
+    local root = player.Character:FindFirstChild("HumanoidRootPart")
+    if root and clonedBandage:FindFirstChild("Handle") then
+        -- Позиционируем бандаж рядом с игроком
+        clonedBandage.Handle.CFrame = root.CFrame + Vector3.new(2, 2, 2)
+        clonedBandage.Handle.Anchored = true -- Фиксируем, чтобы не упал
+    else
+        notify("Error", "Failed to position the cloned bandage!")
         return
     end
 
     -- Уведомляем
-    notify("Dupe Bandage", "Bandage dropped! Refreshing character...")
+    notify("Dupe Bandage", "Bandage cloned and dropped! Attempting to refresh...")
 
-    -- Сбрасываем состояние персонажа без убийства
+    -- Пробуем обновить персонажа без убийства
     local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
-    local root = player.Character:FindFirstChild("HumanoidRootPart")
-    if humanoid and root then
+    if humanoid then
         -- Сохраняем текущую позицию
-        local originalCFrame = root.CFrame
-        -- Перемещаем персонажа в "никуда" и обратно, чтобы обновить состояние
-        root.CFrame = CFrame.new(Vector3.new(0, 10000, 0)) -- Временное перемещение
-        wait(0.5)
-        root.CFrame = originalCFrame -- Возвращаем на место
+        local originalCFrame = player.Character.HumanoidRootPart.CFrame
+        -- Перемещаем персонажа на мгновение в "никуда", чтобы сбросить состояние
+        player.Character.HumanoidRootPart.CFrame = CFrame.new(Vector3.new(0, 10000, 0))
+        wait(0.1)
+        -- Возвращаем персонажа обратно
+        player.Character.HumanoidRootPart.CFrame = originalCFrame
+    end
+
+    -- Разанкориваем бандаж, чтобы его можно было подобрать
+    if clonedBandage and clonedBandage:FindFirstChild("Handle") then
+        clonedBandage.Handle.Anchored = false
     end
 
     -- Уведомляем о следующем шаге
     wait(1)
-    notify("Dupe Bandage", "Character refreshed! Try picking up the dropped bandage.")
+    notify("Dupe Bandage", "Refresh complete! Try picking up the cloned bandage.")
 end
 
 -- Запускаем дюп

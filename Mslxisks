@@ -50,88 +50,38 @@ local function freezeServer()
     end)
 end
 
--- Перезапуск инвентаря
-local function resetInventory()
-    print("Перезапускаю инвентарь без смерти!")
-    local tempStorage = Instance.new("Folder")
-    tempStorage.Name = "TempInventory"
-    tempStorage.Parent = replicated
-    
-    -- Сохраняем текущие предметы
-    local tools = {}
-    for _, tool in pairs(player.Backpack:GetChildren()) do
-        table.insert(tools, tool)
-        tool.Parent = tempStorage
-    end
-    if player.Character then
-        for _, tool in pairs(player.Character:GetChildren()) do
-            if tool:IsA("Tool") then
-                table.insert(tools, tool)
-                tool.Parent = tempStorage
-            end
-        end
-    end
-    
-    -- Спамим RemoteEvent для "перезагрузки"
-    if storeItem then
-        storeItem:FireServer("ResetInventory")
-    end
-    if equipObject then
-        equipObject:FireServer("ResetInventory")
-    end
-    
-    -- Возвращаем предметы
-    wait(0.1)
-    for _, tool in pairs(tools) do
-        tool.Parent = player.Backpack
-    end
-    tempStorage:Destroy()
-    print("Инвентарь перезапущен!")
-end
-
--- Дюп с перезапуском
+-- Дюп через "обман" сервера
 printInventory()
 local shovel = findShovel()
 
 if shovel and (storeItem or pickUpTool or equipObject) then
-    print("Начинаю дюп Shovel с перезапуском инвентаря!")
+    print("Начинаю дюп Shovel через обман сервера!")
     freezeServer() -- Лёгкая заморозка
     
-    -- Дюп
     for i = 1, 50 do
-        local clone = shovel:Clone()
-        clone.Name = "Shovel_" .. math.random(1000, 9999) -- Маскируем
-        
-        -- Копируем все свойства и скрипты
-        for _, child in pairs(shovel:GetChildren()) do
-            if not clone:FindFirstChild(child.Name) then
-                local childClone = child:Clone()
-                childClone.Parent = clone
-            end
-        end
-        
-        -- Пихаем в Backpack
-        clone.Parent = player.Backpack
-        
-        -- Спамим для регистрации
+        -- Спамим RemoteEvent, чтобы сервер сам создал Shovel
         if storeItem then
-            storeItem:FireServer(clone)
-            storeItem:FireServer("Shovel")
-            storeItem:FireServer({Name = "Shovel", Instance = clone})
+            storeItem:FireServer("Shovel") -- Имя
+            storeItem:FireServer({Name = "Shovel", Amount = 1}) -- Таблица
+            storeItem:FireServer({ToolName = "Shovel", Player = player}) -- Фейковый запрос
         end
         if pickUpTool then
-            pickUpTool:FireServer(clone)
             pickUpTool:FireServer("Shovel")
+            pickUpTool:FireServer({Name = "Shovel"})
         end
         if equipObject then
-            equipObject:FireServer(clone)
             equipObject:FireServer("Shovel")
+            equipObject:FireServer({Name = "Shovel", Player = player})
         end
         wait(0.01)
     end
     
-    -- Перезапускаем инвентарь
-    resetInventory()
+    -- Перезапуск через экипировку
+    for _, tool in pairs(player.Backpack:GetChildren()) do
+        tool.Parent = player.Character
+        wait(0.01)
+        tool.Parent = player.Backpack
+    end
     print("Задюпал Shovel, чекни инвентарь — работают ли лопаты?")
 else
     print("Shovel или RemoteEvent не нашёл! Возьми лопату!")

@@ -1,47 +1,35 @@
 local player = game:GetService("Players").LocalPlayer
 local replicated = game:GetService("ReplicatedStorage")
-local dropRemote = replicated.Remotes:FindFirstChild("DropItem")
 
--- Поиск лопаты в инвентаре
-local function findShovel()
-    local character = player.Character
-    local backpack = player.Backpack
-    -- Проверяем в руках
-    if character then
-        for _, v in pairs(character:GetChildren()) do
-            if v:IsA("Tool") and v.Name == "Shovel" then
-                return v
-            end
-        end
+-- Найти первого врага
+local enemy = nil
+for _, v in pairs(game:GetService("Workspace"):GetDescendants()) do
+    if v:FindFirstChild("Humanoid") and v ~= player.Character then
+        enemy = v
+        print("Тестовый враг: " .. v.Name)
+        break
     end
-    -- Проверяем в Backpack
-    for _, v in pairs(backpack:GetChildren()) do
-        if v:IsA("Tool") and v.Name == "Shovel" then
-            return v
-        end
-    end
-    return nil
 end
 
--- Дюп
-if dropRemote then
-    local shovel = findShovel()
-    if shovel then
-        print("Нашёл Shovel, начинаю дюп!")
-        for i = 1, 50 do
-            dropRemote:FireServer(shovel) -- Спамим лопату
-            wait(0.01) -- Быстрый тайминг
-        end
-        print("Заспамил Shovel, чекни землю — сколько лопат наклепал?")
-    else
-        print("Shovel не нашёл! Возьми лопату в инвентарь или в руки!")
+if enemy then
+    local shoot = replicated.Remotes.Weapon:FindFirstChild("Shoot")
+    local replicateShot = replicated.Remotes.Weapon:FindFirstChild("ReplicateShot")
+    local ragdoll = replicated.Shared.Remotes:FindFirstChild("RagdollFlop")
+
+    if shoot then
+        shoot:FireServer(enemy.Humanoid, 1000) -- Пробуем бить Humanoid
+        print("Тест Shoot на " .. enemy.Name)
+    end
+    wait(1)
+    if replicateShot then
+        replicateShot:FireServer(enemy, 1000) -- Пробуем весь объект
+        print("Тест ReplicateShot на " .. enemy.Name)
+    end
+    wait(1)
+    if ragdoll then
+        ragdoll:FireServer(enemy) -- Пробуем рэгдолл как смерть
+        print("Тест RagdollFlop на " .. enemy.Name)
     end
 else
-    print("DropItem не найден, пиздец!")
-end
-
--- Бонус: выведем все предметы в инвентаре
-print("Твой инвентарь:")
-for _, v in pairs(player.Backpack:GetChildren()) do
-    print(v.Name)
+    print("Враг не найден, где они прячутся?")
 end

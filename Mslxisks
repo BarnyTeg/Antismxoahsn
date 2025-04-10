@@ -1,35 +1,53 @@
 local player = game:GetService("Players").LocalPlayer
 local replicated = game:GetService("ReplicatedStorage")
+local pickUpTool = replicated.Remotes.Tool:FindFirstChild("PickUpTool")
+local storeItem = replicated.Remotes:FindFirstChild("StoreItem")
+local equipObject = replicated.Remotes.Object:FindFirstChild("EquipObject")
 
--- Найти первого врага
-local enemy = nil
-for _, v in pairs(game:GetService("Workspace"):GetDescendants()) do
-    if v:FindFirstChild("Humanoid") and v ~= player.Character then
-        enemy = v
-        print("Тестовый враг: " .. v.Name)
-        break
-    end
+-- Вывод текущего инвентаря
+print("Твой инвентарь сейчас:")
+for _, v in pairs(player.Backpack:GetChildren()) do
+    print(v.Name)
 end
 
-if enemy then
-    local shoot = replicated.Remotes.Weapon:FindFirstChild("Shoot")
-    local replicateShot = replicated.Remotes.Weapon:FindFirstChild("ReplicateShot")
-    local ragdoll = replicated.Shared.Remotes:FindFirstChild("RagdollFlop")
-
-    if shoot then
-        shoot:FireServer(enemy.Humanoid, 1000) -- Пробуем бить Humanoid
-        print("Тест Shoot на " .. enemy.Name)
+-- Дюп Shovel в инвентарь
+local shovelName = "Shovel" -- Точное имя предмета
+if pickUpTool or storeItem or equipObject then
+    print("Начинаю дюп Shovel в инвентарь!")
+    
+    -- Тест PickUpTool
+    if pickUpTool then
+        for i = 1, 50 do
+            pickUpTool:FireServer(shovelName) -- Спамим имя лопаты
+            wait(0.01)
+        end
+        print("Спамил PickUpTool, чекни инвентарь!")
     end
-    wait(1)
-    if replicateShot then
-        replicateShot:FireServer(enemy, 1000) -- Пробуем весь объект
-        print("Тест ReplicateShot на " .. enemy.Name)
+    
+    -- Тест StoreItem
+    if storeItem then
+        for i = 1, 50 do
+            storeItem:FireServer(shovelName)
+            wait(0.01)
+        end
+        print("Спамил StoreItem, чекни инвентарь!")
     end
-    wait(1)
-    if ragdoll then
-        ragdoll:FireServer(enemy) -- Пробуем рэгдолл как смерть
-        print("Тест RagdollFlop на " .. enemy.Name)
+    
+    -- Тест EquipObject
+    if equipObject then
+        for i = 1, 50 do
+            equipObject:FireServer(shovelName)
+            wait(0.01)
+        end
+        print("Спамил EquipObject, чекни инвентарь!")
     end
 else
-    print("Враг не найден, где они прячутся?")
+    print("Ни один RemoteEvent не нашёл, пиздец!")
+end
+
+-- Проверка инвентаря после спама
+wait(1)
+print("Твой инвентарь после дюпа:")
+for _, v in pairs(player.Backpack:GetChildren()) do
+    print(v.Name)
 end

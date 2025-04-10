@@ -1,89 +1,70 @@
 local player = game:GetService("Players").LocalPlayer
 local replicated = game:GetService("ReplicatedStorage")
-local workspace = game:GetService("Workspace")
+local dropItem = replicated.Remotes:FindFirstChild("DropItem")
 local dropTool = replicated.Remotes.Tool:FindFirstChild("DropTool")
-local pickUpTool = replicated.Remotes.Tool:FindFirstChild("PickUpTool")
+local storeItem = replicated.Remotes:FindFirstChild("StoreItem")
 
 -- Поиск лопаты
 local function findShovel()
-    local shovel = player.Backpack:FindFirstChild("Shovel") or
-                   (player.Character and player.Character:FindFirstChild("Shovel"))
-    if shovel then
-        print("Нашёл Shovel: " .. shovel.Name)
-        return shovel
+    local character = player.Character
+    local backpack = player.Backpack
+    if character then
+        for _, v in pairs(character:GetChildren()) do
+            if v:IsA("Tool") and v.Name:lower():find("shovel") then
+                return v
+            end
+        end
+    end
+    for _, v in pairs(backpack:GetChildren()) do
+        if v:IsA("Tool") and v.Name:lower():find("shovel") then
+            return v
+        end
     end
     return nil
 end
 
 -- Вывод инвентаря
-local function printInventory()
-    print("Твой инвентарь:")
-    for _, v in pairs(player.Backpack:GetChildren()) do
-        print(v.Name)
-    end
-    if player.Character then
-        for _, v in pairs(player.Character:GetChildren()) do
-            if v:IsA("Tool") then print("В руках: " .. v.Name) end
-        end
+print("Твой инвентарь:")
+for _, v in pairs(player.Backpack:GetChildren()) do
+    print(v.Name)
+end
+if player.Character then
+    for _, v in pairs(player.Character:GetChildren()) do
+        if v:IsA("Tool") then print("В руках: " .. v.Name) end
     end
 end
 
--- Полная заморозка сервера
-local function freezeServer()
-    local remotes = {
-        replicated.Remotes:FindFirstChild("DropItem"),
-        replicated.Remotes:FindFirstChild("StoreItem"),
-        replicated.Remotes.Tool:FindFirstChild("DropTool"),
-        replicated.Remotes.Tool:FindFirstChild("PickUpTool"),
-        replicated.Packages.RemotePromise.Remotes:FindFirstChild("S_InteractWithObject"),
-        replicated.Remotes:FindFirstChild("EndDecision"),
-        replicated.Remotes:FindFirstChild("ReplicateShot"),
-        replicated.Shared.Remotes:FindFirstChild("RagdollFlop")
-    }
-    spawn(function()
-        print("Замораживаю сервер — держись, мож кикнуть!")
-        while true do -- Бесконечный спам
-            for _, remote in pairs(remotes) do
-                if remote then
-                    remote:FireServer(math.random(1, 1000), {}, nil, "spam") -- Хаос
-                end
-            end
-            wait() -- Минимальная задержка
-        end
-    end)
-end
-
--- Дюп с заморозкой
-printInventory()
+-- Дюп через разные ивенты
 local shovel = findShovel()
-
 if shovel then
-    print("Начинаю дюп Shovel с полной остановкой сервера!")
-    freezeServer() -- Запускаем заморозку
+    print("Нашёл " .. shovel.Name .. ", начинаю дюп!")
     
-    for i = 1, 50 do
-        local clone = shovel:Clone()
-        clone.Name = "Tool_" .. math.random(1000, 9999) -- Маскируем
-        if clone:FindFirstChild("Handle") then
-            clone.Handle.Name = "Part_" .. math.random(1000, 9999)
-            clone.Handle.Anchored = false
+    -- Тест DropItem
+    if dropItem then
+        for i = 1, 50 do
+            dropItem:FireServer(shovel)
+            wait(0.01)
         end
-        
-        -- Спавним в Workspace
-        clone.Parent = workspace
-        clone:MoveTo(player.Character.HumanoidRootPart.Position + Vector3.new(math.random(-5, 5), 5, math.random(-5, 5)))
-        
-        -- Спамим
-        if dropTool then dropTool:FireServer(shovel) end
-        if pickUpTool then pickUpTool:FireServer(clone) end
-        wait(0.01)
+        print("Спамил DropItem, чекни землю!")
     end
-    print("Заспамил с заморозкой, чекни землю и инвентарь — остались ли лопаты?")
+    
+    -- Тест DropTool
+    if dropTool then
+        for i = 1, 50 do
+            dropTool:FireServer(shovel)
+            wait(0.01)
+        end
+        print("Спамил DropTool, чекни землю!")
+    end
+    
+    -- Тест StoreItem
+    if storeItem then
+        for i = 1, 50 do
+            storeItem:FireServer(shovel)
+            wait(0.01)
+        end
+        print("Спамил StoreItem, чекни землю!")
+    end
 else
-    print("Shovel не нашёл! Возьми лопату!")
+    print("Shovel не нашёл! Возьми лопату в инвентарь или скажи точное имя!")
 end
-
--- Проверка после
-wait(1)
-print("Твой инвентарь после дюпа:")
-printInventory()

@@ -2,6 +2,7 @@ local player = game:GetService("Players").LocalPlayer
 local replicated = game:GetService("ReplicatedStorage")
 local storeItem = replicated.Remotes:FindFirstChild("StoreItem")
 local pickUpTool = replicated.Remotes.Tool:FindFirstChild("PickUpTool")
+local equipObject = replicated.Remotes.Object:FindFirstChild("EquipObject")
 
 -- Поиск лопаты
 local function findShovel()
@@ -49,34 +50,46 @@ local function freezeServer()
     end)
 end
 
--- Дюп прямо в инвентарь
+-- Дюп с регистрацией клонов
 printInventory()
 local shovel = findShovel()
 
-if shovel and (storeItem or pickUpTool) then
-    print("Начинаю дюп Shovel прямо в инвентарь!")
+if shovel and (storeItem or pickUpTool or equipObject) then
+    print("Начинаю дюп Shovel с регистрацией на сервере!")
     freezeServer() -- Лёгкая заморозка
     
     for i = 1, 50 do
         local clone = shovel:Clone()
         clone.Name = "Shovel_" .. math.random(1000, 9999) -- Маскируем
         
-        -- Пихаем прямо в Backpack
+        -- Копируем свойства оригинала
+        for _, child in pairs(shovel:GetChildren()) do
+            if not clone:FindFirstChild(child.Name) then
+                local childClone = child:Clone()
+                childClone.Parent = clone
+            end
+        end
+        
+        -- Пихаем в Backpack
         clone.Parent = player.Backpack
         
-        -- Пробуем убедить сервер через RemoteEvent
+        -- Регистрируем на сервере
         if storeItem then
             storeItem:FireServer(clone)
             storeItem:FireServer("Shovel")
-            storeItem:FireServer({Name = "Shovel"})
+            storeItem:FireServer({Name = "Shovel", Instance = clone})
         end
         if pickUpTool then
             pickUpTool:FireServer(clone)
             pickUpTool:FireServer("Shovel")
         end
+        if equipObject then
+            equipObject:FireServer(clone)
+            equipObject:FireServer("Shovel")
+        end
         wait(0.01)
     end
-    print("Задюпал Shovel в инвентарь, чекни!")
+    print("Задюпал Shovel, чекни инвентарь — работают ли лопаты?")
 else
     print("Shovel или RemoteEvent не нашёл! Возьми лопату!")
 end

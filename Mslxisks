@@ -2,39 +2,46 @@ local player = game:GetService("Players").LocalPlayer
 local replicated = game:GetService("ReplicatedStorage")
 local dropRemote = replicated.Remotes:FindFirstChild("DropItem")
 
--- Функция для поиска предмета в инвентаре
-local function findItemInInventory(itemName)
+-- Поиск лопаты в инвентаре
+local function findShovel()
     local character = player.Character
-    if not character then return nil end
-    for _, v in pairs(character:GetChildren()) do
-        if v:IsA("Tool") and v.Name == itemName then
-            return v
+    local backpack = player.Backpack
+    -- Проверяем в руках
+    if character then
+        for _, v in pairs(character:GetChildren()) do
+            if v:IsA("Tool") and v.Name == "Shovel" then
+                return v
+            end
         end
     end
-    -- Проверяем Backpack
-    for _, v in pairs(player.Backpack:GetChildren()) do
-        if v:IsA("Tool") and v.Name == itemName then
+    -- Проверяем в Backpack
+    for _, v in pairs(backpack:GetChildren()) do
+        if v:IsA("Tool") and v.Name == "Shovel" then
             return v
         end
     end
     return nil
 end
 
--- Основной дюп
-local itemToDupe = "GoldBar" -- Замени на имя предмета, который хочешь дюпать
-local item = findItemInInventory(itemToDupe)
-
+-- Дюп
 if dropRemote then
-    if item then
-        print("Нашёл " .. itemToDupe .. ", начинаю дюп!")
-        for i = 1, 50 do -- Спамим 50 раз
-            dropRemote:FireServer(item) -- Кидаем объект
-            wait(0.01) -- Быстрый тайминг, чтоб сервер не успевал
+    local shovel = findShovel()
+    if shovel then
+        print("Нашёл Shovel, начинаю дюп!")
+        for i = 1, 50 do
+            dropRemote:FireServer(shovel) -- Спамим лопату
+            wait(0.01) -- Быстрый тайминг
         end
-        print("Заспамил " .. itemToDupe .. ", чекни землю — сколько наклепал?")
+        print("Заспамил Shovel, чекни землю — сколько лопат наклепал?")
     else
-        print("Не нашёл " .. itemToDupe .. " в инвентаре, возьми его в руки или в Backpack!")
+        print("Shovel не нашёл! Возьми лопату в инвентарь или в руки!")
     end
 else
     print("DropItem не найден, пиздец!")
+end
+
+-- Бонус: выведем все предметы в инвентаре
+print("Твой инвентарь:")
+for _, v in pairs(player.Backpack:GetChildren()) do
+    print(v.Name)
 end

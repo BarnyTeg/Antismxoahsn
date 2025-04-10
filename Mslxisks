@@ -1,7 +1,6 @@
 local player = game:GetService("Players").LocalPlayer
 local replicated = game:GetService("ReplicatedStorage")
-local workspace = game:GetService("Workspace")
-local dropTool = replicated.Remotes.Tool:FindFirstChild("DropTool")
+local storeItem = replicated.Remotes:FindFirstChild("StoreItem")
 local pickUpTool = replicated.Remotes.Tool:FindFirstChild("PickUpTool")
 
 -- Поиск лопаты
@@ -28,19 +27,17 @@ local function printInventory()
     end
 end
 
--- Заморозка сервера
+-- Лёгкая заморозка сервера
 local function freezeServer()
     local remotes = {
         replicated.Remotes:FindFirstChild("DropItem"),
         replicated.Remotes:FindFirstChild("StoreItem"),
-        replicated.Remotes.Tool:FindFirstChild("DropTool"),
         replicated.Remotes.Tool:FindFirstChild("PickUpTool"),
-        replicated.Packages.RemotePromise.Remotes:FindFirstChild("S_InteractWithObject"),
-        replicated.Remotes:FindFirstChild("EndDecision")
+        replicated.Packages.RemotePromise.Remotes:FindFirstChild("S_InteractWithObject")
     }
     spawn(function()
-        print("Замораживаю сервер — держись!")
-        for i = 1, 500 do
+        print("Лёгкая заморозка сервера — держись!")
+        for i = 1, 300 do
             for _, remote in pairs(remotes) do
                 if remote then
                     remote:FireServer(math.random(1, 1000), {}, nil, "spam")
@@ -52,29 +49,36 @@ local function freezeServer()
     end)
 end
 
--- Дюп без смерти
+-- Дюп прямо в инвентарь
 printInventory()
 local shovel = findShovel()
 
-if shovel and pickUpTool then
-    print("Начинаю дюп Shovel без смерти!")
-    freezeServer() -- Замораживаем сервер
+if shovel and (storeItem or pickUpTool) then
+    print("Начинаю дюп Shovel прямо в инвентарь!")
+    freezeServer() -- Лёгкая заморозка
     
     for i = 1, 50 do
         local clone = shovel:Clone()
         clone.Name = "Shovel_" .. math.random(1000, 9999) -- Маскируем
         
-        -- Спавним в Workspace
-        clone.Parent = workspace
-        clone:MoveTo(player.Character.HumanoidRootPart.Position + Vector3.new(math.random(-5, 5), 5, math.random(-5, 5)))
+        -- Пихаем прямо в Backpack
+        clone.Parent = player.Backpack
         
-        -- Пытаемся подобрать клон
-        pickUpTool:FireServer(clone)
+        -- Пробуем убедить сервер через RemoteEvent
+        if storeItem then
+            storeItem:FireServer(clone)
+            storeItem:FireServer("Shovel")
+            storeItem:FireServer({Name = "Shovel"})
+        end
+        if pickUpTool then
+            pickUpTool:FireServer(clone)
+            pickUpTool:FireServer("Shovel")
+        end
         wait(0.01)
     end
-    print("Задюпал Shovel, чекни инвентарь и землю!")
+    print("Задюпал Shovel в инвентарь, чекни!")
 else
-    print("Shovel или PickUpTool не нашёл! Возьми лопату!")
+    print("Shovel или RemoteEvent не нашёл! Возьми лопату!")
 end
 
 -- Проверка после

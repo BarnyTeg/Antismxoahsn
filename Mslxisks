@@ -1,5 +1,6 @@
 local player = game:GetService("Players").LocalPlayer
 local replicated = game:GetService("ReplicatedStorage")
+local playerGui = player:WaitForChild("PlayerGui")
 
 -- Поиск RemoteEvent для домов
 local setHouse = replicated:FindFirstChild("SetHouse", true) or
@@ -37,10 +38,32 @@ local function freezeServer()
     end)
 end
 
+-- Обман клиента (сброс данных о доме)
+local function fakeNoHouse()
+    -- Ищем данные о доме в PlayerGui
+    for _, gui in pairs(playerGui:GetChildren()) do
+        if gui.Name:lower():find("house") or gui.Name:lower():find("home") then
+            for _, child in pairs(gui:GetDescendants()) do
+                if child:IsA("StringValue") or child:IsA("ObjectValue") then
+                    if child.Name:lower():find("house") or child.Name:lower():find("owner") then
+                        child.Value = nil
+                        print("Сбросил клиентские данные: " .. child.Name)
+                    end
+                end
+            end
+        end
+    end
+end
+
 -- Функция для спавна дома
 local function spawnHouse(houseType)
     if setHouse then
-        -- Спамим запрос на установку дома
+        -- Сбрасываем текущий дом на сервере
+        setHouse:FireServer(nil, player, false) -- "Убираем" текущий дом
+        setHouse:FireServer({HouseType = nil, Player = player, Claim = false})
+        
+        -- Спамим запрос на новый дом
+        wait(0.01)
         setHouse:FireServer(houseType, player, true)
         setHouse:FireServer({HouseType = houseType, Player = player, Claim = true})
         print("Пытаюсь спавнить дом: " .. houseType)
@@ -52,7 +75,8 @@ end
 -- Основной чит
 printHouses()
 if setHouse then
-    print("Начинаю спавн нескольких домов!")
+    print("Начинаю спавн нескольких домов с обманом!")
+    fakeNoHouse() -- Обманываем клиент
     freezeServer() -- Лёгкая заморозка
     
     -- Список типов домов (примеры, могут отличаться)

@@ -1,102 +1,13 @@
 local player = game:GetService("Players").LocalPlayer
-local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-local workspace = game:GetService("Workspace")
 local replicated = game:GetService("ReplicatedStorage")
+local dropRemote = replicated.Remotes:FindFirstChild("DropItem")
 
--- Настройки
-local radius = 25 -- Радиус
-local damage = 1000 -- Урон
-local cooldown = 0.05 -- Задержка
-
--- Поиск врагов
-local function getEnemies()
-    local enemies = {}
-    if not hrp then
-        print("Где твой перс? Жду HumanoidRootPart!")
-        return enemies
+if dropRemote then
+    for i = 1, 50 do
+        dropRemote:FireServer("GoldBar") -- Спамим сброс GoldBar
+        wait(0.05) -- Тайминг, чтоб сервер лагнул
     end
-    for _, v in pairs(workspace:GetDescendants()) do
-        if v:FindFirstChild("Humanoid") and v ~= player.Character then
-            local enemyHRP = v:FindFirstChild("HumanoidRootPart") or v:FindFirstChild("Torso")
-            if enemyHRP and (enemyHRP.Position - hrp.Position).Magnitude <= radius then
-                table.insert(enemies, v)
-                print("Найден враг: " .. v.Name .. " (" .. v:GetFullName() .. ")")
-            end
-        end
-    end
-    print("Всего врагов в радиусе: " .. #enemies)
-    return enemies
+    print("Заспамил DropItem, чекни землю — есть ли куча GoldBar?")
+else
+    print("DropItem не нашёл, пиздец!")
 end
-
--- Тест RemoteEvent (без Shoot)
-local function testRemoteEvents(enemy)
-    local remotes = {
-        ["S_InteractWithObject"] = replicated.Packages.RemotePromise.Remotes:FindFirstChild("S_InteractWithObject"),
-        ["EndDecision"] = replicated.Remotes:FindFirstChild("EndDecision"),
-        ["RagdollFlop"] = replicated.Shared.Remotes:FindFirstChild("RagdollFlop")
-    }
-    local workingRemote = nil
-
-    if enemy and enemy:FindFirstChild("Humanoid") then
-        for name, remote in pairs(remotes) do
-            if remote then
-                remote:FireServer(enemy, damage) -- Пробуем врага как аргумент
-                print("Тест " .. name .. " на " .. enemy.Name)
-                wait(1) -- Ждём реакции
-                if enemy.Humanoid.Health <= 0 then
-                    workingRemote = remote
-                    print(name .. " сработал! Враг " .. enemy.Name .. " мёртв!")
-                    break
-                end
-            end
-        end
-    end
-    return workingRemote
-end
-
--- Килл аура
-local function startKillAura()
-    local enemies = getEnemies()
-    local testEnemy = enemies[1] -- Первый враг для теста
-    local remote = nil
-
-    if testEnemy then
-        remote = testRemoteEvents(testEnemy)
-    else
-        print("Врагов не нашёл, встань ближе к зомбакам!")
-    end
-
-    if not remote then
-        print("Ни один RemoteEvent не сработал, юзаю S_InteractWithObject по умолчанию")
-        remote = replicated.Packages.RemotePromise.Remotes:FindFirstChild("S_InteractWithObject")
-    end
-
-    -- Запуск ауры
-    spawn(function()
-        while wait(cooldown) do
-            if not hrp then
-                hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-                if not hrp then continue end
-            end
-            local currentEnemies = getEnemies()
-            for _, enemy in pairs(currentEnemies) do
-                if enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
-                    if remote then
-                        remote:FireServer(enemy, damage)
-                        print("Мочу " .. enemy.Name .. " через " .. remote.Name)
-                    else
-                        enemy.Humanoid:TakeDamage(damage) -- Fallback
-                        print("Remote не нашёл, бью клиентски " .. enemy.Name)
-                    end
-                end
-            end
-            if #currentEnemies > 0 then
-                print("Валю " .. #currentEnemies .. " врагов!")
-            end
-        end
-    end)
-end
-
--- Старт
-print("Килл аура 6.0 запущена — без Shoot, тестим другие ивенты!")
-startKillAura()

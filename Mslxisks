@@ -2,12 +2,39 @@ local player = game:GetService("Players").LocalPlayer
 local replicated = game:GetService("ReplicatedStorage")
 local dropRemote = replicated.Remotes:FindFirstChild("DropItem")
 
-if dropRemote then
-    for i = 1, 50 do
-        dropRemote:FireServer("GoldBar") -- Спамим сброс GoldBar
-        wait(0.05) -- Тайминг, чтоб сервер лагнул
+-- Функция для поиска предмета в инвентаре
+local function findItemInInventory(itemName)
+    local character = player.Character
+    if not character then return nil end
+    for _, v in pairs(character:GetChildren()) do
+        if v:IsA("Tool") and v.Name == itemName then
+            return v
+        end
     end
-    print("Заспамил DropItem, чекни землю — есть ли куча GoldBar?")
+    -- Проверяем Backpack
+    for _, v in pairs(player.Backpack:GetChildren()) do
+        if v:IsA("Tool") and v.Name == itemName then
+            return v
+        end
+    end
+    return nil
+end
+
+-- Основной дюп
+local itemToDupe = "GoldBar" -- Замени на имя предмета, который хочешь дюпать
+local item = findItemInInventory(itemToDupe)
+
+if dropRemote then
+    if item then
+        print("Нашёл " .. itemToDupe .. ", начинаю дюп!")
+        for i = 1, 50 do -- Спамим 50 раз
+            dropRemote:FireServer(item) -- Кидаем объект
+            wait(0.01) -- Быстрый тайминг, чтоб сервер не успевал
+        end
+        print("Заспамил " .. itemToDupe .. ", чекни землю — сколько наклепал?")
+    else
+        print("Не нашёл " .. itemToDupe .. " в инвентаре, возьми его в руки или в Backpack!")
+    end
 else
-    print("DropItem не нашёл, пиздец!")
+    print("DropItem не найден, пиздец!")
 end

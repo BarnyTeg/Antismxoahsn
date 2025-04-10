@@ -28,40 +28,60 @@ local function printInventory()
     end
 end
 
--- Дюп с шифрованием
+-- Спам для "заморозки" сервера
+local function spamServer()
+    local remotes = {
+        replicated.Remotes:FindFirstChild("DropItem"),
+        replicated.Remotes:FindFirstChild("StoreItem"),
+        replicated.Remotes.Tool:FindFirstChild("PickUpTool"),
+        replicated.Packages.RemotePromise.Remotes:FindFirstChild("S_InteractWithObject"),
+        replicated.Remotes:FindFirstChild("EndDecision")
+    }
+    spawn(function()
+        for i = 1, 100 do
+            for _, remote in pairs(remotes) do
+                if remote then
+                    remote:FireServer(math.random(1, 1000)) -- Хаотичный спам
+                end
+            end
+            wait(0.005)
+        end
+        print("Заспамил сервер, он должен лагать!")
+    end)
+end
+
+-- Дюп с шифрованием и заморозкой
 printInventory()
 local shovel = findShovel()
 
 if shovel and (dropTool or pickUpTool) then
-    print("Начинаю дюп Shovel с лютым шифрованием!")
+    print("Начинаю дюп Shovel с заморозкой сервера!")
+    spamServer() -- Запускаем спам для лага
     
     for i = 1, 50 do
-        local clone = shovel:Clone() -- Клонируем лопату
-        clone.Name = "Tool_" .. math.random(1000, 9999) -- Маскируем имя
+        local clone = shovel:Clone()
+        clone.Name = "Tool_" .. math.random(1000, 9999) -- Маскируем
         if clone:FindFirstChild("Handle") then
-            clone.Handle.Anchored = false -- Разанкорим, чтоб не висела
-            clone.Handle.Name = "Part_" .. math.random(1000, 9999) -- Меняем Handle
+            clone.Handle.Name = "Part_" .. math.random(1000, 9999)
+            clone.Handle.Anchored = false
         end
         
-        -- Ставим в Workspace
+        -- Спавним в Workspace
         clone.Parent = workspace
-        clone:MoveTo(player.Character.HumanoidRootPart.Position + Vector3.new(math.random(-5, 5), 5, math.random(-5, 5))) -- Разброс
+        clone:MoveTo(player.Character.HumanoidRootPart.Position + Vector3.new(math.random(-5, 5), 5, math.random(-5, 5)))
         
-        -- Спамим DropTool с оригиналом
+        -- Спамим DropTool и PickUpTool
         if dropTool then
             dropTool:FireServer(shovel)
         end
-        
-        -- Пробуем PickUpTool с клоном
         if pickUpTool then
             pickUpTool:FireServer(clone)
         end
-        
         wait(0.01)
     end
-    print("Заспамил с шифрованием, чекни землю и инвентарь — остались ли лопаты?")
+    print("Заспамил с заморозкой, чекни землю и инвентарь — остались ли лопаты?")
 else
-    print("Shovel или RemoteEvent не нашёл! Возьми лопату в инвентарь!")
+    print("Shovel или RemoteEvent не нашёл! Возьми лопату!")
 end
 
 -- Проверка после

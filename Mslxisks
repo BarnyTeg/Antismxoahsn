@@ -28,28 +28,38 @@ local function printInventory()
     end
 end
 
--- Дюп
+-- Дюп с шифрованием
 printInventory()
 local shovel = findShovel()
 
 if shovel and (dropTool or pickUpTool) then
-    print("Начинаю дюп Shovel!")
+    print("Начинаю дюп Shovel с лютым шифрованием!")
     
-    -- Клонируем и спамим
     for i = 1, 50 do
         local clone = shovel:Clone() -- Клонируем лопату
-        clone.Parent = workspace -- Кидаем в Workspace
-        clone:MoveTo(player.Character.HumanoidRootPart.Position + Vector3.new(0, 5, 0)) -- Над тобой
+        clone.Name = "Tool_" .. math.random(1000, 9999) -- Маскируем имя
+        if clone:FindFirstChild("Handle") then
+            clone.Handle.Anchored = false -- Разанкорим, чтоб не висела
+            clone.Handle.Name = "Part_" .. math.random(1000, 9999) -- Меняем Handle
+        end
         
+        -- Ставим в Workspace
+        clone.Parent = workspace
+        clone:MoveTo(player.Character.HumanoidRootPart.Position + Vector3.new(math.random(-5, 5), 5, math.random(-5, 5))) -- Разброс
+        
+        -- Спамим DropTool с оригиналом
         if dropTool then
-            dropTool:FireServer(shovel) -- Сбрасываем оригинал
+            dropTool:FireServer(shovel)
         end
+        
+        -- Пробуем PickUpTool с клоном
         if pickUpTool then
-            pickUpTool:FireServer(clone) -- Пробуем подобрать клон
+            pickUpTool:FireServer(clone)
         end
-        wait(0.01) -- Быстрый спам
+        
+        wait(0.01)
     end
-    print("Заспамил DropTool и PickUpTool, чекни землю и инвентарь!")
+    print("Заспамил с шифрованием, чекни землю и инвентарь — остались ли лопаты?")
 else
     print("Shovel или RemoteEvent не нашёл! Возьми лопату в инвентарь!")
 end

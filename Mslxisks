@@ -1,26 +1,10 @@
 local player = game:GetService("Players").LocalPlayer
 local replicated = game:GetService("ReplicatedStorage")
 local workspace = game:GetService("Workspace")
-
--- Кандидаты на дюп
 local dropTool = replicated.Remotes.Tool:FindFirstChild("DropTool")
 local pickUpTool = replicated.Remotes.Tool:FindFirstChild("PickUpTool")
-local interact = replicated.Packages.RemotePromise.Remotes:FindFirstChild("S_InteractWithObject")
 
--- Вывод инвентаря
-local function printInventory()
-    print("Твой инвентарь сейчас:")
-    for _, v in pairs(player.Backpack:GetChildren()) do
-        print(v.Name)
-    end
-    if player.Character then
-        for _, v in pairs(player.Character:GetChildren()) do
-            if v:IsA("Tool") then print("В руках: " .. v.Name) end
-        end
-    end
-end
-
--- Поиск существующей лопаты
+-- Поиск лопаты
 local function findShovel()
     local shovel = player.Backpack:FindFirstChild("Shovel") or
                    (player.Character and player.Character:FindFirstChild("Shovel"))
@@ -31,45 +15,46 @@ local function findShovel()
     return nil
 end
 
--- Дюп в инвентарь или на карту
-printInventory()
-local shovel = findShovel()
-local shovelName = "Shovel"
-
-if shovel or dropTool or pickUpTool or interact then
-    print("Начинаю дюп Shovel!")
-    
-    -- Спам PickUpTool
-    if pickUpTool then
-        for i = 1, 50 do
-            pickUpTool:FireServer(shovel or shovelName) -- Пробуем объект или имя
-            wait(0.01)
-        end
-        print("Спамил PickUpTool, чекни инвентарь!")
+-- Вывод инвентаря
+local function printInventory()
+    print("Твой инвентарь:")
+    for _, v in pairs(player.Backpack:GetChildren()) do
+        print(v.Name)
     end
-    
-    -- Спам DropTool (может спавнить на землю)
-    if dropTool then
-        for i = 1, 50 do
-            dropTool:FireServer(shovel or shovelName)
-            wait(0.01)
+    if player.Character then
+        for _, v in pairs(player.Character:GetChildren()) do
+            if v:IsA("Tool") then print("В руках: " .. v.Name) end
         end
-        print("Спамил DropTool, чекни землю или инвентарь!")
     end
-    
-    -- Спам S_InteractWithObject (вдруг взаимодействие добавляет)
-    if interact then
-        for i = 1, 50 do
-            interact:FireServer(shovel or {Name = shovelName})
-            wait(0.01)
-        end
-        print("Спамил S_InteractWithObject, чекни инвентарь!")
-    end
-else
-    print("Ни Shovel, ни RemoteEvent не нашёл, пиздец!")
 end
 
--- Проверка после спама
+-- Дюп
+printInventory()
+local shovel = findShovel()
+
+if shovel and (dropTool or pickUpTool) then
+    print("Начинаю дюп Shovel!")
+    
+    -- Клонируем и спамим
+    for i = 1, 50 do
+        local clone = shovel:Clone() -- Клонируем лопату
+        clone.Parent = workspace -- Кидаем в Workspace
+        clone:MoveTo(player.Character.HumanoidRootPart.Position + Vector3.new(0, 5, 0)) -- Над тобой
+        
+        if dropTool then
+            dropTool:FireServer(shovel) -- Сбрасываем оригинал
+        end
+        if pickUpTool then
+            pickUpTool:FireServer(clone) -- Пробуем подобрать клон
+        end
+        wait(0.01) -- Быстрый спам
+    end
+    print("Заспамил DropTool и PickUpTool, чекни землю и инвентарь!")
+else
+    print("Shovel или RemoteEvent не нашёл! Возьми лопату в инвентарь!")
+end
+
+-- Проверка после
 wait(1)
 print("Твой инвентарь после дюпа:")
 printInventory()

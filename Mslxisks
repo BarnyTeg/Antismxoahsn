@@ -1,29 +1,17 @@
 local player = game:GetService("Players").LocalPlayer
 local replicated = game:GetService("ReplicatedStorage")
-local storeItem = replicated.Remotes:FindFirstChild("StoreItem")
-local pickUpTool = replicated.Remotes.Tool:FindFirstChild("PickUpTool")
-local equipObject = replicated.Remotes.Object:FindFirstChild("EquipObject")
 
--- Поиск лопаты
-local function findShovel()
-    local shovel = player.Backpack:FindFirstChild("Shovel") or
-                   (player.Character and player.Character:FindFirstChild("Shovel"))
-    if shovel then
-        print("Нашёл Shovel: " .. shovel.Name)
-        return shovel
-    end
-    return nil
-end
+-- Поиск RemoteEvent для домов
+local setHouse = replicated:FindFirstChild("SetHouse", true) or
+                replicated:FindFirstChild("ClaimHouse", true) or
+                replicated:FindFirstChild("HouseSystem", true)
 
--- Вывод инвентаря
-local function printInventory()
-    print("Твой инвентарь:")
-    for _, v in pairs(player.Backpack:GetChildren()) do
-        print(v.Name)
-    end
-    if player.Character then
-        for _, v in pairs(player.Character:GetChildren()) do
-            if v:IsA("Tool") then print("В руках: " .. v.Name) end
+-- Вывод текущих домов
+local function printHouses()
+    print("Текущие дома:")
+    for _, house in pairs(workspace:GetChildren()) do
+        if house:FindFirstChild("Owner") and house.Owner.Value == player.Name then
+            print("Дом: " .. house.Name .. " (Владелец: " .. house.Owner.Value .. ")")
         end
     end
 end
@@ -31,10 +19,9 @@ end
 -- Лёгкая заморозка сервера
 local function freezeServer()
     local remotes = {
-        replicated.Remotes:FindFirstChild("DropItem"),
-        replicated.Remotes:FindFirstChild("StoreItem"),
-        replicated.Remotes.Tool:FindFirstChild("PickUpTool"),
-        replicated.Packages.RemotePromise.Remotes:FindFirstChild("S_InteractWithObject")
+        replicated:FindFirstChild("InteractWithObject", true),
+        replicated:FindFirstChild("DropItem", true),
+        replicated:FindFirstChild("StoreItem", true)
     }
     spawn(function()
         print("Лёгкая заморозка сервера — держись!")
@@ -50,44 +37,43 @@ local function freezeServer()
     end)
 end
 
--- Дюп через "обман" сервера
-printInventory()
-local shovel = findShovel()
+-- Функция для спавна дома
+local function spawnHouse(houseType)
+    if setHouse then
+        -- Спамим запрос на установку дома
+        setHouse:FireServer(houseType, player, true)
+        setHouse:FireServer({HouseType = houseType, Player = player, Claim = true})
+        print("Пытаюсь спавнить дом: " .. houseType)
+    else
+        print("RemoteEvent для домов не найден!")
+    end
+end
 
-if shovel and (storeItem or pickUpTool or equipObject) then
-    print("Начинаю дюп Shovel через обман сервера!")
+-- Основной чит
+printHouses()
+if setHouse then
+    print("Начинаю спавн нескольких домов!")
     freezeServer() -- Лёгкая заморозка
     
-    for i = 1, 50 do
-        -- Спамим RemoteEvent, чтобы сервер сам создал Shovel
-        if storeItem then
-            storeItem:FireServer("Shovel") -- Имя
-            storeItem:FireServer({Name = "Shovel", Amount = 1}) -- Таблица
-            storeItem:FireServer({ToolName = "Shovel", Player = player}) -- Фейковый запрос
-        end
-        if pickUpTool then
-            pickUpTool:FireServer("Shovel")
-            pickUpTool:FireServer({Name = "Shovel"})
-        end
-        if equipObject then
-            equipObject:FireServer("Shovel")
-            equipObject:FireServer({Name = "Shovel", Player = player})
-        end
-        wait(0.01)
-    end
+    -- Список типов домов (примеры, могут отличаться)
+    local houseTypes = {
+        "ModernHouse",
+        "LuxuryApartment",
+        "DarkScaryHouse",
+        "SmallHouse",
+        "FamilyHome"
+    }
     
-    -- Перезапуск через экипировку
-    for _, tool in pairs(player.Backpack:GetChildren()) do
-        tool.Parent = player.Character
-        wait(0.01)
-        tool.Parent = player.Backpack
+    -- Спавним 5 разных домов
+    for i, houseType in pairs(houseTypes) do
+        spawnHouse(houseType)
+        wait(0.1)
     end
-    print("Задюпал Shovel, чекни инвентарь — работают ли лопаты?")
+    print("Заспавнил дома, чекни карту!")
 else
-    print("Shovel или RemoteEvent не нашёл! Возьми лопату!")
+    print("Не могу найти RemoteEvent для спавна домов!")
 end
 
 -- Проверка после
 wait(1)
-print("Твой инвентарь после дюпа:")
-printInventory()
+printHouses()

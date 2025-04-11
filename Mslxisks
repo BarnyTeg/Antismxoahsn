@@ -1,51 +1,14 @@
 local Players = game:GetService("Players")
-local player = Players.LocalPlayer
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local ContextActionService = game:GetService("ContextActionService")
+local player = Players.LocalPlayer
 
--- Функция для отключения скриптов
-local function disableScripts()
-    print("Отключаю все ранее запущенные скрипты!")
+-- Функция для отключения всех соединений
+local function disconnectAllEvents()
+    print("Отключаю все соединения от чужого скрипта!")
     
-    -- Отключаем LocalScript в PlayerScripts
-    for _, script in pairs(player.PlayerScripts:GetDescendants()) do
-        if script:IsA("LocalScript") or script:IsA("Script") then
-            script.Disabled = true
-            print("Отключил: " .. script.Name .. " (" .. script:GetFullName() .. ")")
-        end
-    end
-    
-    -- Отключаем LocalScript в PlayerGui
-    for _, script in pairs(player.PlayerGui:GetDescendants()) do
-        if script:IsA("LocalScript") or script:IsA("Script") then
-            script.Disabled = true
-            print("Отключил: " .. script.Name .. " (" .. script:GetFullName() .. ")")
-        end
-    end
-    
-    -- Отключаем LocalScript в Character
-    if player.Character then
-        for _, script in pairs(player.Character:GetDescendants()) do
-            if script:IsA("LocalScript") or script:IsA("Script") then
-                script.Disabled = true
-                print("Отключил: " .. script.Name .. " (" .. script:GetFullName() .. ")")
-            end
-        end
-    end
-    
-    -- Отключаем LocalScript в Workspace (на всякий случай)
-    for _, script in pairs(workspace:GetDescendants()) do
-        if script:IsA("LocalScript") or script:IsA("Script") then
-            script.Disabled = true
-            print("Отключил: " .. script.Name .. " (" .. script:GetFullName() .. ")")
-        end
-    end
-end
-
--- Функция для отключения активных соединений
-local function disconnectEvents()
-    print("Отключаю активные соединения!")
-    
-    -- Перехватываем RunService (Heartbeat, RenderStepped и т.д.)
+    -- Отключаем соединения RunService
     local dummyConnection = RunService.Heartbeat:Connect(function() end)
     for i, connection in pairs(getconnections(RunService.Heartbeat)) do
         if connection ~= dummyConnection then
@@ -63,9 +26,86 @@ local function disconnectEvents()
         end
     end
     dummyConnection:Disconnect()
+    
+    -- Отключаем соединения UserInputService
+    dummyConnection = UserInputService.InputBegan:Connect(function() end)
+    for i, connection in pairs(getconnections(UserInputService.InputBegan)) do
+        if connection ~= dummyConnection then
+            connection:Disconnect()
+            print("Отключил соединение InputBegan #" .. i)
+        end
+    end
+    dummyConnection:Disconnect()
+    
+    dummyConnection = UserInputService.InputChanged:Connect(function() end)
+    for i, connection in pairs(getconnections(UserInputService.InputChanged)) do
+        if connection ~= dummyConnection then
+            connection:Disconnect()
+            print("Отключил соединение InputChanged #" .. i)
+        end
+    end
+    dummyConnection:Disconnect()
 end
 
--- Запускаем отключение
+-- Функция для отключения всех LocalScript
+local function disableScripts()
+    print("Отключаю все ранее запущенные скрипты!")
+    
+    for _, script in pairs(player.PlayerScripts:GetDescendants()) do
+        if script:IsA("LocalScript") or script:IsA("Script") then
+            script.Disabled = true
+            print("Отключил: " .. script.Name .. " (" .. script:GetFullName() .. ")")
+        end
+    end
+    
+    for _, script in pairs(player.PlayerGui:GetDescendants()) do
+        if script:IsA("LocalScript") or script:IsA("Script") then
+            script.Disabled = true
+            print("Отключил: " .. script.Name .. " (" .. script:GetFullName() .. ")")
+        end
+    end
+    
+    if player.Character then
+        for _, script in pairs(player.Character:GetDescendants()) do
+            if script:IsA("LocalScript") or script:IsA("Script") then
+                script.Disabled = true
+                print("Отключил: " .. script.Name .. " (" .. script:GetFullName() .. ")")
+            end
+        end
+    end
+end
+
+-- Восстановление управления
+local function restoreControl()
+    print("Восстанавливаю управление!")
+    
+    -- Сбрасываем WalkSpeed
+    if player.Character then
+        local humanoid = player.Character:FindFirstChild("Humanoid")
+        if humanoid then
+            humanoid.WalkSpeed = 16 -- Стандартная скорость в Roblox
+            print("Сбросил WalkSpeed до: " .. humanoid.WalkSpeed)
+        end
+    end
+    
+    -- Сбрасываем анимации
+    if player.Character then
+        for _, animTrack in pairs(player.Character.Humanoid:GetPlayingAnimationTracks()) do
+            animTrack:AdjustSpeed(1) -- Стандартная скорость анимаций
+            print("Сбросил скорость анимации: " .. animTrack.Name)
+        end
+    end
+    
+    -- Разблокируем управление через ContextActionService
+    ContextActionService:UnbindAction("forward")
+    ContextActionService:UnbindAction("backward")
+    ContextActionService:UnbindAction("left")
+    ContextActionService:UnbindAction("right")
+    print("Разблокировал управление (WASD)!")
+end
+
+-- Запускаем отключение и восстановление
 disableScripts()
-disconnectEvents()
-print("Все ранее запущенные скрипты и соединения отключены!")
+disconnectAllEvents()
+restoreControl()
+print("Чужой скрипт отключён, управление возвращено! Пробуй ходить!")

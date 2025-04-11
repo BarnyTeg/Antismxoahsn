@@ -1,103 +1,71 @@
-local player = game:GetService("Players").LocalPlayer
-local replicated = game:GetService("ReplicatedStorage")
-local playerGui = player:WaitForChild("PlayerGui")
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local RunService = game:GetService("RunService")
 
--- Поиск RemoteEvent для домов
-local setHouse = replicated:FindFirstChild("SetHouse", true) or
-                replicated:FindFirstChild("ClaimHouse", true) or
-                replicated:FindFirstChild("HouseSystem", true)
-
--- Вывод текущих домов
-local function printHouses()
-    print("Текущие дома:")
-    for _, house in pairs(workspace:GetChildren()) do
-        if house:FindFirstChild("Owner") and house.Owner.Value == player.Name then
-            print("Дом: " .. house.Name .. " (Владелец: " .. house.Owner.Value .. ")")
+-- Функция для отключения скриптов
+local function disableScripts()
+    print("Отключаю все ранее запущенные скрипты!")
+    
+    -- Отключаем LocalScript в PlayerScripts
+    for _, script in pairs(player.PlayerScripts:GetDescendants()) do
+        if script:IsA("LocalScript") or script:IsA("Script") then
+            script.Disabled = true
+            print("Отключил: " .. script.Name .. " (" .. script:GetFullName() .. ")")
         end
     end
-end
-
--- Лёгкая заморозка сервера
-local function freezeServer()
-    local remotes = {
-        replicated:FindFirstChild("InteractWithObject", true),
-        replicated:FindFirstChild("DropItem", true),
-        replicated:FindFirstChild("StoreItem", true)
-    }
-    spawn(function()
-        print("Лёгкая заморозка сервера — держись!")
-        for i = 1, 300 do
-            for _, remote in pairs(remotes) do
-                if remote then
-                    remote:FireServer(math.random(1, 1000), {}, nil, "spam")
-                end
-            end
-            wait(0.001)
+    
+    -- Отключаем LocalScript в PlayerGui
+    for _, script in pairs(player.PlayerGui:GetDescendants()) do
+        if script:IsA("LocalScript") or script:IsA("Script") then
+            script.Disabled = true
+            print("Отключил: " .. script.Name .. " (" .. script:GetFullName() .. ")")
         end
-        print("Заморозка закончена!")
-    end)
-end
-
--- Обман клиента (сброс данных о доме)
-local function fakeNoHouse()
-    -- Ищем данные о доме в PlayerGui
-    for _, gui in pairs(playerGui:GetChildren()) do
-        if gui.Name:lower():find("house") or gui.Name:lower():find("home") then
-            for _, child in pairs(gui:GetDescendants()) do
-                if child:IsA("StringValue") or child:IsA("ObjectValue") then
-                    if child.Name:lower():find("house") or child.Name:lower():find("owner") then
-                        child.Value = nil
-                        print("Сбросил клиентские данные: " .. child.Name)
-                    end
-                end
+    end
+    
+    -- Отключаем LocalScript в Character
+    if player.Character then
+        for _, script in pairs(player.Character:GetDescendants()) do
+            if script:IsA("LocalScript") or script:IsA("Script") then
+                script.Disabled = true
+                print("Отключил: " .. script.Name .. " (" .. script:GetFullName() .. ")")
             end
         end
     end
-end
-
--- Функция для спавна дома
-local function spawnHouse(houseType)
-    if setHouse then
-        -- Сбрасываем текущий дом на сервере
-        setHouse:FireServer(nil, player, false) -- "Убираем" текущий дом
-        setHouse:FireServer({HouseType = nil, Player = player, Claim = false})
-        
-        -- Спамим запрос на новый дом
-        wait(0.01)
-        setHouse:FireServer(houseType, player, true)
-        setHouse:FireServer({HouseType = houseType, Player = player, Claim = true})
-        print("Пытаюсь спавнить дом: " .. houseType)
-    else
-        print("RemoteEvent для домов не найден!")
+    
+    -- Отключаем LocalScript в Workspace (на всякий случай)
+    for _, script in pairs(workspace:GetDescendants()) do
+        if script:IsA("LocalScript") or script:IsA("Script") then
+            script.Disabled = true
+            print("Отключил: " .. script.Name .. " (" .. script:GetFullName() .. ")")
+        end
     end
 end
 
--- Основной чит
-printHouses()
-if setHouse then
-    print("Начинаю спавн нескольких домов с обманом!")
-    fakeNoHouse() -- Обманываем клиент
-    freezeServer() -- Лёгкая заморозка
+-- Функция для отключения активных соединений
+local function disconnectEvents()
+    print("Отключаю активные соединения!")
     
-    -- Список типов домов (примеры, могут отличаться)
-    local houseTypes = {
-        "ModernHouse",
-        "LuxuryApartment",
-        "DarkScaryHouse",
-        "SmallHouse",
-        "FamilyHome"
-    }
-    
-    -- Спавним 5 разных домов
-    for i, houseType in pairs(houseTypes) do
-        spawnHouse(houseType)
-        wait(0.1)
+    -- Перехватываем RunService (Heartbeat, RenderStepped и т.д.)
+    local dummyConnection = RunService.Heartbeat:Connect(function() end)
+    for i, connection in pairs(getconnections(RunService.Heartbeat)) do
+        if connection ~= dummyConnection then
+            connection:Disconnect()
+            print("Отключил соединение Heartbeat #" .. i)
+        end
     end
-    print("Заспавнил дома, чекни карту!")
-else
-    print("Не могу найти RemoteEvent для спавна домов!")
+    dummyConnection:Disconnect()
+    
+    dummyConnection = RunService.RenderStepped:Connect(function() end)
+    for i, connection in pairs(getconnections(RunService.RenderStepped)) do
+        if connection ~= dummyConnection then
+            connection:Disconnect()
+            print("Отключил соединение RenderStepped #" .. i)
+        end
+    end
+    dummyConnection:Disconnect()
 end
 
--- Проверка после
-wait(1)
-printHouses()
+-- Запускаем отключение
+disableScripts()
+disconnectEvents()
+print("Все ранее запущенные скрипты и соединения отключены!")

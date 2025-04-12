@@ -1,111 +1,162 @@
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local ContextActionService = game:GetService("ContextActionService")
 local player = Players.LocalPlayer
 
--- Функция для отключения всех соединений
-local function disconnectAllEvents()
-    print("Отключаю все соединения от чужого скрипта!")
-    
-    -- Отключаем соединения RunService
-    local dummyConnection = RunService.Heartbeat:Connect(function() end)
-    for i, connection in pairs(getconnections(RunService.Heartbeat)) do
-        if connection ~= dummyConnection then
-            connection:Disconnect()
-            print("Отключил соединение Heartbeat #" .. i)
-        end
-    end
-    dummyConnection:Disconnect()
-    
-    dummyConnection = RunService.RenderStepped:Connect(function() end)
-    for i, connection in pairs(getconnections(RunService.RenderStepped)) do
-        if connection ~= dummyConnection then
-            connection:Disconnect()
-            print("Отключил соединение RenderStepped #" .. i)
-        end
-    end
-    dummyConnection:Disconnect()
-    
-    -- Отключаем соединения UserInputService
-    dummyConnection = UserInputService.InputBegan:Connect(function() end)
-    for i, connection in pairs(getconnections(UserInputService.InputBegan)) do
-        if connection ~= dummyConnection then
-            connection:Disconnect()
-            print("Отключил соединение InputBegan #" .. i)
-        end
-    end
-    dummyConnection:Disconnect()
-    
-    dummyConnection = UserInputService.InputChanged:Connect(function() end)
-    for i, connection in pairs(getconnections(UserInputService.InputChanged)) do
-        if connection ~= dummyConnection then
-            connection:Disconnect()
-            print("Отключил соединение InputChanged #" .. i)
-        end
-    end
-    dummyConnection:Disconnect()
+-- Создаём папку для копий
+local copyStorage = Instance.new("Folder")
+copyStorage.Name = "CopiedObjects"
+copyStorage.Parent = ReplicatedStorage
+
+-- Функция для получения текущего времени
+local function getCurrentTime()
+    return os.date("%Y-%m-%d %H:%M:%S")
 end
 
--- Функция для отключения всех LocalScript
-local function disableScripts()
-    print("Отключаю все ранее запущенные скрипты!")
-    
-    for _, script in pairs(player.PlayerScripts:GetDescendants()) do
-        if script:IsA("LocalScript") or script:IsA("Script") then
-            script.Disabled = true
-            print("Отключил: " .. script.Name .. " (" .. script:GetFullName() .. ")")
+-- Функция для получения всех свойств объекта
+local function getProperties(instance)
+    local properties = {}
+    local success, result = pcall(function()
+        for _, prop in pairs(instance:GetProperties()) do
+            properties[prop] = tostring(instance[prop])
         end
+    end)
+    if not success then
+        properties["Error"] = "Не удалось получить свойства: " .. result
+    end
+    return properties
+end
+
+-- Функция для логирования объекта
+local function logInstance(instance)
+    local log = {}
+    table.insert(log, "=== Объект детектирован в " .. getCurrentTime() .. " ===")
+    table.insert(log, "Имя: " .. instance.Name)
+    table.insert(log, "Тип: " .. instance.ClassName)
+    table.insert(log, "Полный путь: " .. instance:GetFullName())
+    table.insert(log, "Родитель: " .. (instance.Parent and instance.Parent:GetFullName() or "nil"))
+    
+    -- Проверяем уникальный ID (если есть)
+    if instance:IsA("Instance") then
+        table.insert(log, "Instance ID: " .. tostring(instance))
     end
     
-    for _, script in pairs(player.PlayerGui:GetDescendants()) do
-        if script:IsA("LocalScript") or script:IsA("Script") then
-            script.Disabled = true
-            print("Отключил: " .. script.Name .. " (" .. script:GetFullName() .. ")")
-        end
+    -- Свойства объекта
+    local props = getProperties(instance)
+    table.insert(log, "Свойства:")
+    for prop, value in pairs(props) do
+        table.insert(log, "  " .. prop .. ": " .. value)
     end
     
+    -- Дочерние объекты
+    local children = instance:GetChildren()
+    table.insert(log, "Дочерних объектов: " .. #children)
+    for i, child in pairs(children) do
+        table.insert(log, "  Дочерний #" .. i .. ": " .. child.Name .. " (" .. child.ClassName .. ")")
+    end
+    
+    -- Проверяем механики
+    if instance:IsA("BasePart") then
+        if instance:FindFirstChildOfClass("TouchTransmitter") then
+            table.insert(log, "Механика: Touched/TouchEnded (есть TouchTransmitter)")
+        end
+        table.insert(log, "Position: " .. tostring(instance.Position))
+        table.insert(log, "CFrame: " .. tostring(instance.CFrame))
+    end
+    
+    if instance:IsA("ClickDetector") then
+        table.insert(log, "Механика: ClickDetector (кликабельный объект)")
+    end
+    
+    if instance:IsA("ProximityPrompt") then
+        table.insert(log, "Механика: ProximityPrompt (интерактивный объект)")
+        table.insert(log, "ActionText: " .. instance.ActionText)
+        table.insert(log, "ObjectText: " .. instance.ObjectText)
+    end
+    
+    if instance:IsA("RemoteEvent") or instance:IsA("RemoteFunction") then
+        table.insert(log, "Механика: " .. instance.ClassName .. " (связь клиент-сервер)")
+    end
+    
+    if instance:IsA("BindableEvent") or instance:IsA("BindableFunction") then
+        table.insert(log, "Механика: " .. instance.ClassName .. " (локальная механика)")
+    end
+    
+    -- Копирование объекта
+    local success, clone = pcall(function()
+        local copy = instance:Clone()
+        copy.Name = instance.Name .. "_Copy_" .. os.time()
+        copy.Parent = copyStorage
+        return copy
+    end)
+    if success then
+        table.insert(log, "Скопировано: " .. clone.Name .. " в " .. copyStorage:GetFullName())
+    else
+        table.insert(log, "Ошибка копирования: " .. clone)
+    end
+    
+    -- Выводим лог
+    for _, line in pairs(log) do
+        print(line)
+    end
+end
+
+-- Функция для анализа анимаций
+local function logAnimations()
     if player.Character then
-        for _, script in pairs(player.Character:GetDescendants()) do
-            if script:IsA("LocalScript") or script:IsA("Script") then
-                script.Disabled = true
-                print("Отключил: " .. script.Name .. " (" .. script:GetFullName() .. ")")
+        local humanoid = player.Character:FindFirstChild("Humanoid")
+        if humanoid then
+            print("=== Анимации персонажа в " .. getCurrentTime() .. " ===")
+            for _, animTrack in pairs(humanoid:GetPlayingAnimationTracks()) do
+                print("Анимация: " .. animTrack.Name)
+                print("  AnimationId: " .. animTrack.Animation.AnimationId)
+                print("  Speed: " .. animTrack.Speed)
+                print("  IsPlaying: " .. tostring(animTrack.IsPlaying))
             end
         end
     end
 end
 
--- Восстановление управления
-local function restoreControl()
-    print("Восстанавливаю управление!")
+-- Функция для сканирования всей игры
+local function scanGame()
+    print("=== Начинаю сканирование игры в " .. getCurrentTime() .. " ===")
     
-    -- Сбрасываем WalkSpeed
-    if player.Character then
-        local humanoid = player.Character:FindFirstChild("Humanoid")
-        if humanoid then
-            humanoid.WalkSpeed = 16 -- Стандартная скорость в Roblox
-            print("Сбросил WalkSpeed до: " .. humanoid.WalkSpeed)
+    -- Основные сервисы для сканирования
+    local services = {
+        game:GetService("Workspace"),
+        game:GetService("ReplicatedStorage"),
+        game:GetService("Players"),
+        game:GetService("StarterGui"),
+        game:GetService("StarterPlayer"),
+        game:GetService("Lighting"),
+        game:GetService("SoundService")
+    }
+    
+    -- Сканируем каждый сервис
+    for _, service in pairs(services) do
+        print("=== Сканирую сервис: " .. service.Name .. " ===")
+        for _, instance in pairs(service:GetDescendants()) do
+            logInstance(instance)
         end
     end
     
-    -- Сбрасываем анимации
-    if player.Character then
-        for _, animTrack in pairs(player.Character.Humanoid:GetPlayingAnimationTracks()) do
-            animTrack:AdjustSpeed(1) -- Стандартная скорость анимаций
-            print("Сбросил скорость анимации: " .. animTrack.Name)
-        end
-    end
+    -- Сканируем анимации
+    logAnimations()
     
-    -- Разблокируем управление через ContextActionService
-    ContextActionService:UnbindAction("forward")
-    ContextActionService:UnbindAction("backward")
-    ContextActionService:UnbindAction("left")
-    ContextActionService:UnbindAction("right")
-    print("Разблокировал управление (WASD)!")
+    print("=== Сканирование завершено в " .. getCurrentTime() .. " ===")
 end
 
--- Запускаем отключение и восстановление
-disableScripts()
-disconnectAllEvents()
-restoreControl()
-print("Чужой скрипт отключён, управление возвращено! Пробуй ходить!")
+-- Запускаем сканирование
+scanGame()
+
+-- Мониторинг новых объектов
+RunService.Heartbeat:Connect(function()
+    for _, instance in pairs(workspace:GetDescendants()) do
+        if not instance:GetAttribute("Scanned") then
+            instance:SetAttribute("Scanned", true)
+            logInstance(instance)
+        end
+    end
+end)
+
+print("Скрипт запущен! Все новые объекты будут детектироваться автоматически.")

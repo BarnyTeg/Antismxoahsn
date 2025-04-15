@@ -1,9 +1,20 @@
+-- Проверка контекста Roblox
+if not game then
+    error("This script must run in a Roblox environment")
+end
+
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 local RunService = game:GetService("RunService")
 
+-- Проверка Infinite Yield
+if not addcmd then
+    warn("Infinite Yield not loaded. Please load Infinite Yield first.")
+    return
+end
+
 -- Счётчик Desert Coins
 local coins = 0
 local gui = Instance.new("ScreenGui")
@@ -110,7 +121,7 @@ local function createMob(name, hp, speed, position, modelColor, attackFunc, extr
 
     humanoid.Died:Connect(function()
         local sound = Instance.new("Sound")
-        sound.SoundId = "rbxassetid://1837635137" -- Звук смерти
+        sound.SoundId = "rbxassetid://1837635137"
         sound.Parent = torso
         sound:Play()
         wait(2)
@@ -183,7 +194,7 @@ local function createWeapon(name, parent, damage, cooldown, areaEffect, onActiva
                     onActivate(player, tool)
                 end
                 local sound = Instance.new("Sound")
-                sound.SoundId = "rbxassetid://1837634873" -- Звук атаки
+                sound.SoundId = "rbxassetid://1837634873"
                 sound.Parent = handle
                 sound:Play()
                 wait(1)
@@ -197,7 +208,7 @@ end
 
 -- Мобы
 addcmd('spawnmummy', {}, function(args, speaker)
-    local pos = speaker.Character.HumanoidRootPart.Position + Vector3.new(math.random(-10, 10), 0, math.random(-10, 10))
+    local pos = speaker.Character and speaker.Character.HumanoidRootPart.Position + Vector3.new(math.random(-10, 10), 0, math.random(-10, 10)) or Vector3.new(0, 0, 0)
     local mummy, humanoid = createMob("Mummy", 100, 12, pos, BrickColor.new("Light gray"), function(mob, h)
         while h.Health > 0 do
             wait(0.1)
@@ -237,7 +248,7 @@ addcmd('spawnmummy', {}, function(args, speaker)
 end)
 
 addcmd('spawnsphinx', {}, function(args, speaker)
-    local pos = speaker.Character.HumanoidRootPart.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20))
+    local pos = speaker.Character and speaker.Character.HumanoidRootPart.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20)) or Vector3.new(0, 0, 0)
     local sphinx, humanoid = createMob("Sphinx", 200, 16, pos, BrickColor.new("Sand yellow"), function(mob, h)
         while h.Health > 0 do
             wait(0.1)
@@ -290,7 +301,7 @@ addcmd('spawnsphinx', {}, function(args, speaker)
 end)
 
 addcmd('spawnpharaoh', {}, function(args, speaker)
-    local pos = speaker.Character.HumanoidRootPart.Position + Vector3.new(0, 0, 20)
+    local pos = speaker.Character and speaker.Character.HumanoidRootPart.Position + Vector3.new(0, 0, 20) or Vector3.new(0, 0, 0)
     local pharaoh, humanoid = createMob("Pharaoh", 500, 8, pos, BrickColor.new("Gold"), function(mob, h)
         while h.Health > 0 do
             wait(10)
@@ -333,7 +344,7 @@ addcmd('spawnpharaoh', {}, function(args, speaker)
 end)
 
 addcmd('spawnwanderer', {}, function(args, speaker)
-    local pos = speaker.Character.HumanoidRootPart.Position + Vector3.new(math.random(-15, 15), 0, math.random(-15, 15))
+    local pos = speaker.Character and speaker.Character.HumanoidRootPart.Position + Vector3.new(math.random(-15, 15), 0, math.random(-15, 15)) or Vector3.new(0, 0, 0)
     local wanderer = createMob("Wanderer", 200, 16, pos, BrickColor.new("Brown"), function(mob, h)
         while h.Health > 0 do
             wait(0.1)
@@ -363,7 +374,7 @@ addcmd('spawnwanderer', {}, function(args, speaker)
 end)
 
 addcmd('spawntrader', {}, function(args, speaker)
-    local pos = speaker.Character.HumanoidRootPart.Position + Vector3.new(0, 0, 10)
+    local pos = speaker.Character and speaker.Character.HumanoidRootPart.Position + Vector3.new(0, 0, 10) or Vector3.new(0, 0, 0)
     local trader = createMob("Trader", math.huge, 0, pos, BrickColor.new("Green"), nil, function(mob, torso, head)
         mob.HumanoidRootPart.Anchored = true
         local robe = Instance.new("Part")
@@ -417,7 +428,7 @@ addcmd('spawntrader', {}, function(args, speaker)
                     elseif item.name == "Hammer" then
                         createWeapon("Hammer", LocalPlayer.Backpack, 50, 2, 3)
                     elseif item.name == "ExileLantern" then
-                        local lantern = createWeapon("ExileLantern", LocalPlayer.Backpack, 0, 10, nil, function(player)
+                        createWeapon("ExileLantern", LocalPlayer.Backpack, 0, 10, nil, function(player)
                             for _, v in pairs(Workspace:GetChildren()) do
                                 if v:IsA("Model") and v:FindFirstChildOfClass("Humanoid") then
                                     local dist = (v.HumanoidRootPart.Position - player.Character.HumanoidRootPart.Position).Magnitude
@@ -464,7 +475,7 @@ addcmd('spawntrader', {}, function(args, speaker)
 end)
 
 addcmd('spawndog', {}, function(args, speaker)
-    local pos = speaker.Character.HumanoidRootPart.Position + Vector3.new(math.random(-10, 10), 0, math.random(-10, 10))
+    local pos = speaker.Character and speaker.Character.HumanoidRootPart.Position + Vector3.new(math.random(-10, 10), 0, math.random(-10, 10)) or Vector3.new(0, 0, 0)
     local dog, humanoid = createMob("Dog", 1000, 20, pos, BrickColor.new("Brown"), function(mob, h)
         local tamed = false
         while h.Health > 0 do
@@ -531,20 +542,19 @@ addcmd('spawndog', {}, function(args, speaker)
     notify('Dog Spawned', 'Created a Dog with 1000 HP')
 end)
 
--- Постройки
 addcmd('spawnpyramid', {}, function(args, speaker)
+    local pos = speaker.Character and speaker.Character.HumanoidRootPart.Position + Vector3.new(0, 0, 50) or Vector3.new(0, 0, 0)
     local pyramid = Instance.new("Model")
     pyramid.Name = "Pyramid"
     pyramid.Parent = Workspace
 
     local base = Instance.new("Part")
     base.Size = Vector3.new(50, 1, 50)
-    base.Position = speaker.Character.HumanoidRootPart.Position + Vector3.new(0, 0, 50)
+    base.Position = pos
     base.BrickColor = BrickColor.new("Sand yellow")
     base.Anchored = true
     base.Parent = pyramid
 
-    -- Лабиринт (упрощённый: 8 комнат в сетке)
     local rooms = {}
     for x = -1, 1, 2 do
         for z = -1, 1, 2 do
@@ -560,7 +570,6 @@ addcmd('spawnpyramid', {}, function(args, speaker)
         end
     end
 
-    -- Коридоры
     for i, room in ipairs(rooms) do
         if i < #rooms then
             local corridor = Instance.new("Part")
@@ -572,7 +581,6 @@ addcmd('spawnpyramid', {}, function(args, speaker)
         end
     end
 
-    -- Спавн мобов
     for i = 1, 5 do
         local mummyPos = base.Position + Vector3.new(math.random(-20, 20), 2, math.random(-20, 20))
         createMob("Mummy", 100, 12, mummyPos, BrickColor.new("Light gray"), function(m, h)
@@ -613,12 +621,11 @@ addcmd('spawnpyramid', {}, function(args, speaker)
                             mh:MoveTo(closestPlayer.Character.HumanoidRootPart.Position)
                         end
                     end
-                end)
+                end
             end
         end
     end)
 
-    -- Лут
     local items = {
         {name = "GoldIngot", price = 50, chance = 0.2, color = BrickColor.new("Gold")},
         {name = "SilverIngot", price = 25, chance = 0.3, color = BrickColor.new("Silver")},
@@ -634,19 +641,20 @@ addcmd('spawnpyramid', {}, function(args, speaker)
                 notify('Item Stored', 'Stored ' .. item.name .. ' in Bag')
             end)
         end
-    end
+    end)
 
     notify('Pyramid Spawned', 'Created a Pyramid with mobs and loot')
 end)
 
 addcmd('spawnhouse', {}, function(args, speaker)
+    local pos = speaker.Character and speaker.Character.HumanoidRootPart.Position + Vector3.new(0, 0, 20) or Vector3.new(0, 0, 0)
     local house = Instance.new("Model")
     house.Name = "House"
     house.Parent = Workspace
 
     local base = Instance.new("Part")
     base.Size = Vector3.new(8, 1, 8)
-    base.Position = speaker.Character.HumanoidRootPart.Position + Vector3.new(0, 0, 20)
+    base.Position = pos
     base.BrickColor = BrickColor.new("Brown")
     base.Anchored = true
     base.Parent = house
@@ -687,13 +695,14 @@ addcmd('spawnhouse', {}, function(args, speaker)
 end)
 
 addcmd('spawnmarket', {}, function(args, speaker)
+    local pos = speaker.Character and speaker.Character.HumanoidRootPart.Position + Vector3.new(0, 0, 30) or Vector3.new(0, 0, 0)
     local market = Instance.new("Model")
     market.Name = "Market"
     market.Parent = Workspace
 
     local base = Instance.new("Part")
     base.Size = Vector3.new(15, 1, 10)
-    base.Position = speaker.Character.HumanoidRootPart.Position + Vector3.new(0, 0, 30)
+    base.Position = pos
     base.BrickColor = BrickColor.new("Stone grey")
     base.Anchored = true
     base.Parent = market
@@ -820,7 +829,6 @@ addcmd('spawnmarket', {}, function(args, speaker)
         end
     end)
 
-    -- Домик улучшений
     local upgradeBase = Instance.new("Part")
     upgradeBase.Size = Vector3.new(5, 1, 5)
     upgradeBase.Position = base.Position + Vector3.new(10, 0, 0)
@@ -891,7 +899,6 @@ addcmd('spawnmarket', {}, function(args, speaker)
     notify('Market Spawned', 'Created a Market with upgrades')
 end)
 
--- Мешок
 addcmd('spawnbag', {}, function(args, speaker)
     local bag = Instance.new("Tool")
     bag.Name = "Bag"
@@ -945,14 +952,13 @@ addcmd('spawnbag', {}, function(args, speaker)
     notify('Bag Created', 'Equipped a Bag for 10 items')
 end)
 
--- Автоспавн
 coroutine.wrap(function()
     while true do
-        wait(60) -- Каждые 60 секунд
+        wait(60)
         if LocalPlayer.Character then
             local pos = LocalPlayer.Character.HumanoidRootPart.Position
             if math.random() < 0.2 then
-                game:GetService("StarterGui"):SendNotification({Title = "Pyramid", Text = "A Pyramid spawned nearby!"})
+                notify("Pyramid", "A Pyramid spawned nearby!")
                 local pyramid = Instance.new("Model")
                 pyramid.Name = "Pyramid"
                 pyramid.Parent = Workspace
@@ -1007,1021 +1013,6 @@ coroutine.wrap(function()
     end
 end)()
 
--- Тест монет
-addcmd('addcoins', {}, function(args, speaker)
-    local amount = tonumber(args[1]) or 100
-    updateCoins(amount)
-    notify('Coins Added', 'Added ' .. amount .. ' Desert Coins')
-end)local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local LocalPlayer = Players.LocalPlayer
-local RunService = game:GetService("RunService")
-
--- Счётчик Desert Coins
-local coins = 0
-local gui = Instance.new("ScreenGui")
-gui.Parent = LocalPlayer.PlayerGui
-local coinFrame = Instance.new("Frame")
-coinFrame.Size = UDim2.new(0, 120, 0, 50)
-coinFrame.Position = UDim2.new(1, -130, 0, 10)
-coinFrame.BackgroundColor3 = Color3.new(0.1, 0.1, 0.1)
-coinFrame.BackgroundTransparency = 0.3
-coinFrame.Parent = gui
-local coinLabel = Instance.new("TextLabel")
-coinLabel.Size = UDim2.new(1, 0, 1, 0)
-coinLabel.Text = "Coins: 0"
-coinLabel.TextColor3 = Color3.new(1, 0.8, 0)
-coinLabel.BackgroundTransparency = 1
-coinLabel.Parent = coinFrame
-
--- Улучшения игрока
-local upgrades = {
-    Strength = {level = 0, maxLevel = 3, price = 50, bonus = 0.1},
-    Health = {level = 0, maxLevel = 3, price = 75, bonus = 0.2},
-    Speed = {level = 0, maxLevel = 3, price = 50, bonus = 0.1},
-    Defense = {level = 0, maxLevel = 3, price = 60, bonus = 0.1}
-}
-
--- Мешок
-local bagItems = {}
-local maxBagItems = 10
-local bagGui = Instance.new("ScreenGui")
-bagGui.Enabled = false
-bagGui.Parent = LocalPlayer.PlayerGui
-local bagFrame = Instance.new("Frame")
-bagFrame.Size = UDim2.new(0, 300, 0, 200)
-bagFrame.Position = UDim2.new(0.5, -150, 0.5, -100)
-bagFrame.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
-bagFrame.Parent = bagGui
-
--- Уведомления
-local function notify(title, text)
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = title,
-        Text = text,
-        Duration = 5
-    })
-end
-
--- Обновление валюты
-local function updateCoins(amount)
-    coins = coins + amount
-    coinLabel.Text = "Coins: " .. coins
-end
-
--- Создание моба
-local function createMob(name, hp, speed, position, modelColor, attackFunc, extraParts)
-    local mob = Instance.new("Model")
-    mob.Name = name
-    mob.Parent = Workspace
-
-    local torso = Instance.new("Part")
-    torso.Size = Vector3.new(2, 4, 1)
-    torso.Position = position
-    torso.BrickColor = modelColor
-    torso.Parent = mob
-
-    local head = Instance.new("Part")
-    head.Size = Vector3.new(1.5, 1.5, 1.5)
-    head.Position = torso.Position + Vector3.new(0, 3, 0)
-    head.BrickColor = modelColor
-    head.Parent = mob
-
-    local humanoid = Instance.new("Humanoid")
-    humanoid.MaxHealth = hp
-    humanoid.Health = hp
-    humanoid.WalkSpeed = speed
-    humanoid.Parent = mob
-
-    local rootPart = Instance.new("Part")
-    rootPart.Name = "HumanoidRootPart"
-    rootPart.Size = Vector3.new(2, 2, 1)
-    rootPart.Position = torso.Position
-    rootPart.Transparency = 1
-    rootPart.CanCollide = false
-    rootPart.Parent = mob
-    mob.PrimaryPart = rootPart
-
-    local weld = Instance.new("Weld")
-    weld.Part0 = rootPart
-    weld.Part1 = torso
-    weld.Parent = torso
-
-    local headWeld = Instance.new("Weld")
-    headWeld.Part0 = torso
-    headWeld.Part1 = head
-    headWeld.C0 = CFrame.new(0, 3, 0)
-    headWeld.Parent = head
-
-    if extraParts then
-        extraParts(mob, torso, head)
-    end
-
-    if attackFunc then
-        coroutine.wrap(attackFunc)(mob, humanoid)
-    end
-
-    humanoid.Died:Connect(function()
-        local sound = Instance.new("Sound")
-        sound.SoundId = "rbxassetid://1837635137" -- Звук смерти
-        sound.Parent = torso
-        sound:Play()
-        wait(2)
-        sound:Destroy()
-        mob:Destroy()
-    end)
-
-    return mob, humanoid
-end
-
--- Создание предмета
-local function createItem(name, position, value, color, onTouch, anchored)
-    local item = Instance.new("Part")
-    item.Name = name
-    item.Size = Vector3.new(1, 1, 1)
-    item.Position = position
-    item.BrickColor = color
-    item.Anchored = anchored or false
-    item.CanCollide = true
-    item.Parent = Workspace
-
-    local light = Instance.new("PointLight")
-    light.Brightness = 1
-    light.Range = 5
-    light.Color = color.Color
-    light.Parent = item
-
-    if onTouch then
-        item.Touched:Connect(function(hit)
-            local player = Players:GetPlayerFromCharacter(hit.Parent)
-            if player then
-                onTouch(player, item)
-            end
-        end)
-    end
-
-    return item
-end
-
--- Создание оружия
-local function createWeapon(name, parent, damage, cooldown, areaEffect, onActivate)
-    local tool = Instance.new("Tool")
-    tool.Name = name
-    tool.RequiresHandle = true
-    tool.Parent = parent
-
-    local handle = Instance.new("Part")
-    handle.Name = "Handle"
-    handle.Size = Vector3.new(1, 4, 1)
-    handle.BrickColor = BrickColor.new("Gold")
-    handle.Parent = tool
-
-    local lastAttack = 0
-    tool.Activated:Connect(function()
-        if tick() - lastAttack >= cooldown then
-            lastAttack = tick()
-            local player = Players:GetPlayerFromCharacter(tool.Parent)
-            if player and player.Character then
-                if areaEffect then
-                    for _, v in pairs(Workspace:GetChildren()) do
-                        if v:IsA("Model") and v ~= player.Character and v:FindFirstChildOfClass("Humanoid") then
-                            local distance = (v.HumanoidRootPart.Position - player.Character.HumanoidRootPart.Position).Magnitude
-                            if distance < areaEffect then
-                                v.Humanoid:TakeDamage(damage * (1 + upgrades.Strength.level * upgrades.Strength.bonus))
-                            end
-                        end
-                    end
-                end
-                if onActivate then
-                    onActivate(player, tool)
-                end
-                local sound = Instance.new("Sound")
-                sound.SoundId = "rbxassetid://1837634873" -- Звук атаки
-                sound.Parent = handle
-                sound:Play()
-                wait(1)
-                sound:Destroy()
-            end
-        end
-    end)
-
-    return tool
-end
-
--- Мобы
-addcmd('spawnmummy', {}, function(args, speaker)
-    local pos = speaker.Character.HumanoidRootPart.Position + Vector3.new(math.random(-10, 10), 0, math.random(-10, 10))
-    local mummy, humanoid = createMob("Mummy", 100, 12, pos, BrickColor.new("Light gray"), function(mob, h)
-        while h.Health > 0 do
-            wait(0.1)
-            local closestPlayer = Players:GetPlayers()[1]
-            if closestPlayer.Character then
-                h:MoveTo(closestPlayer.Character.HumanoidRootPart.Position)
-                local dist = (closestPlayer.Character.HumanoidRootPart.Position - mob.HumanoidRootPart.Position).Magnitude
-                if dist < 2 then
-                    closestPlayer.Character.Humanoid:TakeDamage(10 * (1 - upgrades.Defense.level * upgrades.Defense.bonus))
-                end
-            end
-        end
-    end, function(mob, torso, head)
-        local bandages = Instance.new("Part")
-        bandages.Size = Vector3.new(2.1, 4.1, 1.1)
-        bandages.Position = torso.Position
-        bandages.Transparency = 0.5
-        bandages.BrickColor = BrickColor.new("White")
-        bandages.Parent = mob
-        local weld = Instance.new("Weld")
-        weld.Part0 = torso
-        weld.Part1 = bandages
-        weld.Parent = bandages
-    end)
-
-    humanoid.Died:Connect(function()
-        if math.random() < 0.1 then
-            createItem("MummyMask", pos + Vector3.new(0, 1, 0), 20, BrickColor.new("White"), function(player, item)
-                updateCoins(20)
-                item:Destroy()
-                notify('Item Collected', 'Picked up MummyMask')
-            end)
-        end
-    end)
-
-    notify('Mummy Spawned', 'Created a Mummy with 100 HP')
-end)
-
-addcmd('spawnsphinx', {}, function(args, speaker)
-    local pos = speaker.Character.HumanoidRootPart.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20))
-    local sphinx, humanoid = createMob("Sphinx", 200, 16, pos, BrickColor.new("Sand yellow"), function(mob, h)
-        while h.Health > 0 do
-            wait(0.1)
-            local closestPlayer = Players:GetPlayers()[1]
-            if closestPlayer.Character then
-                h:MoveTo(closestPlayer.Character.HumanoidRootPart.Position)
-                local dist = (closestPlayer.Character.HumanoidRootPart.Position - mob.HumanoidRootPart.Position).Magnitude
-                if dist < 5 then
-                    closestPlayer.Character.Humanoid.WalkSpeed = closestPlayer.Character.Humanoid.WalkSpeed * 0.5
-                    local slowGui = Instance.new("ScreenGui")
-                    slowGui.Parent = closestPlayer.PlayerGui
-                    local slowLabel = Instance.new("TextLabel")
-                    slowLabel.Size = UDim2.new(0, 200, 0, 50)
-                    slowLabel.Position = UDim2.new(0.5, -100, 0.5, -25)
-                    slowLabel.Text = "Slowed!"
-                    slowLabel.TextColor3 = Color3.new(1, 0, 0)
-                    slowLabel.Parent = slowGui
-                    wait(10)
-                    if closestPlayer.Character then
-                        closestPlayer.Character.Humanoid.WalkSpeed = closestPlayer.Character.Humanoid.WalkSpeed / 0.5
-                    end
-                    slowGui:Destroy()
-                end
-            end
-        end
-    end, function(mob, torso, head)
-        local body = Instance.new("Part")
-        body.Size = Vector3.new(4, 2, 6)
-        body.Position = torso.Position + Vector3.new(0, -1, 0)
-        body.BrickColor = BrickColor.new("Sand yellow")
-        body.Parent = mob
-        local weld = Instance.new("Weld")
-        weld.Part0 = torso
-        weld.Part1 = body
-        weld.C0 = CFrame.new(0, -1, 0)
-        weld.Parent = body
-    end)
-
-    humanoid.Died:Connect(function()
-        if math.random() < 0.2 then
-            createItem("Diamond", pos + Vector3.new(0, 1, 0), 100, BrickColor.new("Cyan"), function(player, item)
-                updateCoins(100)
-                item:Destroy()
-                notify('Item Collected', 'Picked up Diamond')
-            end)
-        end
-    end)
-
-    notify('Sphinx Spawned', 'Created a Sphinx with 200 HP')
-end)
-
-addcmd('spawnpharaoh', {}, function(args, speaker)
-    local pos = speaker.Character.HumanoidRootPart.Position + Vector3.new(0, 0, 20)
-    local pharaoh, humanoid = createMob("Pharaoh", 500, 8, pos, BrickColor.new("Gold"), function(mob, h)
-        while h.Health > 0 do
-            wait(10)
-            for i = 1, 5 do
-                local mummyPos = pos + Vector3.new(math.random(-10, 10), 0, math.random(-10, 10))
-                createMob("Mummy", 100, 12, mummyPos, BrickColor.new("Light gray"), function(m, mh)
-                    while mh.Health > 0 do
-                        wait(0.1)
-                        local closestPlayer = Players:GetPlayers()[1]
-                        if closestPlayer.Character then
-                            mh:MoveTo(closestPlayer.Character.HumanoidRootPart.Position)
-                        end
-                    end
-                end)
-            end
-        end
-    end, function(mob, torso, head)
-        local crown = Instance.new("Part")
-        crown.Size = Vector3.new(2, 0.5, 2)
-        crown.Position = head.Position + Vector3.new(0, 1, 0)
-        crown.BrickColor = BrickColor.new("Really blue")
-        crown.Parent = mob
-        local weld = Instance.new("Weld")
-        weld.Part0 = head
-        weld.Part1 = crown
-        weld.C0 = CFrame.new(0, 1, 0)
-        weld.Parent = crown
-    end)
-
-    humanoid.Died:Connect(function()
-        createWeapon("PharaohStaff", speaker.Backpack, 50, 2, 5)
-        createItem("Diamond", pos + Vector3.new(0, 1, 0), 100, BrickColor.new("Cyan"), function(player, item)
-            updateCoins(100)
-            item:Destroy()
-            notify('Item Collected', 'Picked up Diamond')
-        end)
-    end)
-
-    notify('Pharaoh Spawned', 'Created a Pharaoh with 500 HP')
-end)
-
-addcmd('spawnwanderer', {}, function(args, speaker)
-    local pos = speaker.Character.HumanoidRootPart.Position + Vector3.new(math.random(-15, 15), 0, math.random(-15, 15))
-    local wanderer = createMob("Wanderer", 200, 16, pos, BrickColor.new("Brown"), function(mob, h)
-        while h.Health > 0 do
-            wait(0.1)
-            local closestPlayer = Players:GetPlayers()[1]
-            if closestPlayer.Character then
-                h:MoveTo(closestPlayer.Character.HumanoidRootPart.Position)
-                local dist = (closestPlayer.Character.HumanoidRootPart.Position - mob.HumanoidRootPart.Position).Magnitude
-                if dist < 2 then
-                    closestPlayer.Character.Humanoid:TakeDamage(15 * (1 - upgrades.Defense.level * upgrades.Defense.bonus))
-                end
-            end
-        end
-    end, function(mob, torso, head)
-        local pickaxe = Instance.new("Part")
-        pickaxe.Size = Vector3.new(1, 2, 0.5)
-        pickaxe.Position = torso.Position + Vector3.new(1, 0, 0)
-        pickaxe.BrickColor = BrickColor.new("Silver")
-        pickaxe.Parent = mob
-        local weld = Instance.new("Weld")
-        weld.Part0 = torso
-        weld.Part1 = pickaxe
-        weld.C0 = CFrame.new(1, 0, 0)
-        weld.Parent = pickaxe
-    end)
-
-    notify('Wanderer Spawned', 'Created a Wanderer with 200 HP')
-end)
-
-addcmd('spawntrader', {}, function(args, speaker)
-    local pos = speaker.Character.HumanoidRootPart.Position + Vector3.new(0, 0, 10)
-    local trader = createMob("Trader", math.huge, 0, pos, BrickColor.new("Green"), nil, function(mob, torso, head)
-        mob.HumanoidRootPart.Anchored = true
-        local robe = Instance.new("Part")
-        robe.Size = Vector3.new(2.2, 4.2, 1.2)
-        robe.Position = torso.Position
-        robe.Transparency = 0.3
-        robe.BrickColor = BrickColor.new("Gold")
-        robe.Parent = mob
-        local weld = Instance.new("Weld")
-        weld.Part0 = torso
-        weld.Part1 = robe
-        weld.Parent = robe
-    end)
-
-    local shopGui = Instance.new("ScreenGui")
-    shopGui.Parent = LocalPlayer.PlayerGui
-    local shopFrame = Instance.new("Frame")
-    shopFrame.Size = UDim2.new(0, 300, 0, 200)
-    shopFrame.Position = UDim2.new(0.5, -150, 0.5, -100)
-    shopFrame.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
-    shopFrame.Visible = false
-    shopFrame.Parent = shopGui
-
-    local items = {
-        {name = "Bone", price = 10, chance = 0.6},
-        {name = "GoldPistol", price = 50, chance = 0.4},
-        {name = "RegenPotion", price = 25, chance = 0.7},
-        {name = "Hammer", price = 30, chance = 0.5},
-        {name = "ExileLantern", price = 50, chance = 0.4},
-        {name = "SandAmulet", price = 40, chance = 0.3},
-        {name = "ScorpionArrow", price = 20, chance = 0.5}
-    }
-
-    for i = 1, 3 do
-        local item = items[math.random(1, #items)]
-        if math.random() < item.chance then
-            local button = Instance.new("TextButton")
-            button.Size = UDim2.new(0, 280, 0, 30)
-            button.Position = UDim2.new(0, 10, 0, 10 + (i-1)*40)
-            button.Text = item.name .. " (" .. item.price .. "$)"
-            button.BackgroundColor3 = Color3.new(0.3, 0.3, 0.3)
-            button.TextColor3 = Color3.new(1, 1, 1)
-            button.Parent = shopFrame
-            button.MouseButton1Click:Connect(function()
-                if coins >= item.price then
-                    updateCoins(-item.price)
-                    if item.name == "GoldPistol" then
-                        createWeapon("GoldPistol", LocalPlayer.Backpack, 30, 1, nil)
-                    elseif item.name == "RegenPotion" then
-                        LocalPlayer.Character.Humanoid.Health = LocalPlayer.Character.Humanoid.Health + LocalPlayer.Character.Humanoid.MaxHealth * 0.5
-                    elseif item.name == "Hammer" then
-                        createWeapon("Hammer", LocalPlayer.Backpack, 50, 2, 3)
-                    elseif item.name == "ExileLantern" then
-                        local lantern = createWeapon("ExileLantern", LocalPlayer.Backpack, 0, 10, nil, function(player)
-                            for _, v in pairs(Workspace:GetChildren()) do
-                                if v:IsA("Model") and v:FindFirstChildOfClass("Humanoid") then
-                                    local dist = (v.HumanoidRootPart.Position - player.Character.HumanoidRootPart.Position).Magnitude
-                                    if dist < 10 then
-                                        v.Humanoid.WalkSpeed = 0
-                                        wait(10)
-                                        v.Humanoid.WalkSpeed = 16
-                                    end
-                                end
-                            end
-                        end)
-                    elseif item.name == "SandAmulet" then
-                        LocalPlayer.Character.Humanoid.WalkSpeed = LocalPlayer.Character.Humanoid.WalkSpeed * 1.1
-                        wait(30)
-                        LocalPlayer.Character.Humanoid.WalkSpeed = LocalPlayer.Character.Humanoid.WalkSpeed / 1.1
-                    elseif item.name == "ScorpionArrow" then
-                        createWeapon("ScorpionArrow", LocalPlayer.Backpack, 100, 5, nil, function(player)
-                            local target = Workspace:FindFirstChild("Mummy") or Workspace:FindFirstChild("Sphinx")
-                            if target then
-                                target.Humanoid:TakeDamage(100)
-                                for i = 1, 10 do
-                                    wait(1)
-                                    target.Humanoid:TakeDamage(5)
-                                end
-                            end
-                        end)
-                    end
-                    notify('Purchased', 'Bought ' .. item.name)
-                else
-                    notify('Error', 'Not enough coins')
-                end
-            end)
-        end
-    end
-
-    trader[1].HumanoidRootPart.Touched:Connect(function(hit)
-        local player = Players:GetPlayerFromCharacter(hit.Parent)
-        if player then
-            shopFrame.Visible = true
-        end
-    end)
-
-    notify('Trader Spawned', 'Created a Trader')
-end)
-
-addcmd('spawndog', {}, function(args, speaker)
-    local pos = speaker.Character.HumanoidRootPart.Position + Vector3.new(math.random(-10, 10), 0, math.random(-10, 10))
-    local dog, humanoid = createMob("Dog", 1000, 20, pos, BrickColor.new("Brown"), function(mob, h)
-        local tamed = false
-        while h.Health > 0 do
-            wait(0.1)
-            if tamed then
-                local closestEnemy = nil
-                local minDist = 70
-                for _, v in pairs(Workspace:GetChildren()) do
-                    if v:IsA("Model") and v ~= mob and v ~= speaker.Character and v:FindFirstChildOfClass("Humanoid") then
-                        local dist = (v.HumanoidRootPart.Position - mob.HumanoidRootPart.Position).Magnitude
-                        if dist < minDist then
-                            closestEnemy = v
-                            minDist = dist
-                        end
-                    end
-                end
-                if closestEnemy then
-                    h:MoveTo(closestEnemy.HumanoidRootPart.Position)
-                    local dist = (closestEnemy.HumanoidRootPart.Position - mob.HumanoidRootPart.Position).Magnitude
-                    if dist < 2 then
-                        closestEnemy.Humanoid:TakeDamage(50)
-                    end
-                else
-                    h:MoveTo(speaker.Character.HumanoidRootPart.Position)
-                end
-            end
-        end
-    end, function(mob, torso, head)
-        torso.Size = Vector3.new(3, 1, 2)
-        head.Size = Vector3.new(1, 1, 1)
-        local tail = Instance.new("Part")
-        tail.Size = Vector3.new(0.5, 0.5, 2)
-        tail.Position = torso.Position + Vector3.new(0, 0, 2)
-        tail.BrickColor = BrickColor.new("Brown")
-        tail.Parent = mob
-        local weld = Instance.new("Weld")
-        weld.Part0 = torso
-        weld.Part1 = tail
-        weld.C0 = CFrame.new(0, 0, 2)
-        weld.Parent = tail
-    end)
-
-    humanoid.HealthChanged:Connect(function(health)
-        if health < 1000 then
-            wait(10)
-            humanoid.Health = math.min(1000, humanoid.Health + 100)
-        end
-    end)
-
-    dog.HumanoidRootPart.Touched:Connect(function(hit)
-        local player = Players:GetPlayerFromCharacter(hit.Parent)
-        if player and player.Backpack:FindFirstChild("Bone") then
-            player.Backpack.Bone:Destroy()
-            notify('Dog Tamed', 'The Dog is now your ally')
-            coroutine.wrap(function()
-                while humanoid.Health > 0 do
-                    wait(0.1)
-                    humanoid:MoveTo(player.Character.HumanoidRootPart.Position)
-                end
-            end)()
-        end
-    end)
-
-    notify('Dog Spawned', 'Created a Dog with 1000 HP')
-end)
-
--- Постройки
-addcmd('spawnpyramid', {}, function(args, speaker)
-    local pyramid = Instance.new("Model")
-    pyramid.Name = "Pyramid"
-    pyramid.Parent = Workspace
-
-    local base = Instance.new("Part")
-    base.Size = Vector3.new(50, 1, 50)
-    base.Position = speaker.Character.HumanoidRootPart.Position + Vector3.new(0, 0, 50)
-    base.BrickColor = BrickColor.new("Sand yellow")
-    base.Anchored = true
-    base.Parent = pyramid
-
-    -- Лабиринт (упрощённый: 8 комнат в сетке)
-    local rooms = {}
-    for x = -1, 1, 2 do
-        for z = -1, 1, 2 do
-            for y = 0, 1 do
-                local room = Instance.new("Part")
-                room.Size = Vector3.new(10, 5, 10)
-                room.Position = base.Position + Vector3.new(x * 15, y * 6 + 3, z * 15)
-                room.BrickColor = BrickColor.new("Sand yellow")
-                room.Anchored = true
-                room.Parent = pyramid
-                table.insert(rooms, room)
-            end
-        end
-    end
-
-    -- Коридоры
-    for i, room in ipairs(rooms) do
-        if i < #rooms then
-            local corridor = Instance.new("Part")
-            corridor.Size = Vector3.new(5, 3, (room.Position - rooms[i+1].Position).Magnitude)
-            corridor.Position = (room.Position + rooms[i+1].Position) / 2
-            corridor.BrickColor = BrickColor.new("Sand yellow")
-            corridor.Anchored = true
-            corridor.Parent = pyramid
-        end
-    end
-
-    -- Спавн мобов
-    for i = 1, 5 do
-        local mummyPos = base.Position + Vector3.new(math.random(-20, 20), 2, math.random(-20, 20))
-        createMob("Mummy", 100, 12, mummyPos, BrickColor.new("Light gray"), function(m, h)
-            while h.Health > 0 do
-                wait(0.1)
-                local closestPlayer = Players:GetPlayers()[1]
-                if closestPlayer.Character then
-                    h:MoveTo(closestPlayer.Character.HumanoidRootPart.Position)
-                end
-            end
-        end)
-    end
-
-    if math.random() < 0.5 then
-        local sphinxPos = base.Position + Vector3.new(math.random(-20, 20), 2, math.random(-20, 20))
-        createMob("Sphinx", 200, 16, sphinxPos, BrickColor.new("Sand yellow"), function(m, h)
-            while h.Health > 0 do
-                wait(0.1)
-                local closestPlayer = Players:GetPlayers()[1]
-                if closestPlayer.Character then
-                    h:MoveTo(closestPlayer.Character.HumanoidRootPart.Position)
-                end
-            end
-        end)
-    end
-
-    local pharaohPos = base.Position + Vector3.new(0, 2, 0)
-    createMob("Pharaoh", 500, 8, pharaohPos, BrickColor.new("Gold"), function(m, h)
-        while h.Health > 0 do
-            wait(10)
-            for i = 1, 5 do
-                local mummyPos = pharaohPos + Vector3.new(math.random(-10, 10), 0, math.random(-10, 10))
-                createMob("Mummy", 100, 12, mummyPos, BrickColor.new("Light gray"), function(mm, mh)
-                    while mh.Health > 0 do
-                        wait(0.1)
-                        local closestPlayer = Players:GetPlayers()[1]
-                        if closestPlayer.Character then
-                            mh:MoveTo(closestPlayer.Character.HumanoidRootPart.Position)
-                        end
-                    end
-                end)
-            end
-        end
-    end)
-
-    -- Лут
-    local items = {
-        {name = "GoldIngot", price = 50, chance = 0.2, color = BrickColor.new("Gold")},
-        {name = "SilverIngot", price = 25, chance = 0.3, color = BrickColor.new("Silver")},
-        {name = "Diamond", price = 100, chance = 0.1, color = BrickColor.new("Cyan")},
-        {name = "MummyMask", price = 20, chance = 0.25, color = BrickColor.new("White")}
-    }
-
-    for _, item in ipairs(items) do
-        if math.random() < item.chance then
-            createItem(item.name, base.Position + Vector3.new(math.random(-20, 20), 2, math.random(-20, 20)), item.price, item.color, function(player, part)
-                table.insert(bagItems, item.name)
-                part:Destroy()
-                notify('Item Stored', 'Stored ' .. item.name .. ' in Bag')
-            end)
-        end
-    end
-
-    notify('Pyramid Spawned', 'Created a Pyramid with mobs and loot')
-end)
-
-addcmd('spawnhouse', {}, function(args, speaker)
-    local house = Instance.new("Model")
-    house.Name = "House"
-    house.Parent = Workspace
-
-    local base = Instance.new("Part")
-    base.Size = Vector3.new(8, 1, 8)
-    base.Position = speaker.Character.HumanoidRootPart.Position + Vector3.new(0, 0, 20)
-    base.BrickColor = BrickColor.new("Brown")
-    base.Anchored = true
-    base.Parent = house
-
-    for i = 1, 4 do
-        local wall = Instance.new("Part")
-        wall.Size = Vector3.new(i == 1 and 8 or 1, 5, i == 1 and 1 or 8)
-        wall.Position = base.Position + Vector3.new(i == 1 and 0 or i == 2 and 0 or i == 3 and 3.5 or -3.5, 3, i == 1 and 3.5 or i == 2 and -3.5 or 0 or 0)
-        wall.BrickColor = BrickColor.new("Brown")
-        wall.Anchored = true
-        wall.Parent = house
-    end
-
-    local items = {
-        {name = "Bone", price = 10, chance = 0.5, color = BrickColor.new("White")},
-        {name = "GoldIngot", price = 50, chance = 0.1, color = BrickColor.new("Gold")},
-        {name = "SilverIngot", price = 25, chance = 0.2, color = BrickColor.new("Silver")},
-        {name = "RustyCoin", price = 5, chance = 0.6, color = BrickColor.new("Dark grey")},
-        {name = "OldKnife", price = 15, chance = 0.3, color = BrickColor.new("Silver")},
-        {name = "Torch", price = 10, chance = 0.4, color = BrickColor.new("Yellow")},
-        {name = "SandCloth", price = 8, chance = 0.4, color = BrickColor.new("Beige")},
-        {name = "LuckMedallion", price = 20, chance = 0.15, color = BrickColor.new("Gold")},
-        {name = "CoalPiece", price = 5, chance = 0.5, color = BrickColor.new("Black")},
-        {name = "Dynamite", price = 30, chance = 0.1, color = BrickColor.new("Really red")}
-    }
-
-    for _, item in ipairs(items) do
-        if math.random() < item.chance then
-            createItem(item.name, base.Position + Vector3.new(math.random(-4, 4), 2, math.random(-4, 4)), item.price, item.color, function(player, part)
-                table.insert(bagItems, item.name)
-                part:Destroy()
-                notify('Item Stored', 'Stored ' .. item.name .. ' in Bag')
-            end)
-        end
-    end
-
-    notify('House Spawned', 'Created a House with loot')
-end)
-
-addcmd('spawnmarket', {}, function(args, speaker)
-    local market = Instance.new("Model")
-    market.Name = "Market"
-    market.Parent = Workspace
-
-    local base = Instance.new("Part")
-    base.Size = Vector3.new(15, 1, 10)
-    base.Position = speaker.Character.HumanoidRootPart.Position + Vector3.new(0, 0, 30)
-    base.BrickColor = BrickColor.new("Stone grey")
-    base.Anchored = true
-    base.Parent = market
-
-    local shopGui = Instance.new("ScreenGui")
-    shopGui.Parent = LocalPlayer.PlayerGui
-    local shopFrame = Instance.new("Frame")
-    shopFrame.Size = UDim2.new(0, 300, 0, 400)
-    shopFrame.Position = UDim2.new(0.5, -150, 0.5, -200)
-    shopFrame.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
-    shopFrame.Visible = false
-    shopFrame.Parent = shopGui
-
-    local items = {
-        {name = "GoldPistol", price = 50},
-        {name = "RegenPotion", price = 25},
-        {name = "Hammer", price = 30},
-        {name = "ExileLantern", price = 50},
-        {name = "SandAmulet", price = 40},
-        {name = "ScorpionArrow", price = 20},
-        {name = "FireBow", price = 60},
-        {name = "SandShield", price = 70},
-        {name = "WindBoots", price = 50},
-        {name = "StrengthPotion", price = 30},
-        {name = "DiamondDagger", price = 40},
-        {name = "MysticCompass", price = 25},
-        {name = "ExplosiveCrossbow", price = 80},
-        {name = "InvisibilityCloak", price = 100},
-        {name = "LifeElixir", price = 50}
-    }
-
-    for i, item in ipairs(items) do
-        local button = Instance.new("TextButton")
-        button.Size = UDim2.new(0, 280, 0, 30)
-        button.Position = UDim2.new(0, 10, 0, 10 + (i-1)*40)
-        button.Text = item.name .. " (" .. item.price .. "$)"
-        button.BackgroundColor3 = Color3.new(0.3, 0.3, 0.3)
-        button.TextColor3 = Color3.new(1, 1, 1)
-        button.Parent = shopFrame
-        button.MouseButton1Click:Connect(function()
-            if coins >= item.price then
-                updateCoins(-item.price)
-                if item.name == "GoldPistol" then
-                    createWeapon("GoldPistol", LocalPlayer.Backpack, 30, 1, nil)
-                elseif item.name == "RegenPotion" then
-                    LocalPlayer.Character.Humanoid.Health = LocalPlayer.Character.Humanoid.Health + LocalPlayer.Character.Humanoid.MaxHealth * 0.5
-                elseif item.name == "Hammer" then
-                    createWeapon("Hammer", LocalPlayer.Backpack, 50, 2, 3)
-                elseif item.name == "ExileLantern" then
-                    createWeapon("ExileLantern", LocalPlayer.Backpack, 0, 10, nil, function(player)
-                        for _, v in pairs(Workspace:GetChildren()) do
-                            if v:IsA("Model") and v:FindFirstChildOfClass("Humanoid") then
-                                local dist = (v.HumanoidRootPart.Position - player.Character.HumanoidRootPart.Position).Magnitude
-                                if dist < 10 then
-                                    v.Humanoid.WalkSpeed = 0
-                                    wait(10)
-                                    v.Humanoid.WalkSpeed = 16
-                                end
-                            end
-                        end
-                    end)
-                elseif item.name == "SandAmulet" then
-                    LocalPlayer.Character.Humanoid.WalkSpeed = LocalPlayer.Character.Humanoid.WalkSpeed * 1.1
-                    wait(30)
-                    LocalPlayer.Character.Humanoid.WalkSpeed = LocalPlayer.Character.Humanoid.WalkSpeed / 1.1
-                elseif item.name == "ScorpionArrow" then
-                    createWeapon("ScorpionArrow", LocalPlayer.Backpack, 100, 5, nil, function(player)
-                        local target = Workspace:FindFirstChild("Mummy") or Workspace:FindFirstChild("Sphinx")
-                        if target then
-                            target.Humanoid:TakeDamage(100)
-                            for i = 1, 10 do
-                                wait(1)
-                                target.Humanoid:TakeDamage(5)
-                            end
-                        end
-                    end)
-                elseif item.name == "FireBow" then
-                    createWeapon("FireBow", LocalPlayer.Backpack, 70, 2, nil, function(player)
-                        local target = Workspace:FindFirstChild("Mummy") or Workspace:FindFirstChild("Sphinx")
-                        if target then
-                            target.Humanoid:TakeDamage(70)
-                            for i = 1, 5 do
-                                wait(1)
-                                target.Humanoid:TakeDamage(10)
-                            end
-                        end
-                    end)
-                elseif item.name == "SandShield" then
-                    upgrades.Defense.level = math.min(upgrades.Defense.level + 1, upgrades.Defense.maxLevel)
-                    wait(10)
-                    upgrades.Defense.level = upgrades.Defense.level - 1
-                elseif item.name == "WindBoots" then
-                    LocalPlayer.Character.Humanoid.WalkSpeed = LocalPlayer.Character.Humanoid.WalkSpeed * 1.2
-                    wait(20)
-                    LocalPlayer.Character.Humanoid.WalkSpeed = LocalPlayer.Character.Humanoid.WalkSpeed / 1.2
-                elseif item.name == "StrengthPotion" then
-                    upgrades.Strength.level = math.min(upgrades.Strength.level + 1, upgrades.Strength.maxLevel)
-                    wait(15)
-                    upgrades.Strength.level = upgrades.Strength.level - 1
-                elseif item.name == "DiamondDagger" then
-                    createWeapon("DiamondDagger", LocalPlayer.Backpack, 40, 0.5, nil)
-                elseif item.name == "MysticCompass" then
-                    notify('Compass', 'Points to nearest Pyramid')
-                elseif item.name == "ExplosiveCrossbow" then
-                    createWeapon("ExplosiveCrossbow", LocalPlayer.Backpack, 150, 5, 5)
-                elseif item.name == "InvisibilityCloak" then
-                    LocalPlayer.Character.HumanoidRootPart.Transparency = 0.8
-                    wait(10)
-                    LocalPlayer.Character.HumanoidRootPart.Transparency = 0
-                elseif item.name == "LifeElixir" then
-                    LocalPlayer.Character.Humanoid.Health = LocalPlayer.Character.Humanoid.MaxHealth
-                end
-                notify('Purchased', 'Bought ' .. item.name)
-            else
-                notify('Error', 'Not enough coins')
-            end
-        end)
-    end
-
-    base.Touched:Connect(function(hit)
-        local player = Players:GetPlayerFromCharacter(hit.Parent)
-        if player then
-            shopFrame.Visible = true
-        end
-    end)
-
-    -- Домик улучшений
-    local upgradeBase = Instance.new("Part")
-    upgradeBase.Size = Vector3.new(5, 1, 5)
-    upgradeBase.Position = base.Position + Vector3.new(10, 0, 0)
-    upgradeBase.BrickColor = BrickColor.new("Cyan")
-    upgradeBase.Anchored = true
-    upgradeBase.Parent = market
-
-    local upgradeGui = Instance.new("ScreenGui")
-    upgradeGui.Parent = LocalPlayer.PlayerGui
-    local upgradeFrame = Instance.new("Frame")
-    upgradeFrame.Size = UDim2.new(0, 300, 0, 200)
-    upgradeFrame.Position = UDim2.new(0.5, -150, 0.5, -100)
-    upgradeFrame.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
-    upgradeFrame.Visible = false
-    upgradeFrame.Parent = upgradeGui
-
-    for i, upgrade in ipairs(upgrades) do
-        local button = Instance.new("TextButton")
-        button.Size = UDim2.new(0, 280, 0, 30)
-        button.Position = UDim2.new(0, 10, 0, 10 + (i-1)*40)
-        button.Text = upgrade[1] .. " (" .. upgrade.price .. "$)"
-        button.BackgroundColor3 = Color3.new(0.3, 0.3, 0.3)
-        button.TextColor3 = Color3.new(1, 1, 1)
-        button.Parent = upgradeFrame
-        button.MouseButton1Click:Connect(function()
-            if coins >= upgrade.price and upgrade.level < upgrade.maxLevel then
-                updateCoins(-upgrade.price)
-                upgrade.level = upgrade.level + 1
-                if upgrade[1] == "Speed" then
-                    LocalPlayer.Character.Humanoid.WalkSpeed = LocalPlayer.Character.Humanoid.WalkSpeed * (1 + upgrade.bonus)
-                elseif upgrade[1] == "Health" then
-                    LocalPlayer.Character.Humanoid.MaxHealth = LocalPlayer.Character.Humanoid.MaxHealth * (1 + upgrade.bonus)
-                    LocalPlayer.Character.Humanoid.Health = LocalPlayer.Character.Humanoid.Health * (1 + upgrade.bonus)
-                end
-                notify('Upgraded', upgrade[1] .. ' upgraded to level ' .. upgrade.level)
-            else
-                notify('Error', 'Not enough coins or max level reached')
-            end
-        end)
-    end
-
-    local abilityButton = Instance.new("TextButton")
-    abilityButton.Size = UDim2.new(0, 280, 0, 30)
-    abilityButton.Position = UDim2.new(0, 10, 0, 10 + 4*40)
-    abilityButton.Text = "GhostStep (100$)"
-    abilityButton.BackgroundColor3 = Color3.new(0.3, 0.3, 0.3)
-    abilityButton.TextColor3 = Color3.new(1, 1, 1)
-    abilityButton.Parent = upgradeFrame
-    abilityButton.MouseButton1Click:Connect(function()
-        if coins >= 100 then
-            updateCoins(-100)
-            createWeapon("GhostStep", LocalPlayer.Backpack, 0, 30, nil, function(player)
-                player.Character.HumanoidRootPart.Transparency = 0.8
-                wait(5)
-                player.Character.HumanoidRootPart.Transparency = 0
-            end)
-            notify('Ability Purchased', 'Bought GhostStep')
-        end
-    end)
-
-    upgradeBase.Touched:Connect(function(hit)
-        local player = Players:GetPlayerFromCharacter(hit.Parent)
-        if player then
-            upgradeFrame.Visible = true
-        end
-    end)
-
-    notify('Market Spawned', 'Created a Market with upgrades')
-end)
-
--- Мешок
-addcmd('spawnbag', {}, function(args, speaker)
-    local bag = Instance.new("Tool")
-    bag.Name = "Bag"
-    bag.RequiresHandle = true
-    bag.Parent = speaker.Backpack
-
-    local handle = Instance.new("Part")
-    handle.Name = "Handle"
-    handle.Size = Vector3.new(1, 1, 1)
-    handle.BrickColor = BrickColor.new("Brown")
-    handle.Parent = bag
-
-    bag.Activated:Connect(function()
-        for _, v in pairs(Workspace:GetChildren()) do
-            if v:IsA("Part") and #bagItems < maxBagItems then
-                local distance = (v.Position - speaker.Character.HumanoidRootPart.Position).Magnitude
-                if distance < 5 then
-                    table.insert(bagItems, v.Name)
-                    v:Destroy()
-                    notify('Item Stored', 'Stored ' .. v.Name .. ' in Bag')
-                    break
-                end
-            end
-        end
-    end)
-
-    bag.Equipped:Connect(function()
-        bagGui.Enabled = true
-        bagFrame:ClearAllChildren()
-        for i, item in ipairs(bagItems) do
-            local button = Instance.new("TextButton")
-            button.Size = UDim2.new(0, 280, 0, 30)
-            button.Position = UDim2.new(0, 10, 0, 10 + (i-1)*40)
-            button.Text = item
-            button.BackgroundColor3 = Color3.new(0.3, 0.3, 0.3)
-            button.TextColor3 = Color3.new(1, 1, 1)
-            button.Parent = bagFrame
-            button.MouseButton1Click:Connect(function()
-                table.remove(bagItems, i)
-                createItem(item, speaker.Character.HumanoidRootPart.Position + Vector3.new(0, 2, 0), 0, BrickColor.new("Gold"), nil)
-                notify('Item Retrieved', 'Retrieved ' .. item)
-                bagGui.Enabled = false
-            end)
-        end
-    end)
-
-    bag.Unequipped:Connect(function()
-        bagGui.Enabled = false
-    end)
-
-    notify('Bag Created', 'Equipped a Bag for 10 items')
-end)
-
--- Автоспавн
-coroutine.wrap(function()
-    while true do
-        wait(60) -- Каждые 60 секунд
-        if LocalPlayer.Character then
-            local pos = LocalPlayer.Character.HumanoidRootPart.Position
-            if math.random() < 0.2 then
-                game:GetService("StarterGui"):SendNotification({Title = "Pyramid", Text = "A Pyramid spawned nearby!"})
-                local pyramid = Instance.new("Model")
-                pyramid.Name = "Pyramid"
-                pyramid.Parent = Workspace
-
-                local base = Instance.new("Part")
-                base.Size = Vector3.new(50, 1, 50)
-                base.Position = pos + Vector3.new(math.random(-100, 100), 0, math.random(-100, 100))
-                base.BrickColor = BrickColor.new("Sand yellow")
-                base.Anchored = true
-                base.Parent = pyramid
-
-                for x = -1, 1, 2 do
-                    for z = -1, 1, 2 do
-                        for y = 0, 1 do
-                            local room = Instance.new("Part")
-                            room.Size = Vector3.new(10, 5, 10)
-                            room.Position = base.Position + Vector3.new(x * 15, y * 6 + 3, z * 15)
-                            room.BrickColor = BrickColor.new("Sand yellow")
-                            room.Anchored = true
-                            room.Parent = pyramid
-                        end
-                    end
-                end
-            end
-            if math.random() < 0.5 then
-                createMob("Wanderer", 200, 16, pos + Vector3.new(math.random(-50, 50), 0, math.random(-50, 50)), BrickColor.new("Brown"), function(m, h)
-                    while h.Health > 0 do
-                        wait(0.1)
-                        local closestPlayer = Players:GetPlayers()[1]
-                        if closestPlayer.Character then
-                            h:MoveTo(closestPlayer.Character.HumanoidRootPart.Position)
-                        end
-                    end
-                end)
-            end
-            if math.random() < 0.3 then
-                local house = Instance.new("Model")
-                house.Name = "House"
-                house.Parent = Workspace
-
-                local base = Instance.new("Part")
-                base.Size = Vector3.new(8, 1, 8)
-                base.Position = pos + Vector3.new(math.random(-50, 50), 0, math.random(-50, 50))
-                base.BrickColor = BrickColor.new("Brown")
-                base.Anchored = true
-                base.Parent = house
-            end
-            if math.random() < 0.1 then
-                createMob("Dog", 1000, 20, pos + Vector3.new(math.random(-30, 30), 0, math.random(-30, 30)), BrickColor.new("Brown"), nil)
-            end
-        end
-    end
-end)()
-
--- Тест монет
 addcmd('addcoins', {}, function(args, speaker)
     local amount = tonumber(args[1]) or 100
     updateCoins(amount)

@@ -1,5 +1,5 @@
 -- Helicopter Script for Delta Executor (Mobile)
--- Version: 1.9 | Date: 16.04.2025
+-- Version: 2.0 | Date: 16.04.2025
 -- Description: Automatically spawns a detailed manually-created helicopter with mobile buttons and speed display
 
 -- Проверка окружения Roblox
@@ -139,6 +139,7 @@ local tailRotorBlade = Instance.new("Part")
 tailRotorBlade.Size = Vector3.new(0.2 * scale, 2 * scale, 0.2 * scale)
 tailRotorBlade.Position = spawnPos + Vector3.new(-12 * scale, 1 * scale, 0.5 * scale)
 tailRotorBlade.BrickColor = BrickColor.new("Black")
+tailRotorBlade.BrickColor = BrickColor.new("Black")
 tailRotorBlade.Anchored = true
 tailRotorBlade.CanCollide = true
 tailRotorBlade.Parent = helicopter
@@ -176,16 +177,25 @@ skidSupportRight.Anchored = true
 skidSupportRight.CanCollide = true
 skidSupportRight.Parent = helicopter
 
--- Сиденье (поднимаем на 1 * scale вверх)
+-- Сиденье
 local seat = Instance.new("VehicleSeat")
 seat.Size = Vector3.new(2 * scale, 1 * scale, 2 * scale)
-seat.Position = spawnPos + Vector3.new(3 * scale, (0.5 + 1) * scale, 0) -- Поднимаем на 1 * scale
+seat.Position = spawnPos + Vector3.new(3 * scale, (0.5 + 1) * scale, 0)
 seat.BrickColor = BrickColor.new("Black")
 seat.Transparency = 0
 seat.Anchored = true
 seat.CanCollide = true
 seat.MaxSpeed = 0
 seat.Parent = helicopter
+
+-- Невидимая платформа для упрощения посадки
+local seatPlatform = Instance.new("Part")
+seatPlatform.Size = Vector3.new(2 * scale, 0.2 * scale, 2 * scale)
+seatPlatform.Position = spawnPos + Vector3.new(3 * scale, (0.5 + 1.1) * scale, 0) -- Чуть выше сиденья
+seatPlatform.Transparency = 1
+seatPlatform.Anchored = true
+seatPlatform.CanCollide = true
+seatPlatform.Parent = helicopter
 
 -- Корневая часть
 local rootPart = Instance.new("Part")
@@ -305,8 +315,8 @@ local turn = 0
 local maxSpeed = 27.78 -- 100 км/ч в единицах Roblox (1 stud/sec ≈ 3.6 km/h)
 
 -- Когда игрок садится
-seat.Sit:Connect(function(humanoid)
-    if humanoid.Parent == LocalPlayer.Character then
+seat:GetPropertyChangedSignal("Occupant"):Connect(function()
+    if seat.Occupant and seat.Occupant.Parent == LocalPlayer.Character then
         -- Снимаем якорь с модели
         for _, part in pairs(helicopter:GetDescendants()) do
             if part:IsA("BasePart") then
@@ -319,7 +329,8 @@ seat.Sit:Connect(function(humanoid)
     end
 end)
 
-seat.AncestryChanged:Connect(function()
+-- Когда игрок встаёт
+seat:GetPropertyChangedSignal("Occupant"):Connect(function()
     if not seat.Occupant then
         isFlying = false
         controlGui.Enabled = false

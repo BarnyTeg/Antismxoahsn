@@ -1,5 +1,5 @@
 -- Helicopter Script for Delta Executor (Mobile)
--- Version: 1.4 | Date: 16.04.2025
+-- Version: 1.5 | Date: 16.04.2025
 -- Description: Automatically spawns a detailed helicopter with mobile buttons and speed display
 
 -- Проверка окружения Roblox
@@ -36,7 +36,7 @@ local spawnPos = LocalPlayer.Character.HumanoidRootPart.Position + Vector3.new(1
 -- Загружаем модель вертолёта из Roblox Library
 local helicopterModel
 local success, errorMsg = pcall(function()
-    helicopterModel = InsertService:LoadAsset(184644819) -- Helicopter (Detailed)
+    helicopterModel = InsertService:LoadAsset(149144128) -- Helicopter (by Roblox)
 end)
 
 if not success or not helicopterModel then

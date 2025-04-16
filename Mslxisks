@@ -1,5 +1,5 @@
 -- Helicopter Script for Delta Executor (Mobile)
--- Version: 1.8 | Date: 16.04.2025
+-- Version: 1.9 | Date: 16.04.2025
 -- Description: Automatically spawns a detailed manually-created helicopter with mobile buttons and speed display
 
 -- Проверка окружения Roblox
@@ -79,7 +79,7 @@ cabin.Position = spawnPos + Vector3.new(3 * scale, 2 * scale, 0)
 cabin.BrickColor = BrickColor.new("Light blue")
 cabin.Transparency = 0.5
 cabin.Anchored = true
-cabin.CanCollide = false -- Делаем неосязаемой
+cabin.CanCollide = false
 cabin.Parent = helicopter
 
 -- Хвост
@@ -176,10 +176,10 @@ skidSupportRight.Anchored = true
 skidSupportRight.CanCollide = true
 skidSupportRight.Parent = helicopter
 
--- Сиденье
+-- Сиденье (поднимаем на 1 * scale вверх)
 local seat = Instance.new("VehicleSeat")
 seat.Size = Vector3.new(2 * scale, 1 * scale, 2 * scale)
-seat.Position = spawnPos + Vector3.new(3 * scale, 0.5 * scale, 0)
+seat.Position = spawnPos + Vector3.new(3 * scale, (0.5 + 1) * scale, 0) -- Поднимаем на 1 * scale
 seat.BrickColor = BrickColor.new("Black")
 seat.Transparency = 0
 seat.Anchored = true

@@ -1,71 +1,70 @@
--- Простой вертолёт под Arceus X (мобильный инжектор)
-local player = game.Players.LocalPlayer
-local char = player.Character or player.CharacterAdded:Wait()
-local root = char:WaitForChild("HumanoidRootPart")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
 
 -- Создание модели вертолёта
-local heli = Instance.new("Model", workspace)
-heli.Name = "MobileHelicopter"
+local Helicopter = Instance.new("Model", workspace)
+Helicopter.Name = "MobileHelicopter"
 
--- Тело вертолёта
-local body = Instance.new("Part", heli)
+-- Основной корпус
+local body = Instance.new("Part")
 body.Size = Vector3.new(6, 1, 10)
-body.Position = root.Position + Vector3.new(0, 5, 0)
+body.Position = Vector3.new(0, 10, 0)
 body.Anchored = false
-body.BrickColor = BrickColor.new("Dark stone grey")
 body.Name = "Body"
+body.BrickColor = BrickColor.new("Dark stone grey")
+body.Parent = Helicopter
 
--- Сиденье
-local seat = Instance.new("VehicleSeat", heli)
+-- Пропеллер
+local propeller = Instance.new("Part")
+propeller.Size = Vector3.new(1, 0.2, 12)
+propeller.Position = body.Position + Vector3.new(0, 1.5, 0)
+propeller.Anchored = false
+propeller.BrickColor = BrickColor.new("Really black")
+propeller.Name = "Propeller"
+propeller.Parent = Helicopter
+
+-- Сиденье (рабочее)
+local seat = Instance.new("VehicleSeat")
 seat.Size = Vector3.new(2, 1, 2)
 seat.Position = body.Position + Vector3.new(0, 1, 0)
-seat.BrickColor = BrickColor.new("Bright blue")
-seat.Name = "HeliSeat"
 seat.Anchored = false
+seat.Name = "PilotSeat"
+seat.CanCollide = true
+seat.MaxSpeed = 50
+seat.Torque = Vector3.new(100000, 100000, 100000)
+seat.TurnSpeed = 2
+seat.BrickColor = BrickColor.new("Bright blue")
+seat.Parent = Helicopter
 
--- Привязка сиденья к телу
-local weld = Instance.new("WeldConstraint")
-weld.Part0 = seat
-weld.Part1 = body
-weld.Parent = seat
+-- Привариваем всё к корпусу
+local function weld(part1, part2)
+	local weld = Instance.new("WeldConstraint")
+	weld.Part0 = part1
+	weld.Part1 = part2
+	weld.Parent = part1
+end
 
--- Винт
-local rotor = Instance.new("Part", heli)
-rotor.Size = Vector3.new(1, 0.2, 8)
-rotor.Position = body.Position + Vector3.new(0, 1.2, 0)
-rotor.BrickColor = BrickColor.new("Black")
-rotor.Anchored = false
-rotor.Massless = true
+weld(body, seat)
+weld(body, propeller)
 
-local motor = Instance.new("Motor6D", body)
-motor.Part0 = body
-motor.Part1 = rotor
-motor.C0 = CFrame.new(0, 0.6, 0)
+-- PrimaryPart и позиционирование
+Helicopter.PrimaryPart = body
+Helicopter:SetPrimaryPartCFrame(CFrame.new(0, 10, 0))
 
--- Движение
-local gyro = Instance.new("BodyGyro", body)
-gyro.MaxTorque = Vector3.new(400000, 400000, 400000)
-gyro.P = 3000
+-- Кручение пропеллера
+RunService.RenderStepped:Connect(function()
+	propeller.CFrame = propeller.CFrame * CFrame.Angles(0, math.rad(30), 0)
+end)
 
-local velocity = Instance.new("BodyVelocity", body)
-velocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)
-velocity.Velocity = Vector3.zero
-
--- Управление
-task.spawn(function()
-	while seat.Occupant == nil do task.wait() end
-
-	while seat.Occupant do
-		local throttle = seat.Throttle
-		local steer = seat.Steer
-		local cam = workspace.CurrentCamera
-		local dir = (cam.CFrame.RightVector * steer + cam.CFrame.LookVector * -throttle).Unit
-
-		velocity.Velocity = dir * 60 + Vector3.new(0, throttle * 40, 0)
-		gyro.CFrame = CFrame.new(body.Position, body.Position + dir)
-		rotor.CFrame = rotor.CFrame * CFrame.Angles(0, math.rad(50), 0)
-		task.wait()
+-- Проверка посадки
+seat:GetPropertyChangedSignal("Occupant"):Connect(function()
+	local occupant = seat.Occupant
+	if occupant then
+		local plr = Players:GetPlayerFromCharacter(occupant.Parent)
+		if plr then
+			warn(plr.Name .. " сел в вертолёт")
+		end
 	end
-
-	velocity.Velocity = Vector3.zero
 end)

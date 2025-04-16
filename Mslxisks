@@ -1,5 +1,5 @@
 -- Helicopter Script for Delta Executor (Mobile)
--- Version: 1.2 | Date: 16.04.2025
+-- Version: 1.3 | Date: 16.04.2025
 -- Description: Automatically spawns a controllable helicopter with mobile buttons and speed display
 
 -- Проверка окружения Roblox
@@ -125,21 +125,20 @@ seatWeld.Parent = seat
 
 -- Добавляем физику
 local bodyForce = Instance.new("BodyVelocity")
-bodyForce.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+bodyForce.MaxForce = Vector3.new(4000, 4000, 4000) -- Уменьшаем силу для стабильности
 bodyForce.Velocity = Vector3.new(0, 0, 0)
 bodyForce.Parent = rootPart
 
 local bodyGyro = Instance.new("BodyGyro")
-bodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+bodyGyro.MaxTorque = Vector3.new(4000, 4000, 4000) -- Уменьшаем крутящий момент
 bodyGyro.CFrame = CFrame.new(spawnPos)
+bodyGyro.D = 500 -- Добавляем демпфирование для плавности
 bodyGyro.Parent = rootPart
 
--- Звук двигателя
-local engineSound = Instance.new("Sound")
-engineSound.SoundId = "rbxassetid://9112799177" -- Звук вертолёта
-engineSound.Volume = 1
-engineSound.Looped = true
-engineSound.Parent = body
+-- Добавляем силу тяжести, чтобы вертолёт не улетал вверх
+local gravityForce = Instance.new("BodyForce")
+gravityForce.Force = Vector3.new(0, -196.2 * body:GetMass(), 0) -- Компенсируем гравитацию Roblox
+gravityForce.Parent = rootPart
 
 -- Помещаем вертолёт в Workspace
 helicopter.Parent = Workspace
@@ -248,11 +247,13 @@ local forwardSpeed = 0
 local turn = 0
 local maxSpeed = 27.78 -- 100 км/ч в единицах Roblox (1 stud/sec ≈ 3.6 km/h)
 
+-- Изначально вертолёт остаётся на месте
+bodyForce.Velocity = Vector3.new(0, 0, 0)
+
 seat.Sit:Connect(function(humanoid)
     if humanoid.Parent == LocalPlayer.Character then
         isFlying = true
         controlGui.Enabled = true
-        engineSound:Play()
         notify("Helicopter", "Use the buttons to control the helicopter")
     end
 end)
@@ -261,7 +262,6 @@ seat.AncestryChanged:Connect(function()
     if not seat.Occupant then
         isFlying = false
         controlGui.Enabled = false
-        engineSound:Stop()
         forwardSpeed = 0
         turn = 0
         height = 0
@@ -270,31 +270,31 @@ end)
 
 -- Логика кнопок
 upButton.MouseButton1Down:Connect(function()
-    height = math.min(maxHeight, height + 1)
+    height = math.min(maxHeight, height + 0.5) -- Уменьшаем шаг для плавности
 end)
 
 downButton.MouseButton1Down:Connect(function()
-    height = math.max(minHeight, height - 1)
+    height = math.max(minHeight, height - 0.5)
 end)
 
 forwardButton.MouseButton1Down:Connect(function()
-    forwardSpeed = math.min(maxSpeed, forwardSpeed + 1)
+    forwardSpeed = math.min(maxSpeed, forwardSpeed + 0.5)
 end)
 
 forwardButton.MouseButton1Up:Connect(function()
-    forwardSpeed = math.max(0, forwardSpeed - 1)
+    forwardSpeed = math.max(0, forwardSpeed - 0.5)
 end)
 
 backwardButton.MouseButton1Down:Connect(function()
-    forwardSpeed = math.max(0, forwardSpeed - 1)
+    forwardSpeed = math.max(0, forwardSpeed - 0.5)
 end)
 
 backwardButton.MouseButton1Up:Connect(function()
-    forwardSpeed = math.min(maxSpeed, forwardSpeed + 1)
+    forwardSpeed = math.min(maxSpeed, forwardSpeed + 0.5)
 end)
 
 leftButton.MouseButton1Down:Connect(function()
-    turn = -1
+    turn = -0.5 -- Уменьшаем скорость поворота
 end)
 
 leftButton.MouseButton1Up:Connect(function()
@@ -302,7 +302,7 @@ leftButton.MouseButton1Up:Connect(function()
 end)
 
 rightButton.MouseButton1Down:Connect(function()
-    turn = 1
+    turn = 0.5
 end)
 
 rightButton.MouseButton1Up:Connect(function()
@@ -336,6 +336,7 @@ spawn(function()
             local speedKmh = math.floor(forwardSpeed * 3.6)
             speedLabel.Text = "Speed: " .. speedKmh .. " km/h"
         else
+            -- Если не летаем, сбрасываем скорость, но оставляем вертолёт на месте
             bodyForce.Velocity = Vector3.new(0, 0, 0)
         end
     end

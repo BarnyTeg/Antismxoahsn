@@ -1,5 +1,5 @@
 -- Helicopter Script for Delta Executor (Mobile)
--- Version: 1.6 | Date: 16.04.2025
+-- Version: 1.7 | Date: 16.04.2025
 -- Description: Automatically spawns a detailed manually-created helicopter with mobile buttons and speed display
 
 -- Проверка окружения Roblox
@@ -30,15 +30,18 @@ while not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("Hum
 end
 
 -- Позиция для спавна
-local spawnPos = LocalPlayer.Character.HumanoidRootPart.Position + Vector3.new(10, 5, 0)
+local spawnPos = LocalPlayer.Character.HumanoidRootPart.Position + Vector3.new(20, 5, 0) -- Сдвигаем чуть дальше из-за увеличенного размера
 
 -- Создаём модель вертолёта
 local helicopter = Instance.new("Model")
 helicopter.Name = "Helicopter"
 
+-- Масштабный коэффициент (увеличиваем в 2 раза)
+local scale = 2
+
 -- Корпус (обтекаемой формы)
 local body = Instance.new("Part")
-body.Size = Vector3.new(10, 2, 5)
+body.Size = Vector3.new(10 * scale, 2 * scale, 5 * scale)
 body.Position = spawnPos
 body.BrickColor = BrickColor.new("Dark gray")
 body.Anchored = true
@@ -47,8 +50,8 @@ body.Parent = helicopter
 
 -- Скруглённые края корпуса (имитация обтекаемости)
 local bodyFront = Instance.new("Part")
-bodyFront.Size = Vector3.new(2, 2, 5)
-bodyFront.Position = spawnPos + Vector3.new(6, 0, 0)
+bodyFront.Size = Vector3.new(2 * scale, 2 * scale, 5 * scale)
+bodyFront.Position = spawnPos + Vector3.new(6 * scale, 0, 0)
 bodyFront.BrickColor = BrickColor.new("Dark gray")
 bodyFront.Anchored = true
 bodyFront.CanCollide = true
@@ -58,8 +61,8 @@ frontMesh.Parent = bodyFront
 bodyFront.Parent = helicopter
 
 local bodyRear = Instance.new("Part")
-bodyRear.Size = Vector3.new(2, 2, 5)
-bodyRear.Position = spawnPos + Vector3.new(-6, 0, 0)
+bodyRear.Size = Vector3.new(2 * scale, 2 * scale, 5 * scale)
+bodyRear.Position = spawnPos + Vector3.new(-6 * scale, 0, 0)
 bodyRear.BrickColor = BrickColor.new("Dark gray")
 bodyRear.Anchored = true
 bodyRear.CanCollide = true
@@ -71,8 +74,8 @@ bodyRear.Parent = helicopter
 
 -- Кабина (прозрачная)
 local cabin = Instance.new("Part")
-cabin.Size = Vector3.new(4, 2, 5)
-cabin.Position = spawnPos + Vector3.new(3, 2, 0)
+cabin.Size = Vector3.new(4 * scale, 2 * scale, 5 * scale)
+cabin.Position = spawnPos + Vector3.new(3 * scale, 2 * scale, 0)
 cabin.BrickColor = BrickColor.new("Light blue")
 cabin.Transparency = 0.5
 cabin.Anchored = true
@@ -81,8 +84,8 @@ cabin.Parent = helicopter
 
 -- Хвост
 local tail = Instance.new("Part")
-tail.Size = Vector3.new(8, 0.5, 0.5)
-tail.Position = spawnPos + Vector3.new(-9, 1, 0)
+tail.Size = Vector3.new(8 * scale, 0.5 * scale, 0.5 * scale)
+tail.Position = spawnPos + Vector3.new(-9 * scale, 1 * scale, 0)
 tail.BrickColor = BrickColor.new("Dark gray")
 tail.Anchored = true
 tail.CanCollide = true
@@ -90,33 +93,33 @@ tail.Parent = helicopter
 
 -- Стабилизатор на хвосте
 local tailFin = Instance.new("Part")
-tailFin.Size = Vector3.new(0.5, 2, 1)
-tailFin.Position = spawnPos + Vector3.new(-12, 2, 0)
+tailFin.Size = Vector3.new(0.5 * scale, 2 * scale, 1 * scale)
+tailFin.Position = spawnPos + Vector3.new(-12 * scale, 2 * scale, 0)
 tailFin.BrickColor = BrickColor.new("Dark gray")
 tailFin.Anchored = true
 tailFin.CanCollide = true
 tailFin.Parent = helicopter
 
--- Главный винт
+-- Главный винт (поднимаем выше)
 local mainRotorBase = Instance.new("Part")
-mainRotorBase.Size = Vector3.new(1, 0.5, 1)
-mainRotorBase.Position = spawnPos + Vector3.new(0, 3, 0)
+mainRotorBase.Size = Vector3.new(1 * scale, 0.5 * scale, 1 * scale)
+mainRotorBase.Position = spawnPos + Vector3.new(0, 4 * scale, 0) -- Поднимаем выше
 mainRotorBase.BrickColor = BrickColor.new("Black")
 mainRotorBase.Anchored = true
 mainRotorBase.CanCollide = true
 mainRotorBase.Parent = helicopter
 
 local mainRotorBlade1 = Instance.new("Part")
-mainRotorBlade1.Size = Vector3.new(12, 0.2, 1)
-mainRotorBlade1.Position = spawnPos + Vector3.new(0, 3, 0)
+mainRotorBlade1.Size = Vector3.new(12 * scale, 0.2 * scale, 1 * scale)
+mainRotorBlade1.Position = spawnPos + Vector3.new(0, 4 * scale, 0)
 mainRotorBlade1.BrickColor = BrickColor.new("Black")
 mainRotorBlade1.Anchored = true
 mainRotorBlade1.CanCollide = true
 mainRotorBlade1.Parent = helicopter
 
 local mainRotorBlade2 = Instance.new("Part")
-mainRotorBlade2.Size = Vector3.new(12, 0.2, 1)
-mainRotorBlade2.Position = spawnPos + Vector3.new(0, 3, 0)
+mainRotorBlade2.Size = Vector3.new(12 * scale, 0.2 * scale, 1 * scale)
+mainRotorBlade2.Position = spawnPos + Vector3.new(0, 4 * scale, 0)
 mainRotorBlade2.BrickColor = BrickColor.new("Black")
 mainRotorBlade2.Anchored = true
 mainRotorBlade2.CanCollide = true
@@ -125,16 +128,16 @@ mainRotorBlade2.Parent = helicopter
 
 -- Хвостовой винт
 local tailRotorBase = Instance.new("Part")
-tailRotorBase.Size = Vector3.new(0.5, 0.5, 0.5)
-tailRotorBase.Position = spawnPos + Vector3.new(-12, 1, 0.5)
+tailRotorBase.Size = Vector3.new(0.5 * scale, 0.5 * scale, 0.5 * scale)
+tailRotorBase.Position = spawnPos + Vector3.new(-12 * scale, 1 * scale, 0.5 * scale)
 tailRotorBase.BrickColor = BrickColor.new("Black")
 tailRotorBase.Anchored = true
 tailRotorBase.CanCollide = true
 tailRotorBase.Parent = helicopter
 
 local tailRotorBlade = Instance.new("Part")
-tailRotorBlade.Size = Vector3.new(0.2, 2, 0.2)
-tailRotorBlade.Position = spawnPos + Vector3.new(-12, 1, 0.5)
+tailRotorBlade.Size = Vector3.new(0.2 * scale, 2 * scale, 0.2 * scale)
+tailRotorBlade.Position = spawnPos + Vector3.new(-12 * scale, 1 * scale, 0.5 * scale)
 tailRotorBlade.BrickColor = BrickColor.new("Black")
 tailRotorBlade.Anchored = true
 tailRotorBlade.CanCollide = true
@@ -142,50 +145,52 @@ tailRotorBlade.Parent = helicopter
 
 -- Шасси (полозья)
 local skidLeft = Instance.new("Part")
-skidLeft.Size = Vector3.new(8, 0.5, 0.5)
-skidLeft.Position = spawnPos + Vector3.new(0, -1.5, -2.5)
+skidLeft.Size = Vector3.new(8 * scale, 0.5 * scale, 0.5 * scale)
+skidLeft.Position = spawnPos + Vector3.new(0, -1.5 * scale, -2.5 * scale)
 skidLeft.BrickColor = BrickColor.new("Black")
 skidLeft.Anchored = true
 skidLeft.CanCollide = true
 skidLeft.Parent = helicopter
 
 local skidRight = Instance.new("Part")
-skidRight.Size = Vector3.new(8, 0.5, 0.5)
-skidRight.Position = spawnPos + Vector3.new(0, -1.5, 2.5)
+skidRight.Size = Vector3.new(8 * scale, 0.5 * scale, 0.5 * scale)
+skidRight.Position = spawnPos + Vector3.new(0, -1.5 * scale, 2.5 * scale)
 skidRight.BrickColor = BrickColor.new("Black")
 skidRight.Anchored = true
 skidRight.CanCollide = true
 skidRight.Parent = helicopter
 
 local skidSupportLeft = Instance.new("Part")
-skidSupportLeft.Size = Vector3.new(0.5, 1.5, 0.5)
-skidSupportLeft.Position = spawnPos + Vector3.new(2, -0.5, -2.5)
+skidSupportLeft.Size = Vector3.new(0.5 * scale, 1.5 * scale, 0.5 * scale)
+skidSupportLeft.Position = spawnPos + Vector3.new(2 * scale, -0.5 * scale, -2.5 * scale)
 skidSupportLeft.BrickColor = BrickColor.new("Black")
 skidSupportLeft.Anchored = true
 skidSupportLeft.CanCollide = true
 skidSupportLeft.Parent = helicopter
 
 local skidSupportRight = Instance.new("Part")
-skidSupportRight.Size = Vector3.new(0.5, 1.5, 0.5)
-skidSupportRight.Position = spawnPos + Vector3.new(2, -0.5, 2.5)
+skidSupportRight.Size = Vector3.new(0.5 * scale, 1.5 * scale, 0.5 * scale)
+skidSupportRight.Position = spawnPos + Vector3.new(2 * scale, -0.5 * scale, 2.5 * scale)
 skidSupportRight.BrickColor = BrickColor.new("Black")
 skidSupportRight.Anchored = true
 skidSupportRight.CanCollide = true
 skidSupportRight.Parent = helicopter
 
--- Сиденье
+-- Сиденье (делаем видимым и удобным для посадки)
 local seat = Instance.new("VehicleSeat")
-seat.Size = Vector3.new(2, 1, 2)
-seat.Position = spawnPos + Vector3.new(3, 1, 0)
+seat.Size = Vector3.new(2 * scale, 1 * scale, 2 * scale) -- Увеличиваем размер
+seat.Position = spawnPos + Vector3.new(3 * scale, 0.5 * scale, 0) -- Понижаем для удобной посадки
 seat.BrickColor = BrickColor.new("Black")
+seat.Transparency = 0 -- Делаем видимым
 seat.Anchored = true
 seat.CanCollide = true
+seat.MaxSpeed = 0 -- Отключаем встроенное управление
 seat.Parent = helicopter
 
 -- Корневая часть
 local rootPart = Instance.new("Part")
 rootPart.Name = "HumanoidRootPart"
-rootPart.Size = Vector3.new(2, 2, 2)
+rootPart.Size = Vector3.new(2 * scale, 2 * scale, 2 * scale)
 rootPart.Position = spawnPos
 rootPart.Transparency = 1
 rootPart.Anchored = true

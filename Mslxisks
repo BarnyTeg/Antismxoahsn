@@ -1,5 +1,5 @@
 -- Helicopter Script for Delta Executor (Mobile)
--- Version: 1.7 | Date: 16.04.2025
+-- Version: 1.8 | Date: 16.04.2025
 -- Description: Automatically spawns a detailed manually-created helicopter with mobile buttons and speed display
 
 -- Проверка окружения Roblox
@@ -30,13 +30,13 @@ while not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("Hum
 end
 
 -- Позиция для спавна
-local spawnPos = LocalPlayer.Character.HumanoidRootPart.Position + Vector3.new(20, 5, 0) -- Сдвигаем чуть дальше из-за увеличенного размера
+local spawnPos = LocalPlayer.Character.HumanoidRootPart.Position + Vector3.new(20, 5, 0)
 
 -- Создаём модель вертолёта
 local helicopter = Instance.new("Model")
 helicopter.Name = "Helicopter"
 
--- Масштабный коэффициент (увеличиваем в 2 раза)
+-- Масштабный коэффициент
 local scale = 2
 
 -- Корпус (обтекаемой формы)
@@ -72,14 +72,14 @@ rearMesh.Parent = bodyRear
 rearMesh.Scale = Vector3.new(1, 1, -1) -- Переворачиваем клин
 bodyRear.Parent = helicopter
 
--- Кабина (прозрачная)
+-- Кабина (прозрачная и неосязаемая)
 local cabin = Instance.new("Part")
 cabin.Size = Vector3.new(4 * scale, 2 * scale, 5 * scale)
 cabin.Position = spawnPos + Vector3.new(3 * scale, 2 * scale, 0)
 cabin.BrickColor = BrickColor.new("Light blue")
 cabin.Transparency = 0.5
 cabin.Anchored = true
-cabin.CanCollide = true
+cabin.CanCollide = false -- Делаем неосязаемой
 cabin.Parent = helicopter
 
 -- Хвост
@@ -100,10 +100,10 @@ tailFin.Anchored = true
 tailFin.CanCollide = true
 tailFin.Parent = helicopter
 
--- Главный винт (поднимаем выше)
+-- Главный винт
 local mainRotorBase = Instance.new("Part")
 mainRotorBase.Size = Vector3.new(1 * scale, 0.5 * scale, 1 * scale)
-mainRotorBase.Position = spawnPos + Vector3.new(0, 4 * scale, 0) -- Поднимаем выше
+mainRotorBase.Position = spawnPos + Vector3.new(0, 4 * scale, 0)
 mainRotorBase.BrickColor = BrickColor.new("Black")
 mainRotorBase.Anchored = true
 mainRotorBase.CanCollide = true
@@ -176,15 +176,15 @@ skidSupportRight.Anchored = true
 skidSupportRight.CanCollide = true
 skidSupportRight.Parent = helicopter
 
--- Сиденье (делаем видимым и удобным для посадки)
+-- Сиденье
 local seat = Instance.new("VehicleSeat")
-seat.Size = Vector3.new(2 * scale, 1 * scale, 2 * scale) -- Увеличиваем размер
-seat.Position = spawnPos + Vector3.new(3 * scale, 0.5 * scale, 0) -- Понижаем для удобной посадки
+seat.Size = Vector3.new(2 * scale, 1 * scale, 2 * scale)
+seat.Position = spawnPos + Vector3.new(3 * scale, 0.5 * scale, 0)
 seat.BrickColor = BrickColor.new("Black")
-seat.Transparency = 0 -- Делаем видимым
+seat.Transparency = 0
 seat.Anchored = true
 seat.CanCollide = true
-seat.MaxSpeed = 0 -- Отключаем встроенное управление
+seat.MaxSpeed = 0
 seat.Parent = helicopter
 
 -- Корневая часть

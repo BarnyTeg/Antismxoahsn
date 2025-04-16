@@ -1,6 +1,6 @@
--- Airplane Script for Delta Executor (Mobile)
--- Version: 1.1 | Date: 16.04.2025
--- Description: Spawns a controllable airplane with mobile buttons and speed display
+-- Helicopter Script for Delta Executor (Mobile)
+-- Version: 1.2 | Date: 16.04.2025
+-- Description: Automatically spawns a controllable helicopter with mobile buttons and speed display
 
 -- Проверка окружения Roblox
 if not game then
@@ -13,10 +13,6 @@ local Workspace = game:GetService("Workspace")
 local StarterGui = game:GetService("StarterGui")
 local LocalPlayer = Players.LocalPlayer
 
--- Создаём глобальную таблицу
-local Airplane = {}
-_G.Airplane = Airplane
-
 -- Уведомления
 local function notify(title, text, duration)
     pcall(function()
@@ -28,318 +24,322 @@ local function notify(title, text, duration)
     end)
 end
 
--- Создание самолёта
-Airplane.spawn = function()
-    -- Проверка, что персонаж игрока загружен
-    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        notify("Error", "Player character not found. Please wait until your character loads.")
-        return
-    end
-
-    -- Позиция для спавна
-    local spawnPos = LocalPlayer.Character.HumanoidRootPart.Position + Vector3.new(10, 5, 0)
-
-    -- Создаём модель самолёта
-    local airplane = Instance.new("Model")
-    airplane.Name = "Airplane"
-
-    -- Корпус
-    local body = Instance.new("Part")
-    body.Size = Vector3.new(12, 2, 4)
-    body.Position = spawnPos
-    body.BrickColor = BrickColor.new("Silver")
-    body.Anchored = false
-    body.CanCollide = true
-    body.Parent = airplane
-
-    -- Кабина
-    local cabin = Instance.new("Part")
-    cabin.Size = Vector3.new(4, 2, 4)
-    cabin.Position = spawnPos + Vector3.new(4, 2, 0)
-    cabin.BrickColor = BrickColor.new("Light blue")
-    cabin.Transparency = 0.5
-    cabin.Parent = airplane
-
-    -- Крылья
-    local leftWing = Instance.new("Part")
-    leftWing.Size = Vector3.new(1, 0.5, 8)
-    leftWing.Position = spawnPos + Vector3.new(0, 0, -6)
-    leftWing.BrickColor = BrickColor.new("Silver")
-    leftWing.Parent = airplane
-
-    local rightWing = Instance.new("Part")
-    rightWing.Size = Vector3.new(1, 0.5, 8)
-    rightWing.Position = spawnPos + Vector3.new(0, 0, 6)
-    rightWing.BrickColor = BrickColor.new("Silver")
-    rightWing.Parent = airplane
-
-    -- Хвост
-    local tail = Instance.new("Part")
-    tail.Size = Vector3.new(3, 2, 1)
-    tail.Position = spawnPos + Vector3.new(-6, 2, 0)
-    tail.BrickColor = BrickColor.new("Silver")
-    tail.Parent = airplane
-
-    -- Сиденье
-    local seat = Instance.new("VehicleSeat")
-    seat.Size = Vector3.new(2, 1, 2)
-    seat.Position = spawnPos + Vector3.new(4, 1, 0)
-    seat.BrickColor = BrickColor.new("Black")
-    seat.Parent = airplane
-    seat.MaxSpeed = 0 -- Отключаем стандартное управление VehicleSeat
-
-    -- Корневая часть
-    local rootPart = Instance.new("Part")
-    rootPart.Name = "HumanoidRootPart"
-    rootPart.Size = Vector3.new(2, 2, 2)
-    rootPart.Position = spawnPos
-    rootPart.Transparency = 1
-    rootPart.CanCollide = false
-    rootPart.Parent = airplane
-    airplane.PrimaryPart = rootPart
-
-    -- Соединяем части
-    local bodyWeld = Instance.new("WeldConstraint")
-    bodyWeld.Part0 = rootPart
-    bodyWeld.Part1 = body
-    bodyWeld.Parent = body
-
-    local cabinWeld = Instance.new("WeldConstraint")
-    cabinWeld.Part0 = rootPart
-    cabinWeld.Part1 = cabin
-    cabinWeld.Parent = cabin
-
-    local leftWingWeld = Instance.new("WeldConstraint")
-    leftWingWeld.Part0 = rootPart
-    leftWingWeld.Part1 = leftWing
-    leftWingWeld.Parent = leftWing
-
-    local rightWingWeld = Instance.new("WeldConstraint")
-    rightWingWeld.Part0 = rootPart
-    rightWingWeld.Part1 = rightWing
-    rightWingWeld.Parent = rightWing
-
-    local tailWeld = Instance.new("WeldConstraint")
-    tailWeld.Part0 = rootPart
-    tailWeld.Part1 = tail
-    tailWeld.Parent = tail
-
-    local seatWeld = Instance.new("WeldConstraint")
-    seatWeld.Part0 = rootPart
-    seatWeld.Part1 = seat
-    seatWeld.Parent = seat
-
-    -- Добавляем физику
-    local bodyForce = Instance.new("BodyVelocity")
-    bodyForce.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-    bodyForce.Velocity = Vector3.new(0, 0, 0)
-    bodyForce.Parent = rootPart
-
-    local bodyGyro = Instance.new("BodyGyro")
-    bodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-    bodyGyro.CFrame = CFrame.new(spawnPos)
-    bodyGyro.Parent = rootPart
-
-    -- Звук двигателя
-    local engineSound = Instance.new("Sound")
-    engineSound.SoundId = "rbxassetid://9112799177" -- Звук самолёта
-    engineSound.Volume = 1
-    engineSound.Looped = true
-    engineSound.Parent = body
-
-    -- Помещаем самолёт в Workspace
-    airplane.Parent = Workspace
-
-    -- GUI для управления
-    local controlGui = Instance.new("ScreenGui")
-    controlGui.Name = "AirplaneControls"
-    controlGui.Enabled = false
-    controlGui.Parent = LocalPlayer.PlayerGui
-
-    -- Кнопка Up
-    local upButton = Instance.new("TextButton")
-    upButton.Size = UDim2.new(0, 60, 0, 60)
-    upButton.Position = UDim2.new(0, 10, 0.5, -70)
-    upButton.Text = "Up"
-    upButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
-    upButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    upButton.TextScaled = true
-    upButton.Parent = controlGui
-
-    -- Кнопка Down
-    local downButton = Instance.new("TextButton")
-    downButton.Size = UDim2.new(0, 60, 0, 60)
-    downButton.Position = UDim2.new(0, 10, 0.5, 0)
-    downButton.Text = "Down"
-    downButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-    downButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    downButton.TextScaled = true
-    downButton.Parent = controlGui
-
-    -- Кнопка Forward
-    local forwardButton = Instance.new("TextButton")
-    forwardButton.Size = UDim2.new(0, 60, 0, 60)
-    forwardButton.Position = UDim2.new(1, -130, 0.5, -70)
-    forwardButton.Text = "Forward"
-    forwardButton.BackgroundColor3 = Color3.fromRGB(0, 128, 255)
-    forwardButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    forwardButton.TextScaled = true
-    forwardButton.Parent = controlGui
-
-    -- Кнопка Backward
-    local backwardButton = Instance.new("TextButton")
-    backwardButton.Size = UDim2.new(0, 60, 0, 60)
-    backwardButton.Position = UDim2.new(1, -130, 0.5, 0)
-    backwardButton.Text = "Backward"
-    backwardButton.BackgroundColor3 = Color3.fromRGB(255, 128, 0)
-    backwardButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    backwardButton.TextScaled = true
-    backwardButton.Parent = controlGui
-
-    -- Кнопка Left
-    local leftButton = Instance.new("TextButton")
-    leftButton.Size = UDim2.new(0, 60, 0, 60)
-    leftButton.Position = UDim2.new(1, -70, 0.5, -70)
-    leftButton.Text = "Left"
-    leftButton.BackgroundColor3 = Color3.fromRGB(128, 0, 255)
-    leftButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    leftButton.TextScaled = true
-    leftButton.Parent = controlGui
-
-    -- Кнопка Right
-    local rightButton = Instance.new("TextButton")
-    rightButton.Size = UDim2.new(0, 60, 0, 60)
-    rightButton.Position = UDim2.new(1, -70, 0.5, 0)
-    rightButton.Text = "Right"
-    rightButton.BackgroundColor3 = Color3.fromRGB(128, 255, 0)
-    rightButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    rightButton.TextScaled = true
-    rightButton.Parent = controlGui
-
-    -- Кнопка Exit
-    local exitButton = Instance.new("TextButton")
-    exitButton.Size = UDim2.new(0, 60, 0, 60)
-    exitButton.Position = UDim2.new(0.5, -30, 0, 10)
-    exitButton.Text = "Exit"
-    exitButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-    exitButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    exitButton.TextScaled = true
-    exitButton.Parent = controlGui
-
-    -- Показатель скорости
-    local speedLabel = Instance.new("TextLabel")
-    speedLabel.Size = UDim2.new(0, 100, 0, 40)
-    speedLabel.Position = UDim2.new(0.5, -50, 0, 80)
-    speedLabel.Text = "Speed: 0 km/h"
-    speedLabel.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    speedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    speedLabel.TextScaled = true
-    speedLabel.Parent = controlGui
-
-    -- Управление
-    local isFlying = false
-    local height = 0
-    local maxHeight = 50
-    local minHeight = 0
-    local forwardSpeed = 0
-    local turn = 0
-    local maxSpeed = 27.78 -- 100 км/ч в единицах Roblox (1 stud/sec ≈ 3.6 km/h)
-
-    seat.Sit:Connect(function(humanoid)
-        if humanoid.Parent == LocalPlayer.Character then
-            isFlying = true
-            controlGui.Enabled = true
-            engineSound:Play()
-            notify("Airplane", "Use the buttons to control the airplane")
-        end
-    end)
-
-    seat.AncestryChanged:Connect(function()
-        if not seat.Occupant then
-            isFlying = false
-            controlGui.Enabled = false
-            engineSound:Stop()
-            forwardSpeed = 0
-            turn = 0
-            height = 0
-        end
-    end)
-
-    -- Логика кнопок
-    upButton.MouseButton1Down:Connect(function()
-        height = math.min(maxHeight, height + 1)
-    end)
-
-    downButton.MouseButton1Down:Connect(function()
-        height = math.max(minHeight, height - 1)
-    end)
-
-    forwardButton.MouseButton1Down:Connect(function()
-        forwardSpeed = math.min(maxSpeed, forwardSpeed + 1)
-    end)
-
-    forwardButton.MouseButton1Up:Connect(function()
-        forwardSpeed = math.max(0, forwardSpeed - 1)
-    end)
-
-    backwardButton.MouseButton1Down:Connect(function()
-        forwardSpeed = math.max(0, forwardSpeed - 1)
-    end)
-
-    backwardButton.MouseButton1Up:Connect(function()
-        forwardSpeed = math.min(maxSpeed, forwardSpeed + 1)
-    end)
-
-    leftButton.MouseButton1Down:Connect(function()
-        turn = -1
-    end)
-
-    leftButton.MouseButton1Up:Connect(function()
-        turn = 0
-    end)
-
-    rightButton.MouseButton1Down:Connect(function()
-        turn = 1
-    end)
-
-    rightButton.MouseButton1Up:Connect(function()
-        turn = 0
-    end)
-
-    exitButton.MouseButton1Click:Connect(function()
-        if LocalPlayer.Character and LocalPlayer.Character.Humanoid then
-            LocalPlayer.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-            isFlying = false
-            forwardSpeed = 0
-            turn = 0
-            height = 0
-        end
-    end)
-
-    -- Логика полёта
-    spawn(function()
-        while airplane and airplane.Parent do
-            wait(0.01)
-            if isFlying then
-                -- Направление движения
-                local direction = rootPart.CFrame.LookVector
-                local velocity = direction * forwardSpeed + Vector3.new(0, height, 0)
-                bodyForce.Velocity = velocity
-
-                -- Поворот
-                bodyGyro.CFrame = bodyGyro.CFrame * CFrame.Angles(0, math.rad(turn), 0)
-
-                -- Обновление скорости (переводим в км/ч)
-                local speedKmh = math.floor(forwardSpeed * 3.6)
-                speedLabel.Text = "Speed: " .. speedKmh .. " km/h"
-            else
-                bodyForce.Velocity = Vector3.new(0, 0, 0)
-            end
-        end
-    end)
-
-    notify("Airplane Spawned", "Airplane created! Sit in the seat to fly.")
+-- Ждём, пока персонаж игрока загрузится
+while not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") do
+    wait(0.1)
 end
 
--- Инициализация
-notify("Airplane Script Loaded", "Use Airplane.spawn() in Delta Console to spawn an airplane")
+-- Позиция для спавна
+local spawnPos = LocalPlayer.Character.HumanoidRootPart.Position + Vector3.new(10, 5, 0)
+
+-- Создаём модель вертолёта
+local helicopter = Instance.new("Model")
+helicopter.Name = "Helicopter"
+
+-- Корпус
+local body = Instance.new("Part")
+body.Size = Vector3.new(10, 2, 4)
+body.Position = spawnPos
+body.BrickColor = BrickColor.new("Dark gray")
+body.Anchored = false
+body.CanCollide = true
+body.Parent = helicopter
+
+-- Кабина
+local cabin = Instance.new("Part")
+cabin.Size = Vector3.new(4, 2, 4)
+cabin.Position = spawnPos + Vector3.new(3, 2, 0)
+cabin.BrickColor = BrickColor.new("Light blue")
+cabin.Transparency = 0.5
+cabin.Parent = helicopter
+
+-- Хвост
+local tail = Instance.new("Part")
+tail.Size = Vector3.new(8, 0.5, 0.5)
+tail.Position = spawnPos + Vector3.new(-6, 0, 0)
+tail.BrickColor = BrickColor.new("Dark gray")
+tail.Parent = helicopter
+
+-- Главный винт
+local mainRotor = Instance.new("Part")
+mainRotor.Size = Vector3.new(12, 0.2, 1)
+mainRotor.Position = spawnPos + Vector3.new(0, 2, 0)
+mainRotor.BrickColor = BrickColor.new("Black")
+mainRotor.Parent = helicopter
+
+-- Хвостовой винт
+local tailRotor = Instance.new("Part")
+tailRotor.Size = Vector3.new(0.2, 2, 0.2)
+tailRotor.Position = spawnPos + Vector3.new(-10, 0, 0)
+tailRotor.BrickColor = BrickColor.new("Black")
+tailRotor.Parent = helicopter
+
+-- Сиденье
+local seat = Instance.new("VehicleSeat")
+seat.Size = Vector3.new(2, 1, 2)
+seat.Position = spawnPos + Vector3.new(3, 1, 0)
+seat.BrickColor = BrickColor.new("Black")
+seat.Parent = helicopter
+seat.MaxSpeed = 0 -- Отключаем стандартное управление VehicleSeat
+
+-- Корневая часть
+local rootPart = Instance.new("Part")
+rootPart.Name = "HumanoidRootPart"
+rootPart.Size = Vector3.new(2, 2, 2)
+rootPart.Position = spawnPos
+rootPart.Transparency = 1
+rootPart.CanCollide = false
+rootPart.Parent = helicopter
+helicopter.PrimaryPart = rootPart
+
+-- Соединяем части
+local bodyWeld = Instance.new("WeldConstraint")
+bodyWeld.Part0 = rootPart
+bodyWeld.Part1 = body
+bodyWeld.Parent = body
+
+local cabinWeld = Instance.new("WeldConstraint")
+cabinWeld.Part0 = rootPart
+cabinWeld.Part1 = cabin
+cabinWeld.Parent = cabin
+
+local tailWeld = Instance.new("WeldConstraint")
+tailWeld.Part0 = rootPart
+tailWeld.Part1 = tail
+tailWeld.Parent = tail
+
+local mainRotorWeld = Instance.new("WeldConstraint")
+mainRotorWeld.Part0 = rootPart
+mainRotorWeld.Part1 = mainRotor
+mainRotorWeld.Parent = mainRotor
+
+local tailRotorWeld = Instance.new("WeldConstraint")
+tailRotorWeld.Part0 = rootPart
+tailRotorWeld.Part1 = tailRotor
+tailRotorWeld.Parent = tailRotor
+
+local seatWeld = Instance.new("WeldConstraint")
+seatWeld.Part0 = rootPart
+seatWeld.Part1 = seat
+seatWeld.Parent = seat
+
+-- Добавляем физику
+local bodyForce = Instance.new("BodyVelocity")
+bodyForce.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+bodyForce.Velocity = Vector3.new(0, 0, 0)
+bodyForce.Parent = rootPart
+
+local bodyGyro = Instance.new("BodyGyro")
+bodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+bodyGyro.CFrame = CFrame.new(spawnPos)
+bodyGyro.Parent = rootPart
+
+-- Звук двигателя
+local engineSound = Instance.new("Sound")
+engineSound.SoundId = "rbxassetid://9112799177" -- Звук вертолёта
+engineSound.Volume = 1
+engineSound.Looped = true
+engineSound.Parent = body
+
+-- Помещаем вертолёт в Workspace
+helicopter.Parent = Workspace
+
+-- Анимация винта
+spawn(function()
+    while helicopter and helicopter.Parent do
+        mainRotor.CFrame = mainRotor.CFrame * CFrame.Angles(0, math.rad(10), 0)
+        tailRotor.CFrame = tailRotor.CFrame * CFrame.Angles(0, 0, math.rad(10))
+        wait(0.01)
+    end
+end)
+
+-- GUI для управления
+local controlGui = Instance.new("ScreenGui")
+controlGui.Name = "HelicopterControls"
+controlGui.Enabled = false
+controlGui.Parent = LocalPlayer.PlayerGui
+
+-- Кнопка Up
+local upButton = Instance.new("TextButton")
+upButton.Size = UDim2.new(0, 60, 0, 60)
+upButton.Position = UDim2.new(0, 10, 0.5, -70)
+upButton.Text = "Up"
+upButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+upButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+upButton.TextScaled = true
+upButton.Parent = controlGui
+
+-- Кнопка Down
+local downButton = Instance.new("TextButton")
+downButton.Size = UDim2.new(0, 60, 0, 60)
+downButton.Position = UDim2.new(0, 10, 0.5, 0)
+downButton.Text = "Down"
+downButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+downButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+downButton.TextScaled = true
+downButton.Parent = controlGui
+
+-- Кнопка Forward
+local forwardButton = Instance.new("TextButton")
+forwardButton.Size = UDim2.new(0, 60, 0, 60)
+forwardButton.Position = UDim2.new(1, -130, 0.5, -70)
+forwardButton.Text = "Forward"
+forwardButton.BackgroundColor3 = Color3.fromRGB(0, 128, 255)
+forwardButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+forwardButton.TextScaled = true
+forwardButton.Parent = controlGui
+
+-- Кнопка Backward
+local backwardButton = Instance.new("TextButton")
+backwardButton.Size = UDim2.new(0, 60, 0, 60)
+backwardButton.Position = UDim2.new(1, -130, 0.5, 0)
+backwardButton.Text = "Backward"
+backwardButton.BackgroundColor3 = Color3.fromRGB(255, 128, 0)
+backwardButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+backwardButton.TextScaled = true
+backwardButton.Parent = controlGui
+
+-- Кнопка Left
+local leftButton = Instance.new("TextButton")
+leftButton.Size = UDim2.new(0, 60, 0, 60)
+leftButton.Position = UDim2.new(1, -70, 0.5, -70)
+leftButton.Text = "Left"
+leftButton.BackgroundColor3 = Color3.fromRGB(128, 0, 255)
+leftButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+leftButton.TextScaled = true
+leftButton.Parent = controlGui
+
+-- Кнопка Right
+local rightButton = Instance.new("TextButton")
+rightButton.Size = UDim2.new(0, 60, 0, 60)
+rightButton.Position = UDim2.new(1, -70, 0.5, 0)
+rightButton.Text = "Right"
+rightButton.BackgroundColor3 = Color3.fromRGB(128, 255, 0)
+rightButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+rightButton.TextScaled = true
+rightButton.Parent = controlGui
+
+-- Кнопка Exit
+local exitButton = Instance.new("TextButton")
+exitButton.Size = UDim2.new(0, 60, 0, 60)
+exitButton.Position = UDim2.new(0.5, -30, 0, 10)
+exitButton.Text = "Exit"
+exitButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+exitButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+exitButton.TextScaled = true
+exitButton.Parent = controlGui
+
+-- Показатель скорости
+local speedLabel = Instance.new("TextLabel")
+speedLabel.Size = UDim2.new(0, 100, 0, 40)
+speedLabel.Position = UDim2.new(0.5, -50, 0, 80)
+speedLabel.Text = "Speed: 0 km/h"
+speedLabel.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+speedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+speedLabel.TextScaled = true
+speedLabel.Parent = controlGui
+
+-- Управление
+local isFlying = false
+local height = 0
+local maxHeight = 50
+local minHeight = 0
+local forwardSpeed = 0
+local turn = 0
+local maxSpeed = 27.78 -- 100 км/ч в единицах Roblox (1 stud/sec ≈ 3.6 km/h)
+
+seat.Sit:Connect(function(humanoid)
+    if humanoid.Parent == LocalPlayer.Character then
+        isFlying = true
+        controlGui.Enabled = true
+        engineSound:Play()
+        notify("Helicopter", "Use the buttons to control the helicopter")
+    end
+end)
+
+seat.AncestryChanged:Connect(function()
+    if not seat.Occupant then
+        isFlying = false
+        controlGui.Enabled = false
+        engineSound:Stop()
+        forwardSpeed = 0
+        turn = 0
+        height = 0
+    end
+end)
+
+-- Логика кнопок
+upButton.MouseButton1Down:Connect(function()
+    height = math.min(maxHeight, height + 1)
+end)
+
+downButton.MouseButton1Down:Connect(function()
+    height = math.max(minHeight, height - 1)
+end)
+
+forwardButton.MouseButton1Down:Connect(function()
+    forwardSpeed = math.min(maxSpeed, forwardSpeed + 1)
+end)
+
+forwardButton.MouseButton1Up:Connect(function()
+    forwardSpeed = math.max(0, forwardSpeed - 1)
+end)
+
+backwardButton.MouseButton1Down:Connect(function()
+    forwardSpeed = math.max(0, forwardSpeed - 1)
+end)
+
+backwardButton.MouseButton1Up:Connect(function()
+    forwardSpeed = math.min(maxSpeed, forwardSpeed + 1)
+end)
+
+leftButton.MouseButton1Down:Connect(function()
+    turn = -1
+end)
+
+leftButton.MouseButton1Up:Connect(function()
+    turn = 0
+end)
+
+rightButton.MouseButton1Down:Connect(function()
+    turn = 1
+end)
+
+rightButton.MouseButton1Up:Connect(function()
+    turn = 0
+end)
+
+exitButton.MouseButton1Click:Connect(function()
+    if LocalPlayer.Character and LocalPlayer.Character.Humanoid then
+        LocalPlayer.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+        isFlying = false
+        forwardSpeed = 0
+        turn = 0
+        height = 0
+    end
+end)
+
+-- Логика полёта
+spawn(function()
+    while helicopter and helicopter.Parent do
+        wait(0.01)
+        if isFlying then
+            -- Направление движения
+            local direction = rootPart.CFrame.LookVector
+            local velocity = direction * forwardSpeed + Vector3.new(0, height, 0)
+            bodyForce.Velocity = velocity
+
+            -- Поворот
+            bodyGyro.CFrame = bodyGyro.CFrame * CFrame.Angles(0, math.rad(turn), 0)
+
+            -- Обновление скорости (переводим в км/ч)
+            local speedKmh = math.floor(forwardSpeed * 3.6)
+            speedLabel.Text = "Speed: " .. speedKmh .. " km/h"
+        else
+            bodyForce.Velocity = Vector3.new(0, 0, 0)
+        end
+    end
+end)
+
+-- Уведомление о спавне
+notify("Helicopter Spawned", "Helicopter created! Sit in the seat to fly.")

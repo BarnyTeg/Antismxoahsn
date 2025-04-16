@@ -1,6 +1,6 @@
 -- Dead Rails: Полный скрипт для Delta Executor
--- Версия: 1.4 | Дата: 16.04.2025
--- Описание: Полная реализация мобов, построек, предметов, механик и эффектов для Dead Rails
+-- Версия: 1.6 | Дата: 16.04.2025
+-- Описание: Полная реализация мобов, построек, уникального мешка, механик и эффектов для Dead Rails
 
 -- Проверка окружения Roblox
 if not game then
@@ -18,12 +18,12 @@ local LocalPlayer = Players.LocalPlayer
 -- Константы
 local COIN_UPDATE_INTERVAL = 0.1
 local AUTOSPAWN_INTERVAL = 30
-local MAX_BAG_ITEMS = 15
-local BASE_HP = 100 -- Базовое HP для мумии (X)
+local MAX_BAG_ITEMS = 10 -- Максимум предметов в мешке
+local BASE_HP = 100 -- Базовое HP для мобов
 
 -- Переменные
 local coins = 0
-local bagItems = {}
+local bagItems = {} -- Таблица для хранения предметов в мешке
 local isPaused = false
 
 -- Таблица улучшений
@@ -62,15 +62,15 @@ coinLabel.BackgroundTransparency = 1
 coinLabel.Font = Enum.Font.SourceSansBold
 coinLabel.Parent = coinFrame
 
--- GUI: Мешок
+-- GUI: Уникальный мешок
 local bagGui = Instance.new("ScreenGui")
 bagGui.Name = "BagGUI"
-bagGui.Enabled = false
+bagGui.Enabled = true -- Включаем сразу при запуске
 bagGui.Parent = LocalPlayer.PlayerGui
 
 local bagFrame = Instance.new("Frame")
-bagFrame.Size = UDim2.new(0, 350, 0, 250)
-bagFrame.Position = UDim2.new(0.5, -175, 0.5, -125)
+bagFrame.Size = UDim2.new(0, 350, 0, 400)
+bagFrame.Position = UDim2.new(0.5, -175, 0.5, -200)
 bagFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 bagFrame.BackgroundTransparency = 0.1
 bagFrame.BorderSizePixel = 0
@@ -78,12 +78,31 @@ bagFrame.Parent = bagGui
 
 local bagTitle = Instance.new("TextLabel")
 bagTitle.Size = UDim2.new(1, 0, 0, 40)
-bagTitle.Text = "Inventory"
+bagTitle.Text = "Unique Bag (0/10)"
 bagTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
 bagTitle.TextScaled = true
 bagTitle.BackgroundTransparency = 1
 bagTitle.Font = Enum.Font.SourceSansBold
 bagTitle.Parent = bagFrame
+
+local bagListFrame = Instance.new("Frame")
+bagListFrame.Size = UDim2.new(1, -20, 1, -60)
+bagListFrame.Position = UDim2.new(0, 10, 0, 50)
+bagListFrame.BackgroundTransparency = 1
+bagListFrame.Parent = bagFrame
+
+local closeBagButton = Instance.new("TextButton")
+closeBagButton.Size = UDim2.new(0, 100, 0, 30)
+closeBagButton.Position = UDim2.new(1, -110, 0, 10)
+closeBagButton.Text = "Close"
+closeBagButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+closeBagButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeBagButton.TextScaled = true
+closeBagButton.Parent = bagFrame
+closeBagButton.MouseButton1Click:Connect(function()
+    bagGui.Enabled = false
+    notify("Bag", "Bag Closed")
+end)
 
 -- Уведомления
 local function notify(title, text, duration)
@@ -100,6 +119,54 @@ end
 local function updateCoins(amount)
     coins = math.max(0, coins + amount)
     coinLabel.Text = "Coins: " .. coins
+end
+
+-- Обновление GUI мешка
+local function updateBagGui()
+    bagTitle.Text = "Unique Bag (" .. #bagItems .. "/10)"
+    for _, child in pairs(bagListFrame:GetChildren()) do
+        child:Destroy()
+    end
+    for i, item in ipairs(bagItems) do
+        local itemButton = Instance.new("TextButton")
+        itemButton.Size = UDim2.new(1, -10, 0, 40)
+        itemButton.Position = UDim2.new(0, 5, 0, (i-1)*50)
+        itemButton.Text = item.name .. " (Value: " .. item.value .. ")"
+        itemButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+        itemButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        itemButton.TextScaled = true
+        itemButton.Parent = bagListFrame
+        itemButton.MouseButton1Click:Connect(function()
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                createItem(
+                    item.name,
+                    LocalPlayer.Character.HumanoidRootPart.Position + Vector3.new(math.random(-5, 5), 1, math.random(-5, 5)),
+                    item.value,
+                    item.color,
+                    function(player, droppedItem)
+                        updateCoins(item.value)
+                        droppedItem:Destroy()
+                        notify("Item Used", "Used " .. item.name .. " (+ " .. item.value .. " Coins)")
+                    end
+                )
+                table.remove(bagItems, i)
+                updateBagGui()
+                notify("Item Removed", "Removed " .. item.name .. " from bag")
+            end
+        end)
+    end
+end
+
+-- Добавление предмета в мешок
+local function addToBag(name, value, color)
+    if #bagItems >= MAX_BAG_ITEMS then
+        notify("Error", "Bag is full (10/10)")
+        return false
+    end
+    table.insert(bagItems, {name = name, value = value, color = color})
+    updateBagGui()
+    notify("Item Added", "Added " .. name .. " to bag")
+    return true
 end
 
 -- Создание частиц
@@ -227,13 +294,17 @@ local function createItem(name, position, value, color, onTouch, anchored)
         item.Touched:Connect(function(hit)
             local player = Players:GetPlayerFromCharacter(hit.Parent)
             if player then
-                onTouch(player, item)
-                local sound = Instance.new("Sound")
-                sound.SoundId = "rbxassetid://1837634873"
-                sound.Parent = item
-                sound:Play()
-                wait(1)
-                sound:Destroy()
+                local added = addToBag(name, value, color)
+                if added then
+                    onTouch(player, item)
+                    item:Destroy()
+                    local sound = Instance.new("Sound")
+                    sound.SoundId = "rbxassetid://1837634873"
+                    sound.Parent = Workspace
+                    sound:Play()
+                    wait(1)
+                    sound:Destroy()
+                end
             end
         end)
     end
@@ -368,8 +439,6 @@ _G.DeadRails.spawnmummy = function()
                     BrickColor.new("White"),
                     function(player, item)
                         updateCoins(20)
-                        item:Destroy()
-                        notify("Item Collected", "Picked up MummyMask (+20 Coins)")
                     end
                 )
             end
@@ -455,8 +524,6 @@ _G.DeadRails.spawnsphinx = function()
                     BrickColor.new("Cyan"),
                     function(player, item)
                         updateCoins(100)
-                        item:Destroy()
-                        notify("Item Collected", "Picked up Diamond (+100 Coins)")
                     end
                 )
             end
@@ -559,8 +626,6 @@ _G.DeadRails.spawnpharaoh = function()
                 BrickColor.new("Cyan"),
                 function(player, item)
                     updateCoins(100)
-                    item:Destroy()
-                    notify("Item Collected", "Picked up Diamond (+100 Coins)")
                 end
             )
         end)
@@ -633,8 +698,6 @@ _G.DeadRails.spawnwanderer = function()
                     BrickColor.new("Dark grey"),
                     function(player, item)
                         updateCoins(5)
-                        item:Destroy()
-                        notify("Item Collected", "Picked up RustyCoin (+5 Coins)")
                     end
                 )
             end
@@ -875,12 +938,12 @@ _G.DeadRails.spawndog = function()
 end
 
 -- Постройки
-_G.DeadRails.spawnpyramid = function()
+_G.DeadRails.spawnpyramid = function(pos)
     if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
         notify("Error", "Player character not found")
         return
     end
-    local pos = LocalPlayer.Character.HumanoidRootPart.Position + Vector3.new(0, 0, 30)
+    pos = pos or (LocalPlayer.Character.HumanoidRootPart.Position + Vector3.new(math.random(-50, 50), 0, math.random(-50, 50)))
     local pyramid = Instance.new("Model")
     pyramid.Name = "Pyramid"
     pyramid.Parent = Workspace
@@ -929,15 +992,15 @@ _G.DeadRails.spawnpyramid = function()
         end
     end)
 
-    notify("Pyramid Spawned", "Created a Pyramid that spawns Mummies")
+    notify("Pyramid Spawned", "Created a Pyramid that spawns Mummies at " .. tostring(pos))
 end
 
-_G.DeadRails.spawnoasis = function()
+_G.DeadRails.spawnoasis = function(pos)
     if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
         notify("Error", "Player character not found")
         return
     end
-    local pos = LocalPlayer.Character.HumanoidRootPart.Position + Vector3.new(0, 0, 20)
+    pos = pos or (LocalPlayer.Character.HumanoidRootPart.Position + Vector3.new(math.random(-50, 50), 0, math.random(-50, 50)))
     local oasis = Instance.new("Model")
     oasis.Name = "Oasis"
     oasis.Parent = Workspace
@@ -972,15 +1035,15 @@ _G.DeadRails.spawnoasis = function()
         end
     end)
 
-    notify("Oasis Spawned", "Created an Oasis that heals")
+    notify("Oasis Spawned", "Created an Oasis that heals at " .. tostring(pos))
 end
 
-_G.DeadRails.spawnsandstone = function()
+_G.DeadRails.spawnsandstone = function(pos)
     if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
         notify("Error", "Player character not found")
         return
     end
-    local pos = LocalPlayer.Character.HumanoidRootPart.Position + Vector3.new(0, 0, 15)
+    pos = pos or (LocalPlayer.Character.HumanoidRootPart.Position + Vector3.new(math.random(-50, 50), 0, math.random(-50, 50)))
     local sandstone = Instance.new("Model")
     sandstone.Name = "Sandstone"
     sandstone.Parent = Workspace
@@ -1002,15 +1065,13 @@ _G.DeadRails.spawnsandstone = function()
                 BrickColor.new("Sand yellow"),
                 function(p, item)
                     updateCoins(10)
-                    item:Destroy()
-                    notify("Item Collected", "Picked up SandstoneShard (+10 Coins)")
                 end
             )
             rock:Destroy()
         end
     end)
 
-    notify("Sandstone Spawned", "Created a Sandstone that drops shards")
+    notify("Sandstone Spawned", "Created a Sandstone that drops shards at " .. tostring(pos))
 end
 
 -- Механики и улучшения
@@ -1056,5 +1117,34 @@ _G.DeadRails.upgrade = function(upgradeName)
     notify("Upgrade", upgradeName .. " upgraded to level " .. upgrade.level)
 end
 
+-- Автоматический спавн построек по всей карте
+local function initializeMap()
+    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        wait(1) -- Ждём, пока персонаж загрузится
+        initializeMap()
+        return
+    end
+
+    local playerPos = LocalPlayer.Character.HumanoidRootPart.Position
+
+    -- Спавн нескольких пирамид
+    _G.DeadRails.spawnpyramid(playerPos + Vector3.new(50, 0, 50))
+    _G.DeadRails.spawnpyramid(playerPos + Vector3.new(-50, 0, -50))
+    _G.DeadRails.spawnpyramid(playerPos + Vector3.new(0, 0, 100))
+
+    -- Спавн нескольких оазисов
+    _G.DeadRails.spawnoasis(playerPos + Vector3.new(70, 0, -30))
+    _G.DeadRails.spawnoasis(playerPos + Vector3.new(-70, 0, 30))
+
+    -- Спавн нескольких песчаных камней
+    _G.DeadRails.spawnsandstone(playerPos + Vector3.new(30, 0, 80))
+    _G.DeadRails.spawnsandstone(playerPos + Vector3.new(-30, 0, -80))
+    _G.DeadRails.spawnsandstone(playerPos + Vector3.new(0, 0, -100))
+end
+
 -- Инициализация
+spawn(function()
+    initializeMap()
+end)
+
 notify("Dead Rails Loaded", "Commands: spawnmummy, spawnsphinx, spawnpharaoh, spawnwanderer, spawntrader, spawndog, spawnpyramid, spawnoasis, spawnsandstone, togglepause, openbag, upgrade")

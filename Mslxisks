@@ -1,6 +1,6 @@
 -- Helicopter Script for Delta Executor (Mobile)
--- Version: 2.0 | Date: 16.04.2025
--- Description: Automatically spawns a detailed manually-created helicopter with mobile buttons and speed display
+-- Version: 2.1 | Date: 16.04.2025
+-- Description: Spawns a detailed helicopter visible to all players with mobile buttons and speed display
 
 -- Проверка окружения Roblox
 if not game then
@@ -11,6 +11,7 @@ end
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local StarterGui = game:GetService("StarterGui")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 
 -- Уведомления
@@ -139,7 +140,6 @@ local tailRotorBlade = Instance.new("Part")
 tailRotorBlade.Size = Vector3.new(0.2 * scale, 2 * scale, 0.2 * scale)
 tailRotorBlade.Position = spawnPos + Vector3.new(-12 * scale, 1 * scale, 0.5 * scale)
 tailRotorBlade.BrickColor = BrickColor.new("Black")
-tailRotorBlade.BrickColor = BrickColor.new("Black")
 tailRotorBlade.Anchored = true
 tailRotorBlade.CanCollide = true
 tailRotorBlade.Parent = helicopter
@@ -177,25 +177,15 @@ skidSupportRight.Anchored = true
 skidSupportRight.CanCollide = true
 skidSupportRight.Parent = helicopter
 
--- Сиденье
-local seat = Instance.new("VehicleSeat")
+-- Сиденье (используем Seat вместо VehicleSeat)
+local seat = Instance.new("Seat")
 seat.Size = Vector3.new(2 * scale, 1 * scale, 2 * scale)
 seat.Position = spawnPos + Vector3.new(3 * scale, (0.5 + 1) * scale, 0)
 seat.BrickColor = BrickColor.new("Black")
 seat.Transparency = 0
 seat.Anchored = true
 seat.CanCollide = true
-seat.MaxSpeed = 0
 seat.Parent = helicopter
-
--- Невидимая платформа для упрощения посадки
-local seatPlatform = Instance.new("Part")
-seatPlatform.Size = Vector3.new(2 * scale, 0.2 * scale, 2 * scale)
-seatPlatform.Position = spawnPos + Vector3.new(3 * scale, (0.5 + 1.1) * scale, 0) -- Чуть выше сиденья
-seatPlatform.Transparency = 1
-seatPlatform.Anchored = true
-seatPlatform.CanCollide = true
-seatPlatform.Parent = helicopter
 
 -- Корневая часть
 local rootPart = Instance.new("Part")
@@ -208,6 +198,9 @@ rootPart.CanCollide = false
 rootPart.Parent = helicopter
 helicopter.PrimaryPart = rootPart
 
+-- Помещаем вертолёт в Workspace (чтобы он был виден всем)
+helicopter.Parent = Workspace
+
 -- Анимация винта
 spawn(function()
     while helicopter and helicopter.Parent do
@@ -218,8 +211,14 @@ spawn(function()
     end
 end)
 
--- Помещаем вертолёт в Workspace
-helicopter.Parent = Workspace
+-- Принудительная посадка на сиденье
+seat.Touched:Connect(function(hit)
+    local humanoid = hit.Parent:FindFirstChild("Humanoid")
+    if humanoid and humanoid.Parent == LocalPlayer.Character then
+        seat:Sit(humanoid)
+        notify("Helicopter", "You sat in the helicopter!")
+    end
+end)
 
 -- GUI для управления
 local controlGui = Instance.new("ScreenGui")

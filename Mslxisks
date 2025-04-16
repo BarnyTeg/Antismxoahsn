@@ -1,6 +1,5 @@
 -- Dead Rails: Полный скрипт для Delta Executor
--- Версия: 1.1 | Дата: 16.04.2025
--- Автор: Grok (адаптировано для Delta Executor)
+-- Версия: 1.4 | Дата: 16.04.2025
 -- Описание: Полная реализация мобов, построек, предметов, механик и эффектов для Dead Rails
 
 -- Проверка окружения Roblox
@@ -88,11 +87,13 @@ bagTitle.Parent = bagFrame
 
 -- Уведомления
 local function notify(title, text, duration)
-    StarterGui:SetCore("SendNotification", {
-        Title = title,
-        Text = text,
-        Duration = duration or 5
-    })
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = title,
+            Text = text,
+            Duration = duration or 5
+        })
+    end)
 end
 
 -- Обновление монет
@@ -115,9 +116,13 @@ end
 
 -- Создание моба
 local function createMob(name, hp, speed, position, modelColor, attackFunc, extraParts, animations)
+    if not Workspace then
+        notify("Error", "Workspace not found")
+        return
+    end
+
     local mob = Instance.new("Model")
     mob.Name = name
-    mob.Parent = Workspace
 
     local torso = Instance.new("Part")
     torso.Size = Vector3.new(2, 4, 1)
@@ -172,8 +177,12 @@ local function createMob(name, hp, speed, position, modelColor, attackFunc, extr
         end
     end
 
+    mob.Parent = Workspace
+
     if attackFunc then
-        coroutine.wrap(attackFunc)(mob, humanoid)
+        spawn(function()
+            attackFunc(mob, humanoid)
+        end)
     end
 
     humanoid.Died:Connect(function()
@@ -286,7 +295,7 @@ local animations = {
 
 -- Мобы
 _G.DeadRails.spawnmummy = function()
-    if not LocalPlayer.Character then
+    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
         notify("Error", "Player character not found")
         return
     end
@@ -298,14 +307,14 @@ _G.DeadRails.spawnmummy = function()
         pos,
         BrickColor.new("Light gray"),
         function(mob, h)
-            while h.Health > 0 do
+            while h and h.Parent and h.Health > 0 do
                 wait(0.1)
                 if isPaused then continue end
                 local closestPlayer = Players:GetPlayers()[1]
-                if closestPlayer and closestPlayer.Character then
+                if closestPlayer and closestPlayer.Character and closestPlayer.Character:FindFirstChild("HumanoidRootPart") then
                     h:MoveTo(closestPlayer.Character.HumanoidRootPart.Position)
                     local dist = (closestPlayer.Character.HumanoidRootPart.Position - mob.HumanoidRootPart.Position).Magnitude
-                    if dist < 2 then
+                    if dist < 2 and closestPlayer.Character:FindFirstChild("Humanoid") then
                         closestPlayer.Character.Humanoid:TakeDamage(10 * (1 - upgrades.Defense.level * upgrades.Defense.bonus))
                         local particle = createParticle(mob.HumanoidRootPart, Color3.fromRGB(255, 255, 255), 0.5)
                         wait(0.5)
@@ -349,27 +358,30 @@ _G.DeadRails.spawnmummy = function()
         {Walk = animations.Walk}
     )
 
-    humanoid.Died:Connect(function()
-        if math.random() < 0.15 then
-            createItem(
-                "MummyMask",
-                pos + Vector3.new(0, 1, 0),
-                20,
-                BrickColor.new("White"),
-                function(player, item)
-                    updateCoins(20)
-                    item:Destroy()
-                    notify("Item Collected", "Picked up MummyMask (+20 Coins)")
-                end
-            )
-        end
-    end)
-
-    notify("Mummy Spawned", "Created a Mummy with " .. BASE_HP .. " HP")
+    if mummy then
+        humanoid.Died:Connect(function()
+            if math.random() < 0.15 then
+                createItem(
+                    "MummyMask",
+                    pos + Vector3.new(0, 1, 0),
+                    20,
+                    BrickColor.new("White"),
+                    function(player, item)
+                        updateCoins(20)
+                        item:Destroy()
+                        notify("Item Collected", "Picked up MummyMask (+20 Coins)")
+                    end
+                )
+            end
+        end)
+        notify("Mummy Spawned", "Created a Mummy with " .. BASE_HP .. " HP")
+    else
+        notify("Error", "Failed to spawn Mummy")
+    end
 end
 
 _G.DeadRails.spawnsphinx = function()
-    if not LocalPlayer.Character then
+    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
         notify("Error", "Player character not found")
         return
     end
@@ -381,14 +393,14 @@ _G.DeadRails.spawnsphinx = function()
         pos,
         BrickColor.new("Sand yellow"),
         function(mob, h)
-            while h.Health > 0 do
+            while h and h.Parent and h.Health > 0 do
                 wait(0.1)
                 if isPaused then continue end
                 local closestPlayer = Players:GetPlayers()[1]
-                if closestPlayer and closestPlayer.Character then
+                if closestPlayer and closestPlayer.Character and closestPlayer.Character:FindFirstChild("HumanoidRootPart") then
                     h:MoveTo(closestPlayer.Character.HumanoidRootPart.Position)
                     local dist = (closestPlayer.Character.HumanoidRootPart.Position - mob.HumanoidRootPart.Position).Magnitude
-                    if dist < 5 then
+                    if dist < 5 and closestPlayer.Character:FindFirstChild("Humanoid") then
                         closestPlayer.Character.Humanoid.WalkSpeed = closestPlayer.Character.Humanoid.WalkSpeed * 0.5
                         local slowGui = Instance.new("ScreenGui")
                         slowGui.Parent = closestPlayer.PlayerGui
@@ -401,7 +413,7 @@ _G.DeadRails.spawnsphinx = function()
                         slowLabel.BackgroundTransparency = 1
                         slowLabel.Parent = slowGui
                         wait(10)
-                        if closestPlayer.Character then
+                        if closestPlayer.Character and closestPlayer.Character:FindFirstChild("Humanoid") then
                             closestPlayer.Character.Humanoid.WalkSpeed = closestPlayer.Character.Humanoid.WalkSpeed / 0.5
                         end
                         slowGui:Destroy()
@@ -433,27 +445,30 @@ _G.DeadRails.spawnsphinx = function()
         {Walk = animations.Walk}
     )
 
-    humanoid.Died:Connect(function()
-        if math.random() < 0.25 then
-            createItem(
-                "Diamond",
-                pos + Vector3.new(0, 1, 0),
-                100,
-                BrickColor.new("Cyan"),
-                function(player, item)
-                    updateCoins(100)
-                    item:Destroy()
-                    notify("Item Collected", "Picked up Diamond (+100 Coins)")
-                end
-            )
-        end
-    end)
-
-    notify("Sphinx Spawned", "Created a Sphinx with " .. (BASE_HP * 2) .. " HP")
+    if sphinx then
+        humanoid.Died:Connect(function()
+            if math.random() < 0.25 then
+                createItem(
+                    "Diamond",
+                    pos + Vector3.new(0, 1, 0),
+                    100,
+                    BrickColor.new("Cyan"),
+                    function(player, item)
+                        updateCoins(100)
+                        item:Destroy()
+                        notify("Item Collected", "Picked up Diamond (+100 Coins)")
+                    end
+                )
+            end
+        end)
+        notify("Sphinx Spawned", "Created a Sphinx with " .. (BASE_HP * 2) .. " HP")
+    else
+        notify("Error", "Failed to spawn Sphinx")
+    end
 end
 
 _G.DeadRails.spawnpharaoh = function()
-    if not LocalPlayer.Character then
+    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
         notify("Error", "Player character not found")
         return
     end
@@ -465,7 +480,7 @@ _G.DeadRails.spawnpharaoh = function()
         pos,
         BrickColor.new("Gold"),
         function(mob, h)
-            while h.Health > 0 do
+            while h and h.Parent and h.Health > 0 do
                 wait(8)
                 if isPaused then continue end
                 for i = 1, 5 do
@@ -477,14 +492,14 @@ _G.DeadRails.spawnpharaoh = function()
                         mummyPos,
                         BrickColor.new("Light gray"),
                         function(m, mh)
-                            while mh.Health > 0 do
+                            while mh and mh.Parent and mh.Health > 0 do
                                 wait(0.1)
                                 if isPaused then continue end
                                 local closestPlayer = Players:GetPlayers()[1]
-                                if closestPlayer and closestPlayer.Character then
+                                if closestPlayer and closestPlayer.Character and closestPlayer.Character:FindFirstChild("HumanoidRootPart") then
                                     mh:MoveTo(closestPlayer.Character.HumanoidRootPart.Position)
                                     local dist = (closestPlayer.Character.HumanoidRootPart.Position - m.HumanoidRootPart.Position).Magnitude
-                                    if dist < 2 then
+                                    if dist < 2 and closestPlayer.Character:FindFirstChild("Humanoid") then
                                         closestPlayer.Character.Humanoid:TakeDamage(10 * (1 - upgrades.Defense.level * upgrades.Defense.bonus))
                                     end
                                 end
@@ -522,38 +537,41 @@ _G.DeadRails.spawnpharaoh = function()
         {Walk = animations.Walk}
     )
 
-    humanoid.Died:Connect(function()
-        createWeapon(
-            "PharaohStaff",
-            LocalPlayer.Backpack,
-            50,
-            2,
-            5,
-            function(player, tool)
-                local particle = createParticle(player.Character.HumanoidRootPart, Color3.fromRGB(255, 215, 0), 1)
-                wait(1)
-                particle:Destroy()
-            end,
-            "rbxassetid://1837634873"
-        )
-        createItem(
-            "Diamond",
-            pos + Vector3.new(0, 1, 0),
-            100,
-            BrickColor.new("Cyan"),
-            function(player, item)
-                updateCoins(100)
-                item:Destroy()
-                notify("Item Collected", "Picked up Diamond (+100 Coins)")
-            end
-        )
-    end)
-
-    notify("Pharaoh Spawned", "Created a Pharaoh with " .. (BASE_HP * 5) .. " HP")
+    if pharaoh then
+        humanoid.Died:Connect(function()
+            createWeapon(
+                "PharaohStaff",
+                LocalPlayer.Backpack,
+                50,
+                2,
+                5,
+                function(player, tool)
+                    local particle = createParticle(player.Character.HumanoidRootPart, Color3.fromRGB(255, 215, 0), 1)
+                    wait(1)
+                    particle:Destroy()
+                end,
+                "rbxassetid://1837634873"
+            )
+            createItem(
+                "Diamond",
+                pos + Vector3.new(0, 1, 0),
+                100,
+                BrickColor.new("Cyan"),
+                function(player, item)
+                    updateCoins(100)
+                    item:Destroy()
+                    notify("Item Collected", "Picked up Diamond (+100 Coins)")
+                end
+            )
+        end)
+        notify("Pharaoh Spawned", "Created a Pharaoh with " .. (BASE_HP * 5) .. " HP")
+    else
+        notify("Error", "Failed to spawn Pharaoh")
+    end
 end
 
 _G.DeadRails.spawnwanderer = function()
-    if not LocalPlayer.Character then
+    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
         notify("Error", "Player character not found")
         return
     end
@@ -565,14 +583,14 @@ _G.DeadRails.spawnwanderer = function()
         pos,
         BrickColor.new("Brown"),
         function(mob, h)
-            while h.Health > 0 do
+            while h and h.Parent and h.Health > 0 do
                 wait(0.1)
                 if isPaused then continue end
                 local closestPlayer = Players:GetPlayers()[1]
-                if closestPlayer and closestPlayer.Character then
+                if closestPlayer and closestPlayer.Character and closestPlayer.Character:FindFirstChild("HumanoidRootPart") then
                     h:MoveTo(closestPlayer.Character.HumanoidRootPart.Position)
                     local dist = (closestPlayer.Character.HumanoidRootPart.Position - mob.HumanoidRootPart.Position).Magnitude
-                    if dist < 2 then
+                    if dist < 2 and closestPlayer.Character:FindFirstChild("Humanoid") then
                         closestPlayer.Character.Humanoid:TakeDamage(15 * (1 - upgrades.Defense.level * upgrades.Defense.bonus))
                         local particle = createParticle(mob.HumanoidRootPart, Color3.fromRGB(139, 69, 19), 0.5)
                         wait(0.5)
@@ -605,27 +623,30 @@ _G.DeadRails.spawnwanderer = function()
         {Walk = animations.Walk, Attack = animations.Attack}
     )
 
-    humanoid.Died:Connect(function()
-        if math.random() < 0.1 then
-            createItem(
-                "RustyCoin",
-                pos + Vector3.new(0, 1, 0),
-                5,
-                BrickColor.new("Dark grey"),
-                function(player, item)
-                    updateCoins(5)
-                    item:Destroy()
-                    notify("Item Collected", "Picked up RustyCoin (+5 Coins)")
-                end
-            )
-        end
-    end)
-
-    notify("Wanderer Spawned", "Created a Wanderer with " .. (BASE_HP * 2) .. " HP")
+    if wanderer then
+        humanoid.Died:Connect(function()
+            if math.random() < 0.1 then
+                createItem(
+                    "RustyCoin",
+                    pos + Vector3.new(0, 1, 0),
+                    5,
+                    BrickColor.new("Dark grey"),
+                    function(player, item)
+                        updateCoins(5)
+                        item:Destroy()
+                        notify("Item Collected", "Picked up RustyCoin (+5 Coins)")
+                    end
+                )
+            end
+        end)
+        notify("Wanderer Spawned", "Created a Wanderer with " .. (BASE_HP * 2) .. " HP")
+    else
+        notify("Error", "Failed to spawn Wanderer")
+    end
 end
 
 _G.DeadRails.spawntrader = function()
-    if not LocalPlayer.Character then
+    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
         notify("Error", "Player character not found")
         return
     end
@@ -666,83 +687,87 @@ _G.DeadRails.spawntrader = function()
         end
     )
 
-    local shopGui = Instance.new("ScreenGui")
-    shopGui.Name = "TraderShop"
-    shopGui.Parent = LocalPlayer.PlayerGui
-    local shopFrame = Instance.new("Frame")
-    shopFrame.Size = UDim2.new(0, 400, 0, 300)
-    shopFrame.Position = UDim2.new(0.5, -200, 0.5, -150)
-    shopFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    shopFrame.BackgroundTransparency = 0.1
-    shopFrame.Visible = false
-    shopFrame.Parent = shopGui
-
-    local shopTitle = Instance.new("TextLabel")
-    shopTitle.Size = UDim2.new(1, 0, 0, 40)
-    shopTitle.Text = "Trader's Shop"
-    shopTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-    shopTitle.TextScaled = true
-    shopTitle.BackgroundTransparency = 1
-    shopTitle.Font = Enum.Font.SourceSansBold
-    shopTitle.Parent = shopFrame
-
-    local items = {
-        {name = "Bone", price = 10, chance = 0.6, effect = function() end},
-        {name = "GoldPistol", price = 50, chance = 0.4, effect = function() createWeapon("GoldPistol", LocalPlayer.Backpack, 30, 1, nil, nil, "rbxassetid://1837634873") end},
-        {name = "RegenPotion", price = 25, chance = 0.7, effect = function() if LocalPlayer.Character then LocalPlayer.Character.Humanoid.Health = math.min(LocalPlayer.Character.Humanoid.MaxHealth, LocalPlayer.Character.Humanoid.Health + LocalPlayer.Character.Humanoid.MaxHealth * 0.5) end end},
-        {name = "Hammer", price = 30, chance = 0.5, effect = function() createWeapon("Hammer", LocalPlayer.Backpack, 50, 2, 3, nil, "rbxassetid://1837634873") end},
-        {name = "ExileLantern", price = 50, chance = 0.4, effect = function() createWeapon("ExileLantern", LocalPlayer.Backpack, 0, 10, nil, function(player) for _, v in pairs(Workspace:GetChildren()) do if v:IsA("Model") and v:FindFirstChildOfClass("Humanoid") then local dist = (v.HumanoidRootPart.Position - player.Character.HumanoidRootPart.Position).Magnitude if dist < 10 then v.Humanoid.WalkSpeed = 0 wait(10) v.Humanoid.WalkSpeed = 16 end end end end) end},
-        {name = "SandAmulet", price = 40, chance = 0.3, effect = function() if LocalPlayer.Character then LocalPlayer.Character.Humanoid.WalkSpeed = LocalPlayer.Character.Humanoid.WalkSpeed * 1.1 wait(30) LocalPlayer.Character.Humanoid.WalkSpeed = LocalPlayer.Character.Humanoid.WalkSpeed / 1.1 end end},
-        {name = "ScorpionArrow", price = 20, chance = 0.5, effect = function() createWeapon("ScorpionArrow", LocalPlayer.Backpack, 100, 5, nil, function(player) local target = Workspace:FindFirstChild("Mummy") or Workspace:FindFirstChild("Sphinx") if target then target.Humanoid:TakeDamage(100) for i = 1, 10 do wait(1) target.Humanoid:TakeDamage(5) end end end) end}
-    }
-
-    for i = 1, 4 do
-        local item = items[math.random(1, #items)]
-        if math.random() < item.chance then
-            local button = Instance.new("TextButton")
-            button.Size = UDim2.new(0, 360, 0, 50)
-            button.Position = UDim2.new(0, 20, 0, 50 + (i-1)*60)
-            button.Text = item.name .. " (" .. item.price .. " Coins)"
-            button.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-            button.TextColor3 = Color3.fromRGB(255, 255, 255)
-            button.TextScaled = true
-            button.Parent = shopFrame
-            button.MouseButton1Click:Connect(function()
-                if coins >= item.price then
-                    updateCoins(-item.price)
-                    item.effect()
-                    notify("Purchased", "Bought " .. item.name)
-                else
-                    notify("Error", "Not enough coins")
-                end
-            end)
-        end
-    end
-
-    local closeButton = Instance.new("TextButton")
-    closeButton.Size = UDim2.new(0, 100, 0, 30)
-    closeButton.Position = UDim2.new(1, -110, 0, 10)
-    closeButton.Text = "Close"
-    closeButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
-    closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    closeButton.TextScaled = true
-    closeButton.Parent = shopFrame
-    closeButton.MouseButton1Click:Connect(function()
+    if trader then
+        local shopGui = Instance.new("ScreenGui")
+        shopGui.Name = "TraderShop"
+        shopGui.Parent = LocalPlayer.PlayerGui
+        local shopFrame = Instance.new("Frame")
+        shopFrame.Size = UDim2.new(0, 400, 0, 300)
+        shopFrame.Position = UDim2.new(0.5, -200, 0.5, -150)
+        shopFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        shopFrame.BackgroundTransparency = 0.1
         shopFrame.Visible = false
-    end)
+        shopFrame.Parent = shopGui
 
-    trader.HumanoidRootPart.Touched:Connect(function(hit)
-        local player = Players:GetPlayerFromCharacter(hit.Parent)
-        if player then
-            shopFrame.Visible = true
+        local shopTitle = Instance.new("TextLabel")
+        shopTitle.Size = UDim2.new(1, 0, 0, 40)
+        shopTitle.Text = "Trader's Shop"
+        shopTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+        shopTitle.TextScaled = true
+        shopTitle.BackgroundTransparency = 1
+        shopTitle.Font = Enum.Font.SourceSansBold
+        shopTitle.Parent = shopFrame
+
+        local items = {
+            {name = "Bone", price = 10, chance = 0.6, effect = function() end},
+            {name = "GoldPistol", price = 50, chance = 0.4, effect = function() createWeapon("GoldPistol", LocalPlayer.Backpack, 30, 1, nil, nil, "rbxassetid://1837634873") end},
+            {name = "RegenPotion", price = 25, chance = 0.7, effect = function() if LocalPlayer.Character then LocalPlayer.Character.Humanoid.Health = math.min(LocalPlayer.Character.Humanoid.MaxHealth, LocalPlayer.Character.Humanoid.Health + LocalPlayer.Character.Humanoid.MaxHealth * 0.5) end end},
+            {name = "Hammer", price = 30, chance = 0.5, effect = function() createWeapon("Hammer", LocalPlayer.Backpack, 50, 2, 3, nil, "rbxassetid://1837634873") end},
+            {name = "ExileLantern", price = 50, chance = 0.4, effect = function() createWeapon("ExileLantern", LocalPlayer.Backpack, 0, 10, nil, function(player) for _, v in pairs(Workspace:GetChildren()) do if v:IsA("Model") and v:FindFirstChildOfClass("Humanoid") then local dist = (v.HumanoidRootPart.Position - player.Character.HumanoidRootPart.Position).Magnitude if dist < 10 then v.Humanoid.WalkSpeed = 0 wait(10) v.Humanoid.WalkSpeed = 16 end end end end) end},
+            {name = "SandAmulet", price = 40, chance = 0.3, effect = function() if LocalPlayer.Character then LocalPlayer.Character.Humanoid.WalkSpeed = LocalPlayer.Character.Humanoid.WalkSpeed * 1.1 wait(30) LocalPlayer.Character.Humanoid.WalkSpeed = LocalPlayer.Character.Humanoid.WalkSpeed / 1.1 end end},
+            {name = "ScorpionArrow", price = 20, chance = 0.5, effect = function() createWeapon("ScorpionArrow", LocalPlayer.Backpack, 100, 5, nil, function(player) local target = Workspace:FindFirstChild("Mummy") or Workspace:FindFirstChild("Sphinx") if target then target.Humanoid:TakeDamage(100) for i = 1, 10 do wait(1) target.Humanoid:TakeDamage(5) end end end) end}
+        }
+
+        for i = 1, 4 do
+            local item = items[math.random(1, #items)]
+            if math.random() < item.chance then
+                local button = Instance.new("TextButton")
+                button.Size = UDim2.new(0, 360, 0, 50)
+                button.Position = UDim2.new(0, 20, 0, 50 + (i-1)*60)
+                button.Text = item.name .. " (" .. item.price .. " Coins)"
+                button.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+                button.TextColor3 = Color3.fromRGB(255, 255, 255)
+                button.TextScaled = true
+                button.Parent = shopFrame
+                button.MouseButton1Click:Connect(function()
+                    if coins >= item.price then
+                        updateCoins(-item.price)
+                        item.effect()
+                        notify("Purchased", "Bought " .. item.name)
+                    else
+                        notify("Error", "Not enough coins")
+                    end
+                end)
+            end
         end
-    end)
 
-    notify("Trader Spawned", "Created a Trader with shop")
+        local closeButton = Instance.new("TextButton")
+        closeButton.Size = UDim2.new(0, 100, 0, 30)
+        closeButton.Position = UDim2.new(1, -110, 0, 10)
+        closeButton.Text = "Close"
+        closeButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+        closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        closeButton.TextScaled = true
+        closeButton.Parent = shopFrame
+        closeButton.MouseButton1Click:Connect(function()
+            shopFrame.Visible = false
+        end)
+
+        trader.HumanoidRootPart.Touched:Connect(function(hit)
+            local player = Players:GetPlayerFromCharacter(hit.Parent)
+            if player then
+                shopFrame.Visible = true
+            end
+        end)
+
+        notify("Trader Spawned", "Created a Trader with shop")
+    else
+        notify("Error", "Failed to spawn Trader")
+    end
 end
 
 _G.DeadRails.spawndog = function()
-    if not LocalPlayer.Character then
+    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
         notify("Error", "Player character not found")
         return
     end
@@ -755,7 +780,7 @@ _G.DeadRails.spawndog = function()
         BrickColor.new("Brown"),
         function(mob, h)
             local tamed = false
-            while h.Health > 0 do
+            while h and h.Parent and h.Health > 0 do
                 wait(0.1)
                 if isPaused then continue end
                 if tamed then
@@ -770,17 +795,19 @@ _G.DeadRails.spawndog = function()
                             end
                         end
                     end
-                    if closestEnemy then
+                    if closestEnemy and closestEnemy:FindFirstChild("HumanoidRootPart") then
                         h:MoveTo(closestEnemy.HumanoidRootPart.Position)
                         local dist = (closestEnemy.HumanoidRootPart.Position - mob.HumanoidRootPart.Position).Magnitude
-                        if dist < 2 then
+                        if dist < 2 and closestEnemy:FindFirstChild("Humanoid") then
                             closestEnemy.Humanoid:TakeDamage(50)
                             local particle = createParticle(closestEnemy.HumanoidRootPart, Color3.fromRGB(255, 0, 0), 0.5)
                             wait(0.5)
                             particle:Destroy()
                         end
                     else
-                        h:MoveTo(LocalPlayer.Character.HumanoidRootPart.Position)
+                        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                            h:MoveTo(LocalPlayer.Character.HumanoidRootPart.Position)
+                        end
                     end
                 else
                     h:MoveTo(pos + Vector3.new(math.random(-5, 5), 0, math.random(-5, 5)))
@@ -813,38 +840,221 @@ _G.DeadRails.spawndog = function()
         {Walk = animations.Walk}
     )
 
-    humanoid.HealthChanged:Connect(function(health)
-        if health < BASE_HP * 10 then
-            wait(10)
-            humanoid.Health = math.min(BASE_HP * 10, humanoid.Health + 100)
-            local particle = createParticle(dog.HumanoidRootPart, Color3.fromRGB(0, 255, 0), 1)
-            wait(1)
-            particle:Destroy()
-        end
-    end)
+    if dog then
+        humanoid.HealthChanged:Connect(function(health)
+            if health < BASE_HP * 10 then
+                wait(10)
+                humanoid.Health = math.min(BASE_HP * 10, humanoid.Health + 100)
+                local particle = createParticle(dog.HumanoidRootPart, Color3.fromRGB(0, 255, 0), 1)
+                wait(1)
+                particle:Destroy()
+            end
+        end)
 
-    dog.HumanoidRootPart.Touched:Connect(function(hit)
-        local player = Players:GetPlayerFromCharacter(hit.Parent)
-        if player and player.Backpack:FindFirstChild("Bone") then
-            player.Backpack.Bone:Destroy()
-            notify("Dog Tamed", "The Dog is now your ally")
-            coroutine.wrap(function()
-                while humanoid.Health > 0 do
-                    wait(0.1)
-                    if isPaused then continue end
-                    humanoid:MoveTo(player.Character.HumanoidRootPart.Position)
-                end
-            end)()
-        end
-    end)
+        dog.HumanoidRootPart.Touched:Connect(function(hit)
+            local player = Players:GetPlayerFromCharacter(hit.Parent)
+            if player and player.Backpack:FindFirstChild("Bone") then
+                player.Backpack.Bone:Destroy()
+                notify("Dog Tamed", "The Dog is now your ally")
+                spawn(function()
+                    while humanoid and humanoid.Parent and humanoid.Health > 0 do
+                        wait(0.1)
+                        if isPaused then continue end
+                        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                            humanoid:MoveTo(player.Character.HumanoidRootPart.Position)
+                        end
+                    end
+                end)
+            end
+        end)
 
-    notify("Dog Spawned", "Created a Dog with " .. (BASE_HP * 10) .. " HP")
+        notify("Dog Spawned", "Created a Dog with " .. (BASE_HP * 10) .. " HP")
+    else
+        notify("Error", "Failed to spawn Dog")
+    end
 end
 
 -- Постройки
 _G.DeadRails.spawnpyramid = function()
-    if not LocalPlayer.Character then
+    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
         notify("Error", "Player character not found")
         return
     end
-    local pos = LocalPlayer.Character.H
+    local pos = LocalPlayer.Character.HumanoidRootPart.Position + Vector3.new(0, 0, 30)
+    local pyramid = Instance.new("Model")
+    pyramid.Name = "Pyramid"
+    pyramid.Parent = Workspace
+
+    local base = Instance.new("Part")
+    base.Size = Vector3.new(20, 1, 20)
+    base.Position = pos
+    base.BrickColor = BrickColor.new("Sand yellow")
+    base.Anchored = true
+    base.Parent = pyramid
+
+    local layer1 = Instance.new("Part")
+    layer1.Size = Vector3.new(16, 1, 16)
+    layer1.Position = pos + Vector3.new(0, 2, 0)
+    layer1.BrickColor = BrickColor.new("Sand yellow")
+    layer1.Anchored = true
+    layer1.Parent = pyramid
+
+    local layer2 = Instance.new("Part")
+    layer2.Size = Vector3.new(12, 1, 12)
+    layer2.Position = pos + Vector3.new(0, 4, 0)
+    layer2.BrickColor = BrickColor.new("Sand yellow")
+    layer2.Anchored = true
+    layer2.Parent = pyramid
+
+    local layer3 = Instance.new("Part")
+    layer3.Size = Vector3.new(8, 1, 8)
+    layer3.Position = pos + Vector3.new(0, 6, 0)
+    layer3.BrickColor = BrickColor.new("Sand yellow")
+    layer3.Anchored = true
+    layer3.Parent = pyramid
+
+    local top = Instance.new("Part")
+    top.Size = Vector3.new(4, 1, 4)
+    top.Position = pos + Vector3.new(0, 8, 0)
+    top.BrickColor = BrickColor.new("Sand yellow")
+    top.Anchored = true
+    top.Parent = pyramid
+
+    spawn(function()
+        while pyramid and pyramid.Parent do
+            wait(AUTOSPAWN_INTERVAL)
+            if isPaused then continue end
+            local mummyPos = pos + Vector3.new(math.random(-10, 10), 1, math.random(-10, 10))
+            _G.DeadRails.spawnmummy()
+        end
+    end)
+
+    notify("Pyramid Spawned", "Created a Pyramid that spawns Mummies")
+end
+
+_G.DeadRails.spawnoasis = function()
+    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        notify("Error", "Player character not found")
+        return
+    end
+    local pos = LocalPlayer.Character.HumanoidRootPart.Position + Vector3.new(0, 0, 20)
+    local oasis = Instance.new("Model")
+    oasis.Name = "Oasis"
+    oasis.Parent = Workspace
+
+    local water = Instance.new("Part")
+    water.Size = Vector3.new(10, 0.5, 10)
+    water.Position = pos
+    water.BrickColor = BrickColor.new("Light blue")
+    water.Transparency = 0.5
+    water.Anchored = true
+    water.Parent = oasis
+
+    local palm = Instance.new("Part")
+    palm.Size = Vector3.new(1, 5, 1)
+    palm.Position = pos + Vector3.new(0, 3, 0)
+    palm.BrickColor = BrickColor.new("Brown")
+    palm.Anchored = true
+    palm.Parent = oasis
+
+    local leaves = Instance.new("Part")
+    leaves.Size = Vector3.new(5, 1, 5)
+    leaves.Position = pos + Vector3.new(0, 6, 0)
+    leaves.BrickColor = BrickColor.new("Lime green")
+    leaves.Anchored = true
+    leaves.Parent = oasis
+
+    water.Touched:Connect(function(hit)
+        local player = Players:GetPlayerFromCharacter(hit.Parent)
+        if player and player.Character and player.Character:FindFirstChild("Humanoid") then
+            player.Character.Humanoid.Health = player.Character.Humanoid.MaxHealth
+            notify("Oasis Effect", "Health restored")
+        end
+    end)
+
+    notify("Oasis Spawned", "Created an Oasis that heals")
+end
+
+_G.DeadRails.spawnsandstone = function()
+    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        notify("Error", "Player character not found")
+        return
+    end
+    local pos = LocalPlayer.Character.HumanoidRootPart.Position + Vector3.new(0, 0, 15)
+    local sandstone = Instance.new("Model")
+    sandstone.Name = "Sandstone"
+    sandstone.Parent = Workspace
+
+    local rock = Instance.new("Part")
+    rock.Size = Vector3.new(5, 3, 5)
+    rock.Position = pos
+    rock.BrickColor = BrickColor.new("Sand yellow")
+    rock.Anchored = true
+    rock.Parent = sandstone
+
+    rock.Touched:Connect(function(hit)
+        local player = Players:GetPlayerFromCharacter(hit.Parent)
+        if player then
+            createItem(
+                "SandstoneShard",
+                pos + Vector3.new(0, 2, 0),
+                10,
+                BrickColor.new("Sand yellow"),
+                function(p, item)
+                    updateCoins(10)
+                    item:Destroy()
+                    notify("Item Collected", "Picked up SandstoneShard (+10 Coins)")
+                end
+            )
+            rock:Destroy()
+        end
+    end)
+
+    notify("Sandstone Spawned", "Created a Sandstone that drops shards")
+end
+
+-- Механики и улучшения
+_G.DeadRails.togglepause = function()
+    isPaused = not isPaused
+    notify("Pause", isPaused and "Game Paused" or "Game Resumed")
+end
+
+_G.DeadRails.openbag = function()
+    bagGui.Enabled = not bagGui.Enabled
+    notify("Bag", bagGui.Enabled and "Bag Opened" or "Bag Closed")
+end
+
+_G.DeadRails.upgrade = function(upgradeName)
+    local upgrade = upgrades[upgradeName]
+    if not upgrade then
+        notify("Error", "Invalid upgrade: " .. tostring(upgradeName))
+        return
+    end
+    if upgrade.level >= upgrade.maxLevel then
+        notify("Error", upgradeName .. " is already at max level")
+        return
+    end
+    if coins < upgrade.price then
+        notify("Error", "Not enough coins for " .. upgradeName)
+        return
+    end
+    updateCoins(-upgrade.price)
+    upgrade.level = upgrade.level + 1
+    if upgradeName == "Health" and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        LocalPlayer.Character.Humanoid.MaxHealth = LocalPlayer.Character.Humanoid.MaxHealth * (1 + upgrade.bonus)
+    elseif upgradeName == "Speed" and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        LocalPlayer.Character.Humanoid.WalkSpeed = LocalPlayer.Character.Humanoid.WalkSpeed * (1 + upgrade.bonus)
+    elseif upgradeName == "Regen" and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        spawn(function()
+            while LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") do
+                wait(5)
+                if isPaused then continue end
+                LocalPlayer.Character.Humanoid.Health = math.min(LocalPlayer.Character.Humanoid.MaxHealth, LocalPlayer.Character.Humanoid.Health + LocalPlayer.Character.Humanoid.MaxHealth * upgrade.bonus)
+            end
+        end)
+    end
+    notify("Upgrade", upgradeName .. " upgraded to level " .. upgrade.level)
+end
+
+-- Инициализация
+notify("Dead Rails Loaded", "Commands: spawnmummy, spawnsphinx, spawnpharaoh, spawnwanderer, spawntrader, spawndog, spawnpyramid, spawnoasis, spawnsandstone, togglepause, openbag, upgrade")

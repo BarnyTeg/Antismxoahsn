@@ -1,5 +1,5 @@
 -- Airplane Script for Delta Executor (Mobile)
--- Version: 1.0 | Date: 16.04.2025
+-- Version: 1.1 | Date: 16.04.2025
 -- Description: Spawns a controllable airplane with mobile buttons and speed display
 
 -- Проверка окружения Roblox
@@ -13,8 +13,9 @@ local Workspace = game:GetService("Workspace")
 local StarterGui = game:GetService("StarterGui")
 local LocalPlayer = Players.LocalPlayer
 
--- Глобальная таблица для команд
-_G.Airplane = _G.Airplane or {}
+-- Создаём глобальную таблицу
+local Airplane = {}
+_G.Airplane = Airplane
 
 -- Уведомления
 local function notify(title, text, duration)
@@ -28,9 +29,10 @@ local function notify(title, text, duration)
 end
 
 -- Создание самолёта
-local function createAirplane()
+Airplane.spawn = function()
+    -- Проверка, что персонаж игрока загружен
     if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        notify("Error", "Player character not found")
+        notify("Error", "Player character not found. Please wait until your character loads.")
         return
     end
 
@@ -337,12 +339,6 @@ local function createAirplane()
     end)
 
     notify("Airplane Spawned", "Airplane created! Sit in the seat to fly.")
-    return airplane
-end
-
--- Команда для спавна самолёта
-_G.Airplane.spawn = function()
-    createAirplane()
 end
 
 -- Инициализация

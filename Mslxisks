@@ -1,312 +1,40 @@
--- Helicopter Script for Mobile
--- Fixed Version | Date: 18.04.2025
--- Fully working helicopter with proper seating
-
--- Environment check
-if not game then
-    error("This script must run in a Roblox environment")
-end
-
--- Services
+-- Простейший рабочий вертолет (только сиденье)
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
-local StarterGui = game:GetService("StarterGui")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
--- Player reference
-local LocalPlayer = Players.LocalPlayer
-while not LocalPlayer do
-    wait()
-    LocalPlayer = Players.LocalPlayer
-end
-
--- Notifications
-local function notify(title, text, duration)
-    pcall(function()
-        StarterGui:SetCore("SendNotification", {
-            Title = title,
-            Text = text,
-            Duration = duration or 5
-        })
-    end)
-end
-
--- Wait for character
-while not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") do
+-- Ждем загрузку игрока
+local player = Players.LocalPlayer
+while not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") do
     wait(0.1)
 end
 
--- Spawn position
-local spawnPos = LocalPlayer.Character.HumanoidRootPart.Position + Vector3.new(20, 5, 0)
+-- Позиция перед игроком
+local spawnPos = player.Character.HumanoidRootPart.Position + player.Character.HumanoidRootPart.CFrame.LookVector * 5
 
--- Helicopter model
-local helicopter = Instance.new("Model")
-helicopter.Name = "Helicopter"
-
--- Scale factor
-local scale = 2
-
--- Body (main part)
-local body = Instance.new("Part")
-body.Size = Vector3.new(10 * scale, 2 * scale, 5 * scale)
-body.Position = spawnPos
-body.BrickColor = BrickColor.new("Dark gray")
-body.Anchored = true
-body.CanCollide = true
-body.Parent = helicopter
-
--- Front part (wedge)
-local bodyFront = Instance.new("Part")
-bodyFront.Size = Vector3.new(2 * scale, 2 * scale, 5 * scale)
-bodyFront.Position = spawnPos + Vector3.new(6 * scale, 0, 0)
-bodyFront.BrickColor = BrickColor.new("Dark gray")
-bodyFront.Anchored = true
-bodyFront.CanCollide = true
-local frontMesh = Instance.new("SpecialMesh")
-frontMesh.MeshType = Enum.MeshType.Wedge
-frontMesh.Parent = bodyFront
-bodyFront.Parent = helicopter
-
--- Rear part (wedge)
-local bodyRear = Instance.new("Part")
-bodyRear.Size = Vector3.new(2 * scale, 2 * scale, 5 * scale)
-bodyRear.Position = spawnPos + Vector3.new(-6 * scale, 0, 0)
-bodyRear.BrickColor = BrickColor.new("Dark gray")
-bodyRear.Anchored = true
-bodyRear.CanCollide = true
-local rearMesh = Instance.new("SpecialMesh")
-rearMesh.MeshType = Enum.MeshType.Wedge
-rearMesh.Parent = bodyRear
-rearMesh.Scale = Vector3.new(1, 1, -1)
-bodyRear.Parent = helicopter
-
--- Cabin (transparent)
-local cabin = Instance.new("Part")
-cabin.Size = Vector3.new(4 * scale, 2 * scale, 5 * scale)
-cabin.Position = spawnPos + Vector3.new(3 * scale, 2 * scale, 0)
-cabin.BrickColor = BrickColor.new("Light blue")
-cabin.Transparency = 0.5
-cabin.Anchored = true
-cabin.CanCollide = false
-cabin.Parent = helicopter
-
--- Tail
-local tail = Instance.new("Part")
-tail.Size = Vector3.new(8 * scale, 0.5 * scale, 0.5 * scale)
-tail.Position = spawnPos + Vector3.new(-9 * scale, 1 * scale, 0)
-tail.BrickColor = BrickColor.new("Dark gray")
-tail.Anchored = true
-tail.CanCollide = true
-tail.Parent = helicopter
-
--- Tail fin
-local tailFin = Instance.new("Part")
-tailFin.Size = Vector3.new(0.5 * scale, 2 * scale, 1 * scale)
-tailFin.Position = spawnPos + Vector3.new(-12 * scale, 2 * scale, 0)
-tailFin.BrickColor = BrickColor.new("Dark gray")
-tailFin.Anchored = true
-tailFin.CanCollide = true
-tailFin.Parent = helicopter
-
--- Main rotor base
-local mainRotorBase = Instance.new("Part")
-mainRotorBase.Size = Vector3.new(1 * scale, 0.5 * scale, 1 * scale)
-mainRotorBase.Position = spawnPos + Vector3.new(0, 4 * scale, 0)
-mainRotorBase.BrickColor = BrickColor.new("Black")
-mainRotorBase.Anchored = true
-mainRotorBase.CanCollide = true
-mainRotorBase.Parent = helicopter
-
--- Rotor blades
-local mainRotorBlade1 = Instance.new("Part")
-mainRotorBlade1.Size = Vector3.new(12 * scale, 0.2 * scale, 1 * scale)
-mainRotorBlade1.Position = spawnPos + Vector3.new(0, 4 * scale, 0)
-mainRotorBlade1.BrickColor = BrickColor.new("Black")
-mainRotorBlade1.Anchored = true
-mainRotorBlade1.CanCollide = true
-mainRotorBlade1.Parent = helicopter
-
-local mainRotorBlade2 = Instance.new("Part")
-mainRotorBlade2.Size = Vector3.new(12 * scale, 0.2 * scale, 1 * scale)
-mainRotorBlade2.Position = spawnPos + Vector3.new(0, 4 * scale, 0)
-mainRotorBlade2.BrickColor = BrickColor.new("Black")
-mainRotorBlade2.Anchored = true
-mainRotorBlade2.CanCollide = true
-mainRotorBlade2.CFrame = mainRotorBlade1.CFrame * CFrame.Angles(0, math.rad(90), 0)
-mainRotorBlade2.Parent = helicopter
-
--- Tail rotor
-local tailRotorBase = Instance.new("Part")
-tailRotorBase.Size = Vector3.new(0.5 * scale, 0.5 * scale, 0.5 * scale)
-tailRotorBase.Position = spawnPos + Vector3.new(-12 * scale, 1 * scale, 0.5 * scale)
-tailRotorBase.BrickColor = BrickColor.new("Black")
-tailRotorBase.Anchored = true
-tailRotorBase.CanCollide = true
-tailRotorBase.Parent = helicopter
-
-local tailRotorBlade = Instance.new("Part")
-tailRotorBlade.Size = Vector3.new(0.2 * scale, 2 * scale, 0.2 * scale)
-tailRotorBlade.Position = spawnPos + Vector3.new(-12 * scale, 1 * scale, 0.5 * scale)
-tailRotorBlade.BrickColor = BrickColor.new("Black")
-tailRotorBlade.Anchored = true
-tailRotorBlade.CanCollide = true
-tailRotorBlade.Parent = helicopter
-
--- Landing skids
-local skidLeft = Instance.new("Part")
-skidLeft.Size = Vector3.new(8 * scale, 0.5 * scale, 0.5 * scale)
-skidLeft.Position = spawnPos + Vector3.new(0, -1.5 * scale, -2.5 * scale)
-skidLeft.BrickColor = BrickColor.new("Black")
-skidLeft.Anchored = true
-skidLeft.CanCollide = true
-skidLeft.Parent = helicopter
-
-local skidRight = Instance.new("Part")
-skidRight.Size = Vector3.new(8 * scale, 0.5 * scale, 0.5 * scale)
-skidRight.Position = spawnPos + Vector3.new(0, -1.5 * scale, 2.5 * scale)
-skidRight.BrickColor = BrickColor.new("Black")
-skidRight.Anchored = true
-skidRight.CanCollide = true
-skidRight.Parent = helicopter
-
--- Seat (using VehicleSeat)
-local seat = Instance.new("VehicleSeat")
-seat.Size = Vector3.new(2 * scale, 1 * scale, 2 * scale)
-seat.Position = spawnPos + Vector3.new(3 * scale, (0.5 + 1) * scale, 0)
-seat.BrickColor = BrickColor.new("Black")
-seat.Transparency = 0
-seat.Anchored = false  -- Must be false for physics
+-- Создаем сиденье
+local seat = Instance.new("Seat")
+seat.Name = "HelicopterSeat"
+seat.Size = Vector3.new(3, 1, 3) -- Достаточно большой размер
+seat.CFrame = CFrame.new(spawnPos + Vector3.new(0, 2, 0)) -- Чуть выше земли
+seat.Anchored = false -- Должно быть false!
 seat.CanCollide = true
-seat.MaxSpeed = 100
-seat.Parent = helicopter
+seat.Parent = Workspace
 
--- Root part
-local rootPart = Instance.new("Part")
-rootPart.Name = "HelicopterRoot"
-rootPart.Size = Vector3.new(2 * scale, 2 * scale, 2 * scale)
-rootPart.Position = spawnPos
-rootPart.Transparency = 1
-rootPart.Anchored = true
-rootPart.CanCollide = false
-rootPart.Parent = helicopter
-helicopter.PrimaryPart = rootPart
-
--- Weld all parts together
-local function weldParts(part1, part2)
-    local weld = Instance.new("WeldConstraint")
-    weld.Part0 = part1
-    weld.Part1 = part2
-    weld.Parent = part1
-end
-
-weldParts(body, bodyFront)
-weldParts(body, bodyRear)
-weldParts(body, cabin)
-weldParts(body, tail)
-weldParts(tail, tailFin)
-weldParts(body, mainRotorBase)
-weldParts(mainRotorBase, mainRotorBlade1)
-weldParts(mainRotorBase, mainRotorBlade2)
-weldParts(tailFin, tailRotorBase)
-weldParts(tailRotorBase, tailRotorBlade)
-weldParts(body, skidLeft)
-weldParts(body, skidRight)
-weldParts(body, seat)
-
--- Rotor animation
-spawn(function()
-    while helicopter and helicopter.Parent do
-        mainRotorBlade1.CFrame = mainRotorBlade1.CFrame * CFrame.Angles(0, math.rad(10), 0)
-        mainRotorBlade2.CFrame = mainRotorBlade2.CFrame * CFrame.Angles(0, math.rad(10), 0)
-        tailRotorBlade.CFrame = tailRotorBlade.CFrame * CFrame.Angles(0, 0, math.rad(10))
-        wait(0.01)
-    end
-end)
-
--- Control GUI
-local controlGui = Instance.new("ScreenGui")
-controlGui.Name = "HelicopterControls"
-controlGui.Enabled = false
-controlGui.Parent = LocalPlayer.PlayerGui
-
--- Control buttons (same as before)
--- ... [Previous button code remains unchanged] ...
-
--- Flight variables
-local isFlying = false
-local height = 0
-local forwardSpeed = 0
-local turn = 0
-local maxSpeed = 27.78 -- 100 km/h
-
--- Seat handling
-local function onSeatOccupied()
-    if seat.Occupant and seat.Occupant.Parent == LocalPlayer.Character then
-        -- Release anchors
-        for _, part in pairs(helicopter:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.Anchored = false
-            end
-        end
-        isFlying = true
-        controlGui.Enabled = true
-        notify("Helicopter", "You're now piloting the helicopter!")
+-- Функция посадки
+local function onTouch(hit)
+    local humanoid = hit.Parent:FindFirstChildOfClass("Humanoid")
+    if humanoid and humanoid == player.Character.Humanoid then
+        humanoid.Sit = true -- Принудительно сажаем
+        seat:Sit(humanoid) -- Альтернативный способ
+        print("Игрок сел в вертолет!")
     end
 end
 
-local function onSeatVacated()
-    isFlying = false
-    controlGui.Enabled = false
-    forwardSpeed = 0
-    turn = 0
-    height = 0
-    
-    -- Anchor all parts
-    for _, part in pairs(helicopter:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.Anchored = true
-        end
-    end
-end
+seat.Touched:Connect(onTouch)
 
-seat:GetPropertyChangedSignal("Occupant"):Connect(function()
-    if seat.Occupant then
-        onSeatOccupied()
-    else
-        onSeatVacated()
-    end
-end)
-
--- Flight physics
-spawn(function()
-    while helicopter and helicopter.Parent do
-        wait(0.01)
-        if isFlying then
-            local rootPart = helicopter.PrimaryPart
-            local currentCFrame = rootPart.CFrame
-
-            -- Rotation
-            local newCFrame = currentCFrame * CFrame.Angles(0, math.rad(turn), 0)
-
-            -- Forward movement
-            local direction = newCFrame.LookVector
-            newCFrame = newCFrame + (direction * forwardSpeed * 0.1)
-
-            -- Altitude
-            newCFrame = newCFrame + Vector3.new(0, height * 0.1, 0)
-
-            -- Apply movement
-            rootPart.CFrame = newCFrame
-
-            -- Update speed display
-            local speedKmh = math.floor(forwardSpeed * 3.6)
-            speedLabel.Text = "Speed: " .. speedKmh .. " km/h"
-        end
-    end
-end)
-
--- Initial notification
-notify("Helicopter Spawned", "Approach and sit in the helicopter to fly!", 5)
-
--- Final step: add to workspace
-helicopter.Parent = Workspace
+-- Уведомление
+game:GetService("StarterGui"):SetCore("SendNotification", {
+    Title = "Вертолет",
+    Text = "Подойдите к сиденью чтобы сесть",
+    Duration = 5
+})

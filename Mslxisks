@@ -6,35 +6,50 @@ while not player.Character or not player.Character:FindFirstChild("HumanoidRootP
     wait(0.1)
 end
 
--- Создаем сиденье с фиксированной позицией
+-- Создаем оптимизированное сиденье
 local seat = Instance.new("Seat")
 seat.Name = "HelicopterSeat"
-seat.Size = Vector3.new(3, 1.5, 3)
+seat.Size = Vector3.new(4, 1.2, 4) -- Увеличил размер для надежности
 seat.Anchored = true
 seat.CanCollide = true
-seat.CFrame = player.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -5) * CFrame.Angles(0, math.rad(180), 0)
+seat.CFrame = player.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -3) * CFrame.Angles(0, math.rad(180), 0)
 seat.Parent = Workspace
 
--- Жесткая фиксация позиции
-local sitCFrame = seat.CFrame * CFrame.new(0, -0.7, 0) * CFrame.Angles(-0.2, 0, 0)
+-- Настройки посадки
+local sitOffset = CFrame.new(0, -0.5, 0.2) -- Смещение позиции (Y и Z)
+local sitAngle = CFrame.Angles(-0.3, 0, 0) -- Наклон назад
 
+-- Плавное притягивание к сиденью
+local function smoothSit(humanoid)
+    local startTime = os.clock()
+    local duration = 0.5 -- Длительность анимации в секундах
+    
+    while os.clock() - startTime < duration do
+        if not humanoid or humanoid.Health <= 0 then break end
+        
+        -- Плавное перемещение
+        local progress = (os.clock() - startTime)/duration
+        humanoid.RootPart.CFrame = seat.CFrame:Lerp(
+            seat.CFrame * sitOffset * sitAngle,
+            progress
+        )
+        humanoid.Sit = true
+        wait(0.01)
+    end
+    
+    -- Фиксация в конечной позиции
+    if humanoid then
+        humanoid.PlatformStand = true
+        humanoid.RootPart.CFrame = seat.CFrame * sitOffset * sitAngle
+    end
+end
+
+-- Обработка касания
 seat.Touched:Connect(function(hit)
     local humanoid = hit.Parent:FindFirstChildOfClass("Humanoid")
-    if humanoid and humanoid == player.Character.Humanoid then
-        
-        -- Телепортация в фиксированную позу
+    if humanoid and humanoid == player.Character.Humanoid and not humanoid.Sit then
         humanoid.Sit = true
-        humanoid.RootPart.CFrame = sitCFrame
-        
-        -- Жесткая фиксация (повторяем 5 раз для надежности)
-        for i = 1, 5 do
-            wait(0.1)
-            humanoid.RootPart.CFrame = sitCFrame
-            humanoid.Sit = true
-        end
-        
-        -- Отключаем физику персонажа
-        humanoid.PlatformStand = true
+        smoothSit(humanoid)
     end
 end)
 
@@ -43,5 +58,7 @@ player.Character.Humanoid.Jumping:Connect(function()
     if player.Character.Humanoid.Sit then
         player.Character.Humanoid.PlatformStand = false
         player.Character.Humanoid.Sit = false
+        -- Небольшой толчок вперед при выходе
+        player.Character.HumanoidRootPart.Velocity = seat.CFrame.LookVector * 10
     end
 end)

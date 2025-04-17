@@ -1,64 +1,155 @@
+-- Вертолёт с фиксированным сиденьем и мобильным управлением
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
+local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
 while not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") do
     wait(0.1)
 end
 
--- Создаем сиденье с правильным позиционированием
+-- Параметры вертолёта
+local scale = 1.5
+local spawnPos = player.Character.HumanoidRootPart.Position + Vector3.new(0, 3, -5)
+
+-- Модель вертолёта
+local helicopter = Instance.new("Model")
+helicopter.Name = "Helicopter"
+
+-- Основные части
+local body = Instance.new("Part")
+body.Size = Vector3.new(5*scale, 1.5*scale, 3*scale)
+body.Position = spawnPos
+body.Anchored = true
+body.CanCollide = true
+body.Color = Color3.fromRGB(80, 80, 80)
+body.Parent = helicopter
+
+-- Компактное сиденье (фиксированное)
 local seat = Instance.new("Seat")
-seat.Name = "HelicopterSeat"
-seat.Size = Vector3.new(4, 0.4, 4) -- Тонкое сиденье (меньше вероятность коллизий)
+seat.Size = Vector3.new(2.2, 0.4, 2.2)
+seat.CFrame = body.CFrame * CFrame.new(0, 0.8, -0.5) * CFrame.Angles(-0.2, 0, 0)
 seat.Anchored = true
 seat.CanCollide = true
+seat.Color = Color3.fromRGB(30, 30, 30)
+seat.Parent = helicopter
 
--- Позиция сиденья (3 метра перед игроком + 1.5 метра вверх)
-seat.CFrame = player.Character.HumanoidRootPart.CFrame 
-             * CFrame.new(0, 1.5, -3) 
-             * CFrame.Angles(-0.3, math.rad(180), 0) -- Наклон спинки назад
-seat.Parent = Workspace
+-- Винт (для визуализации)
+local rotor = Instance.new("Part")
+rotor.Size = Vector3.new(0.2, 0.1, 6*scale)
+rotor.CFrame = body.CFrame * CFrame.new(0, 2*scale, 0)
+rotor.Anchored = true
+rotor.CanCollide = false
+rotor.Color = Color3.fromRGB(200, 200, 200)
+rotor.Parent = helicopter
 
--- Точная поза для сидения (на поверхности сиденья)
-local targetCFrame = seat.CFrame 
-                   * CFrame.new(0, seat.Size.Y/2 + 0.5, 0) -- Сидит НА сиденье
-                   * CFrame.Angles(-0.3, 0, 0) -- Наклон корпуса
+-- Крепление сиденья
+local weld = Instance.new("WeldConstraint")
+weld.Part0 = body
+weld.Part1 = seat
+weld.Parent = seat
 
--- Автоматическая посадка
+helicopter.PrimaryPart = body
+helicopter.Parent = Workspace
+
+-- Система посадки
+local targetCFrame = seat.CFrame * CFrame.new(0, 0.5, 0) * CFrame.Angles(-0.2, 0, 0)
+
 seat.Touched:Connect(function(hit)
     local humanoid = hit.Parent:FindFirstChildOfClass("Humanoid")
-    if humanoid and humanoid == player.Character.Humanoid then
-        
-        -- 1. Включаем режим сидения
+    if humanoid and humanoid == player.Character.Humanoid and not humanoid.Sit then
         humanoid.Sit = true
         humanoid.PlatformStand = true
-        
-        -- 2. Телепортация в точную позицию
         humanoid.RootPart.CFrame = targetCFrame
         
-        -- 3. Фиксация позиции (3 кадра подряд для надежности)
-        for i = 1, 3 do
-            task.wait(0.1)
-            humanoid.RootPart.CFrame = targetCFrame
+        -- Активация управления
+        activateControls(true)
+    end
+end)
+
+-- Мобильное управление
+local controlGui = Instance.new("ScreenGui")
+controlGui.Name = "HelicopterControls"
+controlGui.Parent = player.PlayerGui
+
+local function createButton(name, position, color)
+    local button = Instance.new("TextButton")
+    button.Name = name
+    button.Size = UDim2.new(0, 80, 0, 80)
+    button.Position = position
+    button.BackgroundColor3 = color
+    button.Text = name
+    button.TextScaled = true
+    button.Visible = false
+    button.Parent = controlGui
+    return button
+end
+
+local buttons = {
+    Up = createButton("Up", UDim2.new(0.1, 0, 0.7, 0), Color3.new(0, 1, 0)),
+    Down = createButton("Down", UDim2.new(0.1, 0, 0.85, 0), Color3.new(1, 0, 0)),
+    Forward = createButton("Fwd", UDim2.new(0.8, 0, 0.7, 0), Color3.new(0, 0, 1)),
+    Back = createButton("Back", UDim2.new(0.8, 0, 0.85, 0), Color3.new(1, 0.5, 0)),
+    Exit = createButton("Exit", UDim2.new(0.45, 0, 0.5, 0), Color3.new(1, 0, 0))
+}
+
+-- Параметры управления
+local isFlying = false
+local moveVector = Vector3.new(0, 0, 0)
+local maxSpeed = 50
+local turnSpeed = 1.5
+
+local function activateControls(state)
+    isFlying = state
+    for _, btn in pairs(buttons) do
+        btn.Visible = state
+    end
+end
+
+-- Обработка кнопок
+buttons.Up.MouseButton1Down:Connect(function() moveVector = Vector3.new(0, 1, 0) end)
+buttons.Down.MouseButton1Down:Connect(function() moveVector = Vector3.new(0, -1, 0) end)
+buttons.Forward.MouseButton1Down:Connect(function() moveVector = Vector3.new(0, 0, -1) end)
+buttons.Back.MouseButton1Down:Connect(function() moveVector = Vector3.new(0, 0, 1) end)
+
+buttons.Exit.MouseButton1Click:Connect(function()
+    if player.Character.Humanoid then
+        player.Character.Humanoid.PlatformStand = false
+        player.Character.Humanoid.Sit = false
+        activateControls(false)
+    end
+end)
+
+-- Сброс при отпускании
+UserInputService.TouchEnded:Connect(function()
+    moveVector = Vector3.new(0, 0, 0)
+end)
+
+-- Система полёта
+game:GetService("RunService").Heartbeat:Connect(function(dt)
+    if isFlying and helicopter.Parent then
+        -- Поворот винта
+        rotor.CFrame = rotor.CFrame * CFrame.Angles(0, dt*10, 0)
+        
+        -- Движение вертолёта
+        local moveForce = moveVector * dt * maxSpeed
+        local newCF = body.CFrame:ToWorldSpace(CFrame.new(moveForce.X, moveForce.Y, moveForce.Z))
+        
+        -- Плавное перемещение
+        body.CFrame = body.CFrame:Lerp(newCF, 0.3)
+        seat.CFrame = body.CFrame * CFrame.new(0, 0.8, -0.5) * CFrame.Angles(-0.2, 0, 0)
+        
+        -- Фиксация игрока
+        if player.Character and player.Character.Humanoid.Sit then
+            player.Character.HumanoidRootPart.CFrame = seat.CFrame * CFrame.new(0, 0.5, 0) * CFrame.Angles(-0.2, 0, 0)
         end
     end
 end)
 
--- Выход по прыжку (с небольшим толчком)
-player.Character.Humanoid.Jumping:Connect(function()
-    if player.Character.Humanoid.Sit then
-        player.Character.Humanoid.PlatformStand = false
-        player.Character.Humanoid.Sit = false
-        player.Character.HumanoidRootPart.Velocity = seat.CFrame.LookVector * 12
+-- Вращение винта (визуальный эффект)
+spawn(function()
+    while helicopter.Parent do
+        rotor.CFrame = rotor.CFrame * CFrame.Angles(0, 0.1, 0)
+        wait()
     end
 end)
-
--- Визуальный маркер сиденья (для отладки)
-local marker = Instance.new("Part")
-marker.Size = Vector3.new(1, 0.2, 1)
-marker.CFrame = targetCFrame
-marker.Anchored = true
-marker.CanCollide = false
-marker.Transparency = 0.7
-marker.Color = Color3.new(1, 0, 0)
-marker.Parent = Workspace

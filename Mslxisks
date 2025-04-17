@@ -8,71 +8,77 @@ local player = game.Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local rootPart = character:WaitForChild("HumanoidRootPart")
 local workspace = game.Workspace
-local replicatedStorage = game:GetService("ReplicatedStorage")
 
 -- Функция для создания дракона
 local function spawnDragon()
-    -- Ищем модель зомби в игре (будем использовать её как основу)
-    local baseModel = workspace:FindFirstChild("Zombie") or replicatedStorage:FindFirstChild("Zombie")
-    if not baseModel then
-        print("Модель Zombie не найдена! Попробуй найти зомби в игре.")
-        return
-    end
-
-    -- Клонируем модель
-    local dragon = baseModel:Clone()
+    -- Создаём модель дракона
+    local dragon = Instance.new("Model")
     dragon.Name = "DragonCompanion"
-    
-    -- Настраиваем внешний вид дракона
-    local humanoid = dragon:FindFirstChildOfClass("Humanoid")
-    if humanoid then
-        local originalHeight = humanoid.HipHeight
-        humanoid.HipHeight = 3 -- 3 метра в высоту
-        for _, part in pairs(dragon:GetDescendants()) do
-            if part:IsA("BasePart") then
-                local scaleFactor = 3 / originalHeight
-                part.Size = part.Size * scaleFactor
-                -- Тёмно-зелёный цвет с красными акцентами
-                part.BrickColor = BrickColor.new("Dark green")
-                if part.Name == "Head" then
-                    part.BrickColor = BrickColor.new("Crimson")
-                end
-            end
-        end
 
-        -- Добавляем "крылья" (имитация через части)
-        local leftWing = Instance.new("Part")
-        leftWing.Name = "LeftWing"
-        leftWing.Size = Vector3.new(2, 0.2, 3)
-        leftWing.BrickColor = BrickColor.new("Dark green")
-        leftWing.Position = dragon.PrimaryPart.Position + Vector3.new(-2, 2, 0)
-        leftWing.Parent = dragon
+    -- Создаём части дракона
+    local body = Instance.new("Part")
+    body.Name = "Body"
+    body.Size = Vector3.new(2, 1, 4) -- Длинное тело
+    body.BrickColor = BrickColor.new("Dark green")
+    body.Position = Vector3.new(0, 3, 0)
+    body.Parent = dragon
+    dragon.PrimaryPart = body
 
-        local rightWing = Instance.new("Part")
-        rightWing.Name = "RightWing"
-        rightWing.Size = Vector3.new(2, 0.2, 3)
-        rightWing.BrickColor = BrickColor.new("Dark green")
-        rightWing.Position = dragon.PrimaryPart.Position + Vector3.new(2, 2, 0)
-        rightWing.Parent = dragon
+    local head = Instance.new("Part")
+    head.Name = "Head"
+    head.Size = Vector3.new(1, 1, 1.5)
+    head.BrickColor = BrickColor.new("Crimson")
+    head.Position = body.Position + Vector3.new(0, 0.5, 2)
+    head.Parent = dragon
 
-        -- Прикрепляем крылья
-        local weldLeft = Instance.new("Weld")
-        weldLeft.Part0 = dragon.PrimaryPart
-        weldLeft.Part1 = leftWing
-        weldLeft.C0 = CFrame.new(-2, 2, 0)
-        weldLeft.Parent = leftWing
+    local leftWing = Instance.new("Part")
+    leftWing.Name = "LeftWing"
+    leftWing.Size = Vector3.new(2, 0.2, 3)
+    leftWing.BrickColor = BrickColor.new("Dark green")
+    leftWing.Position = body.Position + Vector3.new(-1.5, 0.5, 0)
+    leftWing.Parent = dragon
 
-        local weldRight = Instance.new("Weld")
-        weldRight.Part0 = dragon.PrimaryPart
-        weldRight.Part1 = rightWing
-        weldRight.C0 = CFrame.new(2, 2, 0)
-        weldRight.Parent = rightWing
+    local rightWing = Instance.new("Part")
+    rightWing.Name = "RightWing"
+    rightWing.Size = Vector3.new(2, 0.2, 3)
+    rightWing.BrickColor = BrickColor.new("Dark green")
+    rightWing.Position = body.Position + Vector3.new(1.5, 0.5, 0)
+    rightWing.Parent = dragon
+
+    local tail = Instance.new("Part")
+    tail.Name = "Tail"
+    tail.Size = Vector3.new(0.5, 0.5, 3)
+    tail.BrickColor = BrickColor.new("Dark green")
+    tail.Position = body.Position + Vector3.new(0, 0, -3.5)
+    tail.Parent = dragon
+
+    -- Добавляем лапы
+    for i = 1, 4 do
+        local leg = Instance.new("Part")
+        leg.Name = "Leg" .. i
+        leg.Size = Vector3.new(0.5, 1, 0.5)
+        leg.BrickColor = BrickColor.new("Dark green")
+        leg.Position = body.Position + Vector3.new(i % 2 == 0 and 1 or -1, -1, i <= 2 and 1 or -1)
+        leg.Parent = dragon
     end
 
-    -- Делаем дракона неуязвимым
-    if humanoid then
-        humanoid.MaxHealth = math.huge
-        humanoid.Health = math.huge
+    -- Добавляем хуманоид для движения
+    local humanoid = Instance.new("Humanoid")
+    humanoid.MaxHealth = math.huge
+    humanoid.Health = math.huge
+    humanoid.HipHeight = 3 -- 3 метра в высоту
+    humanoid.Parent = dragon
+
+    -- Прикрепляем части
+    for _, part in pairs(dragon:GetChildren()) do
+        if part:IsA("BasePart") and part ~= body then
+            local weld = Instance.new("Weld")
+            weld.Part0 = body
+            weld.Part1 = part
+            weld.C0 = CFrame.new(body.Position)
+            weld.C1 = CFrame.new(part.Position)
+            weld.Parent = part
+        end
     end
 
     -- Позиция спавна (5-10 студс от игрока)
@@ -84,11 +90,11 @@ local function spawnDragon()
     -- Добавляем звук рычания дракона
     local sound = Instance.new("Sound")
     sound.Name = "DragonRoar"
-    sound.SoundId = "rbxassetid://9120386436" -- Стандартный звук драконьего рёва в Roblox
+    sound.SoundId = "rbxassetid://9120386436" -- Стандартный звук драконьего рёва
     sound.Volume = 1
     sound.Looped = true
     sound.PlaybackSpeed = 0.7
-    sound.Parent = dragon:FindFirstChild("Head") or dragon.PrimaryPart
+    sound.Parent = head
     sound:Play()
 
     -- Настраиваем поведение (следует за игроком, атакует мобов)
@@ -98,7 +104,7 @@ local function spawnDragon()
     aggroScript.Source = [[
         local dragon = script.Parent
         local humanoid = dragon:FindFirstChildOfClass("Humanoid")
-        local rootPart = dragon:FindFirstChild("HumanoidRootPart")
+        local rootPart = dragon:FindFirstChild("Body")
         local player = game.Players.LocalPlayer
         local playerRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 

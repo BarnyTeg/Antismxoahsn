@@ -1,22 +1,113 @@
 local Library = loadstring(Game:HttpGet("https://raw.githubusercontent.com/bloodball/-back-ups-for-libs/main/wizard"))()
 
-local PhantomForcesWindow = Library:NewWindow("Dead Rails")
+local PhantomForcesWindow = Library:NewWindow("Dead Rails Cheats")
+local BondCheats = PhantomForcesWindow:NewSection("Bond Farming")
 
-local KillingCheats = PhantomForcesWindow:NewSection("Main")
+-- Переменные
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local rootPart = character:WaitForChild("HumanoidRootPart")
+local flying = false
+local speed = 200 -- Скорость полёта
+local detectionRadius = 500 -- Радиус обнаружения облигаций
 
-KillingCheats:CreateButton("Night Vision", function()
-local lighting = game:GetService("Lighting")
+-- Функция для полёта
+local function startFlying()
+    local bodyVelocity = Instance.new("BodyVelocity")
+    bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+    bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+    bodyVelocity.Parent = rootPart
 
-lighting.Brightness = 5 -- Adjust this value for desired brightness
-lighting.Ambient = Color3.new(1, 1, 1) -- Set ambient light to full white
-lighting.FogEnd = 0 -- Remove fog (optional)
-lighting.ShadowSoftness = 0 -- Remove shadows (optional)
+    flying = true
+    while flying do
+        bodyVelocity.Velocity = (rootPart.CFrame.LookVector * speed) + Vector3.new(0, 2, 0) -- Летим вперёд и немного вверх
+        wait()
+    end
+    bodyVelocity:Destroy()
+end
+
+-- Функция для остановки полёта
+local function stopFlying()
+    flying = false
+end
+
+-- Функция для поиска облигаций
+local function findBonds()
+    for _, obj in pairs(game.Workspace:GetDescendants()) do
+        if obj.Name == "Bond" and (obj.Position - rootPart.Position).Magnitude <= detectionRadius then
+            return obj
+        end
+    end
+    return nil
+end
+
+-- Функция для поиска всех облигаций в мире
+local function findAllBonds()
+    local bonds = {}
+    for _, obj in pairs(game.Workspace:GetDescendants()) do
+        if obj.Name == "Bond" then
+            table.insert(bonds, obj)
+        end
+    end
+    return bonds
+end
+
+-- Функция для телепорта и сбора
+local function collectBond(bond)
+    if bond then
+        rootPart.CFrame = CFrame.new(bond.Position + Vector3.new(0, 5, 0)) -- Телепорт чуть выше облигации
+        wait(0.5)
+        -- Предполагаем, что сбор работает через FireServer
+        local remote = game:GetService("ReplicatedStorage"):FindFirstChild("CollectItem") -- Замени на правильный RemoteEvent
+        if remote then
+            remote:FireServer(bond)
+        end
+    end
+end
+
+-- Функция для смерти
+local function killSelf()
+    humanoid.Health = 0
+end
+
+-- Основной чит
+BondCheats:CreateButton("Start Bond Farming", function()
+    -- Увеличиваем скорость
+    humanoid.WalkSpeed = 100
+
+    -- Начинаем полёт
+    startFlying()
+
+    -- Основной цикл
+    while true do
+        local bond = findBonds()
+        if bond then
+            stopFlying()
+            collectBond(bond)
+            wait(0.5)
+            startFlying()
+        else
+            -- Проверяем, застряли ли мы (например, не двигаемся)
+            local lastPos = rootPart.Position
+            wait(2)
+            if (rootPart.Position - lastPos).Magnitude < 5 then
+                stopFlying()
+                -- Собираем все оставшиеся облигации
+                local remainingBonds = findAllBonds()
+                for _, bond in pairs(remainingBonds) do
+                    collectBond(bond)
+                    wait(0.5)
+                end
+                -- Умираем
+                killSelf()
+                break
+            end
+        end
+        wait()
+    end
 end)
 
-KillingCheats:CreateButton("Unlock High Roller Class", function()
-local args = {
-    [1] = "HighRoller" -- Название класса из списка
-}
-
-game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("RemotePromise"):WaitForChild("Remotes"):WaitForChild("C_BuyClass"):FireServer(unpack(args))
+BondCheats:CreateButton("Stop Flying", function()
+    stopFlying()
 end)

@@ -1,592 +1,117 @@
 local Library = loadstring(Game:HttpGet("https://raw.githubusercontent.com/bloodball/-back-ups-for-libs/main/wizard"))()
 
 local PhantomForcesWindow = Library:NewWindow("Dead Rails Cheats")
-local DragonCheats = PhantomForcesWindow:NewSection("Dragon Companion")
+local WeaponCheats = PhantomForcesWindow:NewSection("Super Weapon")
 
 -- Переменные
 local player = game.Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local rootPart = character:WaitForChild("HumanoidRootPart")
 local workspace = game.Workspace
 
--- Функция для спавна дракона
-local function spawnDragon()
-    -- Создаём модель дракона
-    local dragon = Instance.new("Model")
-    dragon.Name = "DragonCompanion"
+-- Функция для создания оружия
+local function spawnWeapon()
+    -- Создаём инструмент (дробовик)
+    local shotgun = Instance.new("Tool")
+    shotgun.Name = "SplashShotgun"
+    shotgun.RequiresHandle = true
 
-    -- Масштаб для роста 3 игрока (≈16 студс, 4-5 метров)
-    local heightInStuds = 16 -- 3 игрока ≈ 16 студс
-    local scaleFactor = heightInStuds / 10 -- Исходная длина тела 10 студс
+    -- Создаём рукоятку (визуальная часть дробовика)
+    local handle = Instance.new("Part")
+    handle.Name = "Handle"
+    handle.Size = Vector3.new(1, 0.5, 3)
+    handle.BrickColor = BrickColor.new("Black")
+    handle.Parent = shotgun
 
-    -- Создаём части дракона
-    -- Голова
-    local headMain = Instance.new("Part")
-    headMain.Name = "HeadMain"
-    headMain.Size = Vector3.new(5, 4, 6) * scaleFactor
-    headMain.BrickColor = BrickColor.new("Really red")
-    headMain.Position = Vector3.new(0, 2 * scaleFactor, 8 * scaleFactor)
-    headMain.Parent = dragon
-    dragon.PrimaryPart = headMain
+    -- Добавляем визуальные детали (ствол, приклад)
+    local barrel = Instance.new("Part")
+    barrel.Name = "Barrel"
+    barrel.Size = Vector3.new(0.5, 0.5, 2)
+    barrel.BrickColor = BrickColor.new("Dark gray")
+    barrel.Position = Vector3.new(0, 0, 2)
+    barrel.Parent = shotgun
 
-    local snout = Instance.new("Part")
-    snout.Name = "Snout"
-    snout.Size = Vector3.new(3, 2, 3) * scaleFactor
-    snout.BrickColor = BrickColor.new("Really red")
-    snout.Position = Vector3.new(0, 1.5 * scaleFactor, 11 * scaleFactor)
-    snout.Parent = dragon
+    local stock = Instance.new("Part")
+    stock.Name = "Stock"
+    stock.Size = Vector3.new(0.8, 0.8, 1)
+    stock.BrickColor = BrickColor.new("Brown")
+    stock.Position = Vector3.new(0, 0, -1.5)
+    stock.Parent = shotgun
 
-    local lowerJaw = Instance.new("Part")
-    lowerJaw.Name = "LowerJaw"
-    lowerJaw.Size = Vector3.new(4, 1, 4) * scaleFactor
-    lowerJaw.BrickColor = BrickColor.new("Really red")
-    lowerJaw.Position = Vector3.new(0, 0, 10 * scaleFactor)
-    lowerJaw.Parent = dragon
-
-    -- Глаза
-    local leftEye = Instance.new("Part")
-    leftEye.Name = "LeftEye"
-    leftEye.Size = Vector3.new(1, 1, 0.5) * scaleFactor
-    leftEye.BrickColor = BrickColor.new("Yellow")
-    leftEye.Position = Vector3.new(-1.5 * scaleFactor, 3 * scaleFactor, 10 * scaleFactor)
-    leftEye.Parent = dragon
-
-    local rightEye = Instance.new("Part")
-    rightEye.Name = "RightEye"
-    rightEye.Size = Vector3.new(1, 1, 0.5) * scaleFactor
-    rightEye.BrickColor = BrickColor.new("Yellow")
-    rightEye.Position = Vector3.new(1.5 * scaleFactor, 3 * scaleFactor, 10 * scaleFactor)
-    rightEye.Parent = dragon
-
-    local leftEyeGlow = Instance.new("Part")
-    leftEyeGlow.Name = "LeftEyeGlow"
-    leftEyeGlow.Size = Vector3.new(0.6, 0.6, 0.2) * scaleFactor
-    leftEyeGlow.BrickColor = BrickColor.new("Orange")
-    leftEyeGlow.Position = Vector3.new(-1.5 * scaleFactor, 3 * scaleFactor, (10 + 0.3) * scaleFactor)
-    leftEyeGlow.Parent = dragon
-
-    local rightEyeGlow = Instance.new("Part")
-    rightEyeGlow.Name = "RightEyeGlow"
-    rightEyeGlow.Size = Vector3.new(0.6, 0.6, 0.2) * scaleFactor
-    rightEyeGlow.BrickColor = BrickColor.new("Orange")
-    rightEyeGlow.Position = Vector3.new(1.5 * scaleFactor, 3 * scaleFactor, (10 + 0.3) * scaleFactor)
-    rightEyeGlow.Parent = dragon
-
-    -- Рога
-    local leftHorn = Instance.new("Part")
-    leftHorn.Name = "LeftHorn"
-    leftHorn.Size = Vector3.new(1, 2, 1) * scaleFactor
-    leftHorn.BrickColor = BrickColor.new("Brown")
-    leftHorn.Position = Vector3.new(-2 * scaleFactor, 4 * scaleFactor, 8 * scaleFactor)
-    leftHorn.Orientation = Vector3.new(0, 0, -20)
-    leftHorn.Parent = dragon
-
-    local rightHorn = Instance.new("Part")
-    rightHorn.Name = "RightHorn"
-    rightHorn.Size = Vector3.new(1, 2, 1) * scaleFactor
-    rightHorn.BrickColor = BrickColor.new("Brown")
-    rightHorn.Position = Vector3.new(2 * scaleFactor, 4 * scaleFactor, 8 * scaleFactor)
-    rightHorn.Orientation = Vector3.new(0, 0, 20)
-    rightHorn.Parent = dragon
-
-    -- Шипы и ноздри на голове
-    local headSpike1 = Instance.new("Part")
-    headSpike1.Name = "HeadSpike1"
-    headSpike1.Size = Vector3.new(1, 2, 1) * scaleFactor
-    headSpike1.BrickColor = BrickColor.new("Black")
-    headSpike1.Position = Vector3.new(0, 4.5 * scaleFactor, 7 * scaleFactor)
-    headSpike1.Parent = dragon
-
-    local headSpike2 = Instance.new("Part")
-    headSpike2.Name = "HeadSpike2"
-    headSpike2.Size = Vector3.new(1, 1.5, 1) * scaleFactor
-    headSpike2.BrickColor = BrickColor.new("Black")
-    headSpike2.Position = Vector3.new(0, 4.5 * scaleFactor, 5 * scaleFactor)
-    headSpike2.Parent = dragon
-
-    local leftNostril = Instance.new("Part")
-    leftNostril.Name = "LeftNostril"
-    leftNostril.Size = Vector3.new(0.5, 0.5, 0.2) * scaleFactor
-    leftNostril.BrickColor = BrickColor.new("Black")
-    leftNostril.Position = Vector3.new(-0.7 * scaleFactor, 2 * scaleFactor, 12.5 * scaleFactor)
-    leftNostril.Parent = dragon
-
-    local rightNostril = Instance.new("Part")
-    rightNostril.Name = "RightNostril"
-    rightNostril.Size = Vector3.new(0.5, 0.5, 0.2) * scaleFactor
-    rightNostril.BrickColor = BrickColor.new("Black")
-    rightNostril.Position = Vector3.new(0.7 * scaleFactor, 2 * scaleFactor, 12.5 * scaleFactor)
-    rightNostril.Parent = dragon
-
-    -- Зубы
-    local tooth1 = Instance.new("Part")
-    tooth1.Name = "Tooth1"
-    tooth1.Size = Vector3.new(0.4, 0.6, 0.4) * scaleFactor
-    tooth1.BrickColor = BrickColor.new("Yellow")
-    tooth1.Position = Vector3.new(-1 * scaleFactor, 1.1 * scaleFactor, 11 * scaleFactor)
-    tooth1.Parent = dragon
-
-    local tooth2 = Instance.new("Part")
-    tooth2.Name = "Tooth2"
-    tooth2.Size = Vector3.new(0.4, 0.6, 0.4) * scaleFactor
-    tooth2.BrickColor = BrickColor.new("Yellow")
-    tooth2.Position = Vector3.new(1 * scaleFactor, 1.1 * scaleFactor, 11 * scaleFactor)
-    tooth2.Parent = dragon
-
-    local tooth3 = Instance.new("Part")
-    tooth3.Name = "Tooth3"
-    tooth3.Size = Vector3.new(0.4, 0.6, 0.4) * scaleFactor
-    tooth3.BrickColor = BrickColor.new("Yellow")
-    tooth3.Position = Vector3.new(0, 1.1 * scaleFactor, 11.8 * scaleFactor)
-    tooth3.Parent = dragon
-
-    -- Шея
-    local neckFront = Instance.new("Part")
-    neckFront.Name = "NeckFront"
-    neckFront.Size = Vector3.new(4, 3, 4) * scaleFactor
-    neckFront.BrickColor = BrickColor.new("Really red")
-    neckFront.Position = Vector3.new(0, 2 * scaleFactor, 4 * scaleFactor)
-    neckFront.Parent = dragon
-
-    local neckBack = Instance.new("Part")
-    neckBack.Name = "NeckBack"
-    neckBack.Size = Vector3.new(4.5, 3.5, 4) * scaleFactor
-    neckBack.BrickColor = BrickColor.new("Really red")
-    neckBack.Position = Vector3.new(0, 2 * scaleFactor, 0)
-    neckBack.Parent = dragon
-
-    -- Шипы на шее
-    local neckSpike1 = Instance.new("Part")
-    neckSpike1.Name = "NeckSpike1"
-    neckSpike1.Size = Vector3.new(0.8, 1.5, 0.8) * scaleFactor
-    neckSpike1.BrickColor = BrickColor.new("Black")
-    neckSpike1.Position = Vector3.new(0, 3.5 * scaleFactor, 4 * scaleFactor)
-    neckSpike1.Parent = dragon
-
-    local neckSpike2 = Instance.new("Part")
-    neckSpike2.Name = "NeckSpike2"
-    neckSpike2.Size = Vector3.new(0.8, 1.8, 0.8) * scaleFactor
-    neckSpike2.BrickColor = BrickColor.new("Black")
-    neckSpike2.Position = Vector3.new(0, 3.7 * scaleFactor, 2 * scaleFactor)
-    neckSpike2.Parent = dragon
-
-    local neckSpike3 = Instance.new("Part")
-    neckSpike3.Name = "NeckSpike3"
-    neckSpike3.Size = Vector3.new(0.8, 2, 0.8) * scaleFactor
-    neckSpike3.BrickColor = BrickColor.new("Black")
-    neckSpike3.Position = Vector3.new(0, 4 * scaleFactor, 0)
-    neckSpike3.Parent = dragon
-
-    local neckScales1 = Instance.new("Part")
-    neckScales1.Name = "NeckScales1"
-    neckScales1.Size = Vector3.new(4, 0.5, 4) * scaleFactor
-    neckScales1.BrickColor = BrickColor.new("Dark red")
-    neckScales1.Position = Vector3.new(0, 0.5 * scaleFactor, 4 * scaleFactor)
-    neckScales1.Parent = dragon
-
-    local neckScales2 = Instance.new("Part")
-    neckScales2.Name = "NeckScales2"
-    neckScales2.Size = Vector3.new(4.5, 0.5, 4) * scaleFactor
-    neckScales2.BrickColor = BrickColor.new("Dark red")
-    neckScales2.Position = Vector3.new(0, 0.5 * scaleFactor, 0)
-    neckScales2.Parent = dragon
-
-    -- Тело
-    local bodyMain = Instance.new("Part")
-    bodyMain.Name = "BodyMain"
-    bodyMain.Size = Vector3.new(7, 6, 10) * scaleFactor
-    bodyMain.BrickColor = BrickColor.new("Really red")
-    bodyMain.Position = Vector3.new(0, 2 * scaleFactor, -5 * scaleFactor)
-    bodyMain.Parent = dragon
-
-    local chest = Instance.new("Part")
-    chest.Name = "Chest"
-    chest.Size = Vector3.new(6.5, 3.5, 6) * scaleFactor
-    chest.BrickColor = BrickColor.new("Really red")
-    chest.Position = Vector3.new(0, 0, -4 * scaleFactor)
-    chest.Parent = dragon
-
-    local belly = Instance.new("Part")
-    belly.Name = "Belly"
-    belly.Size = Vector3.new(6, 0.3, 9) * scaleFactor
-    belly.BrickColor = BrickColor.new("Dark red")
-    belly.Position = Vector3.new(0, 0, -5 * scaleFactor)
-    belly.Parent = dragon
-
-    -- Шипы на спине
-    local spineSpike1 = Instance.new("Part")
-    spineSpike1.Name = "SpineSpike1"
-    spineSpike1.Size = Vector3.new(1, 2, 1) * scaleFactor
-    spineSpike1.BrickColor = BrickColor.new("Black")
-    spineSpike1.Position = Vector3.new(0, 5 * scaleFactor, -3 * scaleFactor)
-    spineSpike1.Parent = dragon
-
-    local spineSpike2 = Instance.new("Part")
-    spineSpike2.Name = "SpineSpike2"
-    spineSpike2.Size = Vector3.new(1, 2, 1) * scaleFactor
-    spineSpike2.BrickColor = BrickColor.new("Black")
-    spineSpike2.Position = Vector3.new(0, 5 * scaleFactor, -6 * scaleFactor)
-    spineSpike2.Parent = dragon
-
-    local spineSpike3 = Instance.new("Part")
-    spineSpike3.Name = "SpineSpike3"
-    spineSpike3.Size = Vector3.new(1, 2, 1) * scaleFactor
-    spineSpike3.BrickColor = BrickColor.new("Black")
-    spineSpike3.Position = Vector3.new(0, 5 * scaleFactor, -9 * scaleFactor)
-    spineSpike3.Parent = dragon
-
-    -- Мускулистые детали
-    local muscleLeft = Instance.new("Part")
-    muscleLeft.Name = "MuscleLeft"
-    muscleLeft.Size = Vector3.new(0.5, 3, 5) * scaleFactor
-    muscleLeft.BrickColor = BrickColor.new("Dark red")
-    muscleLeft.Position = Vector3.new(3 * scaleFactor, 2 * scaleFactor, -5 * scaleFactor)
-    muscleLeft.Parent = dragon
-
-    local muscleRight = Instance.new("Part")
-    muscleRight.Name = "MuscleRight"
-    muscleRight.Size = Vector3.new(0.5, 3, 5) * scaleFactor
-    muscleRight.BrickColor = BrickColor.new("Dark red")
-    muscleRight.Position = Vector3.new(-3 * scaleFactor, 2 * scaleFactor, -5 * scaleFactor)
-    muscleRight.Parent = dragon
-
-    -- Передние ноги
-    local frontLeftUpper = Instance.new("Part")
-    frontLeftUpper.Name = "FrontLeftUpper"
-    frontLeftUpper.Size = Vector3.new(2, 6, 2) * scaleFactor
-    frontLeftUpper.BrickColor = BrickColor.new("Really red")
-    frontLeftUpper.Position = Vector3.new(-3 * scaleFactor, -2 * scaleFactor, -1 * scaleFactor)
-    frontLeftUpper.Parent = dragon
-
-    local frontLeftFoot = Instance.new("Part")
-    frontLeftFoot.Name = "FrontLeftFoot"
-    frontLeftFoot.Size = Vector3.new(3, 2, 3) * scaleFactor
-    frontLeftFoot.BrickColor = BrickColor.new("Really red")
-    frontLeftFoot.Position = Vector3.new(-3.5 * scaleFactor, -6 * scaleFactor, -1 * scaleFactor)
-    frontLeftFoot.Parent = dragon
-
-    local frontRightUpper = Instance.new("Part")
-    frontRightUpper.Name = "FrontRightUpper"
-    frontRightUpper.Size = Vector3.new(2, 6, 2) * scaleFactor
-    frontRightUpper.BrickColor = BrickColor.new("Really red")
-    frontRightUpper.Position = Vector3.new(3 * scaleFactor, -2 * scaleFactor, -1 * scaleFactor)
-    frontRightUpper.Parent = dragon
-
-    local frontRightFoot = Instance.new("Part")
-    frontRightFoot.Name = "FrontRightFoot"
-    frontRightFoot.Size = Vector3.new(3, 2, 3) * scaleFactor
-    frontRightFoot.BrickColor = BrickColor.new("Really red")
-    frontRightFoot.Position = Vector3.new(3.5 * scaleFactor, -6 * scaleFactor, -1 * scaleFactor)
-    frontRightFoot.Parent = dragon
-
-    -- Задние ноги
-    local rearLeftUpper = Instance.new("Part")
-    rearLeftUpper.Name = "RearLeftUpper"
-    rearLeftUpper.Size = Vector3.new(2, 6, 2) * scaleFactor
-    rearLeftUpper.BrickColor = BrickColor.new("Really red")
-    rearLeftUpper.Position = Vector3.new(-3 * scaleFactor, -2 * scaleFactor, -9 * scaleFactor)
-    rearLeftUpper.Parent = dragon
-
-    local rearLeftFoot = Instance.new("Part")
-    rearLeftFoot.Name = "RearLeftFoot"
-    rearLeftFoot.Size = Vector3.new(3, 2, 3) * scaleFactor
-    rearLeftFoot.BrickColor = BrickColor.new("Really red")
-    rearLeftFoot.Position = Vector3.new(-3.5 * scaleFactor, -6 * scaleFactor, -9 * scaleFactor)
-    rearLeftFoot.Parent = dragon
-
-    local rearRightUpper = Instance.new("Part")
-    rearRightUpper.Name = "RearRightUpper"
-    rearRightUpper.Size = Vector3.new(2, 6, 2) * scaleFactor
-    rearRightUpper.BrickColor = BrickColor.new("Really red")
-    rearRightUpper.Position = Vector3.new(3 * scaleFactor, -2 * scaleFactor, -9 * scaleFactor)
-    rearRightUpper.Parent = dragon
-
-    local rearRightFoot = Instance.new("Part")
-    rearRightFoot.Name = "RearRightFoot"
-    rearRightFoot.Size = Vector3.new(3, 2, 3) * scaleFactor
-    rearRightFoot.BrickColor = BrickColor.new("Really red")
-    rearRightFoot.Position = Vector3.new(3.5 * scaleFactor, -6 * scaleFactor, -9 * scaleFactor)
-    rearRightFoot.Parent = dragon
-
-    -- Когти
-    local claws = {
-        {part = frontLeftFoot, positions = {Vector3.new(-4.5, -7, 0), Vector3.new(-3.5, -7, 0), Vector3.new(-2.5, -7, 0)}},
-        {part = frontRightFoot, positions = {Vector3.new(4.5, -7, 0), Vector3.new(3.5, -7, 0), Vector3.new(2.5, -7, 0)}},
-        {part = rearLeftFoot, positions = {Vector3.new(-4.5, -7, -10), Vector3.new(-3.5, -7, -10), Vector3.new(-2.5, -7, -10)}},
-        {part = rearRightFoot, positions = {Vector3.new(4.5, -7, -10), Vector3.new(3.5, -7, -10), Vector3.new(2.5, -7, -10)}}
-    }
-    for _, clawSet in pairs(claws) do
-        for i, pos in ipairs(clawSet.positions) do
-            local claw = Instance.new("Part")
-            claw.Name = clawSet.part.Name .. "Claw" .. i
-            claw.Size = Vector3.new(1, 1, 1.5) * scaleFactor
-            claw.BrickColor = BrickColor.new("Brown")
-            claw.Position = pos * scaleFactor
-            claw.Parent = dragon
-        end
-    end
-
-    -- Крылья
-    local leftWingBase = Instance.new("Part")
-    leftWingBase.Name = "LeftWingBase"
-    leftWingBase.Size = Vector3.new(2, 2, 6) * scaleFactor
-    leftWingBase.BrickColor = BrickColor.new("Really red")
-    leftWingBase.Position = Vector3.new(-4 * scaleFactor, 3 * scaleFactor, -5 * scaleFactor)
-    leftWingBase.Parent = dragon
-
-    local rightWingBase = Instance.new("Part")
-    rightWingBase.Name = "RightWingBase"
-    rightWingBase.Size = Vector3.new(2, 2, 6) * scaleFactor
-    rightWingBase.BrickColor = BrickColor.new("Really red")
-    rightWingBase.Position = Vector3.new(4 * scaleFactor, 3 * scaleFactor, -5 * scaleFactor)
-    rightWingBase.Parent = dragon
-
-    local leftWingMain = Instance.new("Part")
-    leftWingMain.Name = "LeftWingMain"
-    leftWingMain.Size = Vector3.new(6, 0.5, 8) * scaleFactor
-    leftWingMain.BrickColor = BrickColor.new("Really red")
-    leftWingMain.Position = Vector3.new(-8 * scaleFactor, 3 * scaleFactor, -5 * scaleFactor)
-    leftWingMain.Parent = dragon
-
-    local rightWingMain = Instance.new("Part")
-    rightWingMain.Name = "RightWingMain"
-    rightWingMain.Size = Vector3.new(6, 0.5, 8) * scaleFactor
-    rightWingMain.BrickColor = BrickColor.new("Really red")
-    rightWingMain.Position = Vector3.new(8 * scaleFactor, 3 * scaleFactor, -5 * scaleFactor)
-    rightWingMain.Parent = dragon
-
-    local leftWingTip = Instance.new("Part")
-    leftWingTip.Name = "LeftWingTip"
-    leftWingTip.Size = Vector3.new(4, 0.3, 4) * scaleFactor
-    leftWingTip.BrickColor = BrickColor.new("Dark red")
-    leftWingTip.Position = Vector3.new(-10 * scaleFactor, 3 * scaleFactor, -5 * scaleFactor)
-    leftWingTip.Parent = dragon
-
-    local rightWingTip = Instance.new("Part")
-    rightWingTip.Name = "RightWingTip"
-    rightWingTip.Size = Vector3.new(4, 0.3, 4) * scaleFactor
-    rightWingTip.BrickColor = BrickColor.new("Dark red")
-    rightWingTip.Position = Vector3.new(10 * scaleFactor, 3 * scaleFactor, -5 * scaleFactor)
-    rightWingTip.Parent = dragon
-
-    local leftWingClaw = Instance.new("Part")
-    leftWingClaw.Name = "LeftWingClaw"
-    leftWingClaw.Size = Vector3.new(1, 1, 1) * scaleFactor
-    leftWingClaw.BrickColor = BrickColor.new("Brown")
-    leftWingClaw.Position = Vector3.new(-11 * scaleFactor, 3 * scaleFactor, -3 * scaleFactor)
-    leftWingClaw.Parent = dragon
-
-    local rightWingClaw = Instance.new("Part")
-    rightWingClaw.Name = "RightWingClaw"
-    rightWingClaw.Size = Vector3.new(1, 1, 1) * scaleFactor
-    rightWingClaw.BrickColor = BrickColor.new("Brown")
-    rightWingClaw.Position = Vector3.new(11 * scaleFactor, 3 * scaleFactor, -3 * scaleFactor)
-    rightWingClaw.Parent = dragon
-
-    local leftWingSupport1 = Instance.new("Part")
-    leftWingSupport1.Name = "LeftWingSupport1"
-    leftWingSupport1.Size = Vector3.new(0.5, 0.3, 9) * scaleFactor
-    leftWingSupport1.BrickColor = BrickColor.new("Dark red")
-    leftWingSupport1.Position = Vector3.new(-6 * scaleFactor, 3 * scaleFactor, -2 * scaleFactor)
-    leftWingSupport1.Parent = dragon
-
-    local leftWingSupport2 = Instance.new("Part")
-    leftWingSupport2.Name = "LeftWingSupport2"
-    leftWingSupport2.Size = Vector3.new(0.5, 0.3, 7) * scaleFactor
-    leftWingSupport2.BrickColor = BrickColor.new("Dark red")
-    leftWingSupport2.Position = Vector3.new(-9 * scaleFactor, 3 * scaleFactor, -2 * scaleFactor)
-    leftWingSupport2.Parent = dragon
-
-    local rightWingSupport1 = Instance.new("Part")
-    rightWingSupport1.Name = "RightWingSupport1"
-    rightWingSupport1.Size = Vector3.new(0.5, 0.3, 9) * scaleFactor
-    rightWingSupport1.BrickColor = BrickColor.new("Dark red")
-    rightWingSupport1.Position = Vector3.new(6 * scaleFactor, 3 * scaleFactor, -2 * scaleFactor)
-    rightWingSupport1.Parent = dragon
-
-    local rightWingSupport2 = Instance.new("Part")
-    rightWingSupport2.Name = "RightWingSupport2"
-    rightWingSupport2.Size = Vector3.new(0.5, 0.3, 7) * scaleFactor
-    rightWingSupport2.BrickColor = BrickColor.new("Dark red")
-    rightWingSupport2.Position = Vector3.new(9 * scaleFactor, 3 * scaleFactor, -2 * scaleFactor)
-    rightWingSupport2.Parent = dragon
-
-    -- Хвост
-    local tailBase = Instance.new("Part")
-    tailBase.Name = "TailBase"
-    tailBase.Size = Vector3.new(5, 4, 4) * scaleFactor
-    tailBase.BrickColor = BrickColor.new("Really red")
-    tailBase.Position = Vector3.new(0, 2 * scaleFactor, -13 * scaleFactor)
-    tailBase.Parent = dragon
-
-    local tailMid = Instance.new("Part")
-    tailMid.Name = "TailMid"
-    tailMid.Size = Vector3.new(3, 3, 6) * scaleFactor
-    tailMid.BrickColor = BrickColor.new("Really red")
-    tailMid.Position = Vector3.new(0, 2 * scaleFactor, -18 * scaleFactor)
-    tailMid.Parent = dragon
-
-    local tailEnd = Instance.new("Part")
-    tailEnd.Name = "TailEnd"
-    tailEnd.Size = Vector3.new(2, 2, 6) * scaleFactor
-    tailEnd.BrickColor = BrickColor.new("Really red")
-    tailEnd.Position = Vector3.new(0, 2 * scaleFactor, -24 * scaleFactor)
-    tailEnd.Parent = dragon
-
-    local tailTip = Instance.new("Part")
-    tailTip.Name = "TailTip"
-    tailTip.Size = Vector3.new(1, 1, 2) * scaleFactor
-    tailTip.BrickColor = BrickColor.new("Really red")
-    tailTip.Position = Vector3.new(0, 2 * scaleFactor, -28 * scaleFactor)
-    tailTip.Parent = dragon
-
-    -- Шипы на хвосте
-    local tailSpike1 = Instance.new("Part")
-    tailSpike1.Name = "TailSpike1"
-    tailSpike1.Size = Vector3.new(1, 2, 1) * scaleFactor
-    tailSpike1.BrickColor = BrickColor.new("Black")
-    tailSpike1.Position = Vector3.new(0, 4 * scaleFactor, -14 * scaleFactor)
-    tailSpike1.Parent = dragon
-
-    local tailSpike2 = Instance.new("Part")
-    tailSpike2.Name = "TailSpike2"
-    tailSpike2.Size = Vector3.new(1, 1.5, 1) * scaleFactor
-    tailSpike2.BrickColor = BrickColor.new("Black")
-    tailSpike2.Position = Vector3.new(0, 3.5 * scaleFactor, -18 * scaleFactor)
-    tailSpike2.Parent = dragon
-
-    local tailSpike3 = Instance.new("Part")
-    tailSpike3.Name = "TailSpike3"
-    tailSpike3.Size = Vector3.new(1, 1, 1) * scaleFactor
-    tailSpike3.BrickColor = BrickColor.new("Black")
-    tailSpike3.Position = Vector3.new(0, 3 * scaleFactor, -22 * scaleFactor)
-    tailSpike3.Parent = dragon
-
-    local tailSpike4 = Instance.new("Part")
-    tailSpike4.Name = "TailSpike4"
-    tailSpike4.Size = Vector3.new(1, 1, 1) * scaleFactor
-    tailSpike4.BrickColor = BrickColor.new("Black")
-    tailSpike4.Position = Vector3.new(0, 2.5 * scaleFactor, -26 * scaleFactor)
-    tailSpike4.Parent = dragon
-
-    local tailEndSpike = Instance.new("Part")
-    tailEndSpike.Name = "TailEndSpike"
-    tailEndSpike.Size = Vector3.new(1.5, 1.5, 2) * scaleFactor
-    tailEndSpike.BrickColor = BrickColor.new("Black")
-    tailEndSpike.Position = Vector3.new(0, 2 * scaleFactor, -30 * scaleFactor)
-    tailEndSpike.Parent = dragon
-
-    -- Прикрепляем части
-    for _, part in pairs(dragon:GetChildren()) do
-        if part:IsA("BasePart") and part ~= dragon.PrimaryPart then
+    -- Прикрепляем детали к рукоятке
+    for _, part in pairs(shotgun:GetChildren()) do
+        if part:IsA("BasePart") and part ~= handle then
             local weld = Instance.new("Weld")
-            weld.Part0 = dragon.PrimaryPart
+            weld.Part0 = handle
             weld.Part1 = part
-            weld.C0 = CFrame.new(dragon.PrimaryPart.Position)
+            weld.C0 = CFrame.new(handle.Position)
             weld.C1 = CFrame.new(part.Position)
             weld.Parent = part
         end
     end
 
-    -- Добавляем хуманоид для движения
-    local humanoid = Instance.new("Humanoid")
-    humanoid.MaxHealth = math.huge -- Бессмертие
-    humanoid.Health = math.huge
-    humanoid.WalkSpeed = 179 -- 50 метров/сек ≈ 179 студс/сек
-    humanoid.HipHeight = 6 * scaleFactor -- Поднимаем дракона над землёй
-    humanoid.Parent = dragon
+    -- Добавляем звук выстрела
+    local fireSound = Instance.new("Sound")
+    fireSound.Name = "FireSound"
+    fireSound.SoundId = "rbxassetid://165969964" -- Звук выстрела
+    fireSound.Volume = 1
+    fireSound.Parent = handle
 
-    -- Позиция спавна (10 студс от игрока)
-    local spawnDistance = 10
-    local spawnPos = rootPart.CFrame * CFrame.new(0, heightInStuds / 2, -spawnDistance)
-    dragon:SetPrimaryPartCFrame(spawnPos)
-
-    -- Добавляем звуки
-    local roarSound = Instance.new("Sound")
-    roarSound.Name = "RoarSound"
-    roarSound.SoundId = "rbxassetid://9120386436" -- Драконий рёв
-    roarSound.Volume = 1
-    roarSound.Looped = true
-    roarSound.PlaybackSpeed = 0.7
-    roarSound.Parent = dragon.PrimaryPart
-    roarSound:Play()
-
-    local attackSound = Instance.new("Sound")
-    attackSound.Name = "AttackSound"
-    attackSound.SoundId = "rbxassetid://1842932855" -- Звук атаки
-    attackSound.Volume = 1
-    attackSound.Parent = dragon.PrimaryPart
-
-    -- Делаем дракона видимым для всех
-    dragon.Parent = workspace
-    print("Дракон заспавнен!")
-
-    -- Настраиваем поведение
-    local aggroScript = Instance.new("Script")
-    aggroScript.Name = "DragonAI"
-    aggroScript.Parent = dragon
-    aggroScript.Source = [[
-        local dragon = script.Parent
-        local humanoid = dragon:FindFirstChildOfClass("Humanoid")
-        local rootPart = dragon.PrimaryPart
+    -- Добавляем скрипт для стрельбы
+    local fireScript = Instance.new("Script")
+    fireScript.Name = "FireScript"
+    fireScript.Parent = shotgun
+    fireScript.Source = [[
+        local tool = script.Parent
+        local handle = tool:WaitForChild("Handle")
+        local fireSound = handle:WaitForChild("FireSound")
         local player = game.Players.LocalPlayer
-        local attackSound = dragon.PrimaryPart:FindFirstChild("AttackSound")
-        local patrolRadius = 10 -- Радиус патрулирования
-        local lastPatrolPos = rootPart.Position
-        local patrolDirection = 1 -- 1 или -1 для движения вперёд/назад
+        local mouse = player:GetMouse()
+        local lastFireTime = 0
+        local cooldown = 0.2 -- 0.2 секунды
 
-        while true do
-            local playerRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-            if playerRoot then
-                local distanceToPlayer = (rootPart.Position - playerRoot.Position).Magnitude
-                -- Следуем за игроком, если слишком далеко
-                if distanceToPlayer > 250 then -- 70 метров ≈ 250 студс
-                    humanoid:MoveTo(playerRoot.Position)
-                    lastPatrolPos = rootPart.Position
-                else
-                    -- Патрулирование, если игрок рядом
-                    local patrolOffset = patrolDirection * patrolRadius
-                    local patrolPos = lastPatrolPos + Vector3.new(patrolOffset, 0, 0)
-                    humanoid:MoveTo(patrolPos)
-                    if (rootPart.Position - patrolPos).Magnitude < 5 then
-                        patrolDirection = patrolDirection * -1 -- Меняем направление
-                    end
-                end
+        tool.Activated:Connect(function()
+            local currentTime = tick()
+            if currentTime - lastFireTime >= cooldown then
+                lastFireTime = currentTime
 
-                -- Проверяем, не перевернулся ли дракон
-                local orientation = rootPart.Orientation
-                if math.abs(orientation.X) > 45 or math.abs(orientation.Z) > 45 then
-                    -- Выравниваем дракона
-                    local currentCFrame = rootPart.CFrame
-                    rootPart.CFrame = CFrame.new(currentCFrame.Position) * CFrame.Angles(0, math.rad(orientation.Y), 0)
-                end
+                -- Проигрываем звук выстрела
+                fireSound:Play()
 
-                -- Ищем ближайших NPC
+                -- Создаём луч для определения точки попадания
+                local ray = Ray.new(handle.Position, (mouse.Hit.Position - handle.Position).Unit * 300)
+                local hit, position = workspace:FindPartOnRayWithIgnoreList(ray, {player.Character, tool})
+
+                -- Создаём взрыв в точке попадания
+                local explosion = Instance.new("Explosion")
+                explosion.Position = position
+                explosion.BlastRadius = 18 -- 5 метров ≈ 18 студс
+                explosion.BlastPressure = 0 -- Отключаем физику взрыва
+                explosion.DestroyJointRadiusPercent = 0
+                explosion.ExplosionType = Enum.ExplosionType.NoCraters
+                explosion.Parent = workspace
+
+                -- Наносим урон всем NPC в радиусе взрыва
                 for _, obj in pairs(workspace:GetDescendants()) do
-                    if obj:IsA("Model") and obj ~= dragon and obj:FindFirstChildOfClass("Humanoid") then
+                    if obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid") then
                         local targetHumanoid = obj:FindFirstChildOfClass("Humanoid")
                         local targetRoot = obj:FindFirstChild("HumanoidRootPart")
                         if targetHumanoid and targetRoot and not game.Players:GetPlayerFromCharacter(obj) then
-                            local distance = (rootPart.Position - targetRoot.Position).Magnitude
-                            if distance <= 100 then
-                                humanoid:MoveTo(targetRoot.Position)
-                                if distance <= 20 then
-                                    targetHumanoid:TakeDamage(50)
-                                    if attackSound then
-                                        attackSound:Play()
-                                    end
-                                end
+                            local distance = (position - targetRoot.Position).Magnitude
+                            if distance <= 18 then
+                                targetHumanoid:TakeDamage(50)
                             end
                         end
                     end
                 end
             end
-            wait(0.1)
-        end
+        end)
     ]]
+
+    -- Добавляем оружие в инвентарь
+    shotgun.Parent = player.Backpack
+    print("Дробовик добавлен в инвентарь!")
 end
 
--- Кнопка для спавна дракона
-DragonCheats:CreateButton("Spawn Dragon Companion", function()
-    spawnDragon()
-end) 
+-- Кнопка для добавления оружия
+WeaponCheats:CreateButton("Spawn Splash Shotgun", function()
+    spawnWeapon()
+end)

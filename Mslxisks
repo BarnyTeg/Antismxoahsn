@@ -1,149 +1,66 @@
 local Library = loadstring(Game:HttpGet("https://raw.githubusercontent.com/bloodball/-back-ups-for-libs/main/wizard"))()
 
 local PhantomForcesWindow = Library:NewWindow("Dead Rails Cheats")
-local DragonCheats = PhantomForcesWindow:NewSection("Dragon Companion")
+local DragonCheats = PhantomForcesWindow:NewSection("Dragon Spawner")
 
 -- Переменные
 local player = game.Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local rootPart = character:WaitForChild("HumanoidRootPart")
 local workspace = game.Workspace
+local replicatedStorage = game:GetService("ReplicatedStorage")
 
--- Функция для создания дракона
+-- Функция для спавна дракона
 local function spawnDragon()
-    -- Создаём модель дракона
-    local dragon = Instance.new("Model")
+    -- Предполагаем, что ты загрузил модель в ReplicatedStorage под именем "BlackDragon"
+    local dragonModel = replicatedStorage:FindFirstChild("BlackDragon")
+    if not dragonModel then
+        print("Модель BlackDragon не найдена! Убедись, что ты загрузил её в ReplicatedStorage.")
+        return
+    end
+
+    -- Клонируем модель
+    local dragon = dragonModel:Clone()
     dragon.Name = "DragonCompanion"
 
-    -- Создаём части дракона
-    local body = Instance.new("Part")
-    body.Name = "Body"
-    body.Size = Vector3.new(2, 1, 4) -- Длинное тело
-    body.BrickColor = BrickColor.new("Dark green")
-    body.Position = Vector3.new(0, 3, 0)
-    body.Parent = dragon
-    dragon.PrimaryPart = body
-
-    local head = Instance.new("Part")
-    head.Name = "Head"
-    head.Size = Vector3.new(1, 1, 1.5)
-    head.BrickColor = BrickColor.new("Crimson")
-    head.Position = body.Position + Vector3.new(0, 0.5, 2)
-    head.Parent = dragon
-
-    local leftWing = Instance.new("Part")
-    leftWing.Name = "LeftWing"
-    leftWing.Size = Vector3.new(2, 0.2, 3)
-    leftWing.BrickColor = BrickColor.new("Dark green")
-    leftWing.Position = body.Position + Vector3.new(-1.5, 0.5, 0)
-    leftWing.Parent = dragon
-
-    local rightWing = Instance.new("Part")
-    rightWing.Name = "RightWing"
-    rightWing.Size = Vector3.new(2, 0.2, 3)
-    rightWing.BrickColor = BrickColor.new("Dark green")
-    rightWing.Position = body.Position + Vector3.new(1.5, 0.5, 0)
-    rightWing.Parent = dragon
-
-    local tail = Instance.new("Part")
-    tail.Name = "Tail"
-    tail.Size = Vector3.new(0.5, 0.5, 3)
-    tail.BrickColor = BrickColor.new("Dark green")
-    tail.Position = body.Position + Vector3.new(0, 0, -3.5)
-    tail.Parent = dragon
-
-    -- Добавляем лапы
-    for i = 1, 4 do
-        local leg = Instance.new("Part")
-        leg.Name = "Leg" .. i
-        leg.Size = Vector3.new(0.5, 1, 0.5)
-        leg.BrickColor = BrickColor.new("Dark green")
-        leg.Position = body.Position + Vector3.new(i % 2 == 0 and 1 or -1, -1, i <= 2 and 1 or -1)
-        leg.Parent = dragon
-    end
-
-    -- Добавляем хуманоид для движения
-    local humanoid = Instance.new("Humanoid")
-    humanoid.MaxHealth = math.huge
-    humanoid.Health = math.huge
-    humanoid.HipHeight = 3 -- 3 метра в высоту
-    humanoid.Parent = dragon
-
-    -- Прикрепляем части
-    for _, part in pairs(dragon:GetChildren()) do
-        if part:IsA("BasePart") and part ~= body then
-            local weld = Instance.new("Weld")
-            weld.Part0 = body
-            weld.Part1 = part
-            weld.C0 = CFrame.new(body.Position)
-            weld.C1 = CFrame.new(part.Position)
-            weld.Parent = part
-        end
-    end
-
-    -- Позиция спавна (5-10 студс от игрока)
-    local spawnDistance = 10
-    local spawnPos = rootPart.CFrame * CFrame.new(0, 2, -spawnDistance)
-    dragon:SetPrimaryPartCFrame(spawnPos)
-    dragon.Parent = workspace
-
-    -- Добавляем звук рычания дракона
-    local sound = Instance.new("Sound")
-    sound.Name = "DragonRoar"
-    sound.SoundId = "rbxassetid://9120386436" -- Стандартный звук драконьего рёва
-    sound.Volume = 1
-    sound.Looped = true
-    sound.PlaybackSpeed = 0.7
-    sound.Parent = head
-    sound:Play()
-
-    -- Настраиваем поведение (следует за игроком, атакует мобов)
-    local aggroScript = Instance.new("Script")
-    aggroScript.Name = "DragonAI"
-    aggroScript.Parent = dragon
-    aggroScript.Source = [[
-        local dragon = script.Parent
-        local humanoid = dragon:FindFirstChildOfClass("Humanoid")
-        local rootPart = dragon:FindFirstChild("Body")
-        local player = game.Players.LocalPlayer
-        local playerRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-
-        while true do
-            if playerRoot then
-                local distanceToPlayer = (rootPart.Position - playerRoot.Position).Magnitude
-                -- Следуем за игроком, если слишком далеко
-                if distanceToPlayer > 10 then
-                    humanoid:MoveTo(playerRoot.Position)
-                end
-
-                -- Ищем ближайших NPC
-                for _, obj in pairs(workspace:GetDescendants()) do
-                    if obj:IsA("Model") and obj ~= dragon and obj:FindFirstChildOfClass("Humanoid") then
-                        local targetHumanoid = obj:FindFirstChildOfClass("Humanoid")
-                        local targetRoot = obj:FindFirstChild("HumanoidRootPart")
-                        if targetHumanoid and targetRoot and not game.Players:GetPlayerFromCharacter(obj) then
-                            local distance = (rootPart.Position - targetRoot.Position).Magnitude
-                            if distance <= 30 then
-                                -- Двигаемся к цели
-                                humanoid:MoveTo(targetRoot.Position)
-                                -- Атака
-                                if distance <= 5 then
-                                    targetHumanoid:TakeDamage(50) -- Высокий урон
-                                end
-                            end
-                        end
-                    end
-                end
+    -- Масштабируем до 20 метров (примерно 71 студс)
+    local heightInStuds = 71 -- 20 метров / 0.28 = 71 студс
+    local humanoid = dragon:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        local originalHeight = humanoid.HipHeight
+        humanoid.HipHeight = heightInStuds
+        local scaleFactor = heightInStuds / originalHeight
+        for _, part in pairs(dragon:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.Size = part.Size * scaleFactor
             end
-            wait(0.1)
         end
-    ]]
+    else
+        -- Если хуманоида нет, масштабируем вручную
+        for _, part in pairs(dragon:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.Size = part.Size * (heightInStuds / 5) -- Предполагаем, что исходная высота ~5 студс
+            end
+        end
+    end
 
-    -- Делаем дракона видимым для всех (серверный объект)
+    -- Позиция спавна (10 студс от игрока)
+    local spawnDistance = 10
+    local spawnPos = rootPart.CFrame * CFrame.new(0, heightInStuds / 2, -spawnDistance)
+    dragon:SetPrimaryPartCFrame(spawnPos)
+
+    -- Отключаем физику, чтобы дракон просто стоял
+    for _, part in pairs(dragon:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.Anchored = true
+        end
+    end
+
+    -- Делаем дракона видимым для всех
     dragon.Parent = workspace
 end
 
 -- Кнопка для спавна дракона
-DragonCheats:CreateButton("Spawn Dragon Companion", function()
+DragonCheats:CreateButton("Spawn Dragon", function()
     spawnDragon()
 end)

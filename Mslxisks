@@ -15,11 +15,11 @@ local function spawnDragon()
     local dragon = Instance.new("Model")
     dragon.Name = "DragonCompanion"
 
-    -- Масштаб для 20 метров (71 студс)
-    local heightInStuds = 71 -- 20 метров / 0.28 = 71 студс
+    -- Масштаб для роста 3 игрока (≈16 студс, 4-5 метров)
+    local heightInStuds = 16 -- 3 игрока ≈ 16 студс
     local scaleFactor = heightInStuds / 10 -- Исходная длина тела 10 студс
 
-    -- Создаём части дракона (на основе твоего шаблона)
+    -- Создаём части дракона
     -- Голова
     local headMain = Instance.new("Part")
     headMain.Name = "HeadMain"
@@ -78,7 +78,7 @@ local function spawnDragon()
     leftHorn.Size = Vector3.new(1, 2, 1) * scaleFactor
     leftHorn.BrickColor = BrickColor.new("Brown")
     leftHorn.Position = Vector3.new(-2 * scaleFactor, 4 * scaleFactor, 8 * scaleFactor)
-    leftHorn.Orientation = Vector3.new(0, 0, -20) -- Наклон наружу
+    leftHorn.Orientation = Vector3.new(0, 0, -20)
     leftHorn.Parent = dragon
 
     local rightHorn = Instance.new("Part")
@@ -86,7 +86,7 @@ local function spawnDragon()
     rightHorn.Size = Vector3.new(1, 2, 1) * scaleFactor
     rightHorn.BrickColor = BrickColor.new("Brown")
     rightHorn.Position = Vector3.new(2 * scaleFactor, 4 * scaleFactor, 8 * scaleFactor)
-    rightHorn.Orientation = Vector3.new(0, 0, 20) -- Наклон наружу
+    rightHorn.Orientation = Vector3.new(0, 0, 20)
     rightHorn.Parent = dragon
 
     -- Шипы и ноздри на голове
@@ -493,6 +493,7 @@ local function spawnDragon()
     humanoid.MaxHealth = math.huge -- Бессмертие
     humanoid.Health = math.huge
     humanoid.WalkSpeed = 179 -- 50 метров/сек ≈ 179 студс/сек
+    humanoid.HipHeight = 6 * scaleFactor -- Поднимаем дракона над землёй
     humanoid.Parent = dragon
 
     -- Позиция спавна (10 студс от игрока)
@@ -512,7 +513,7 @@ local function spawnDragon()
 
     local attackSound = Instance.new("Sound")
     attackSound.Name = "AttackSound"
-    attackSound.SoundId = "rbxassetid://1842932855" -- Звук атаки (огонь/удар)
+    attackSound.SoundId = "rbxassetid://1842932855" -- Звук атаки
     attackSound.Volume = 1
     attackSound.Parent = dragon.PrimaryPart
 
@@ -520,7 +521,7 @@ local function spawnDragon()
     dragon.Parent = workspace
     print("Дракон заспавнен!")
 
-    -- Настраиваем поведение (следует за игроком, атакует NPC)
+    -- Настраиваем поведение
     local aggroScript = Instance.new("Script")
     aggroScript.Name = "DragonAI"
     aggroScript.Parent = dragon
@@ -530,6 +531,9 @@ local function spawnDragon()
         local rootPart = dragon.PrimaryPart
         local player = game.Players.LocalPlayer
         local attackSound = dragon.PrimaryPart:FindFirstChild("AttackSound")
+        local patrolRadius = 10 -- Радиус патрулирования
+        local lastPatrolPos = rootPart.Position
+        local patrolDirection = 1 -- 1 или -1 для движения вперёд/назад
 
         while true do
             local playerRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
@@ -538,6 +542,23 @@ local function spawnDragon()
                 -- Следуем за игроком, если слишком далеко
                 if distanceToPlayer > 250 then -- 70 метров ≈ 250 студс
                     humanoid:MoveTo(playerRoot.Position)
+                    lastPatrolPos = rootPart.Position
+                else
+                    -- Патрулирование, если игрок рядом
+                    local patrolOffset = patrolDirection * patrolRadius
+                    local patrolPos = lastPatrolPos + Vector3.new(patrolOffset, 0, 0)
+                    humanoid:MoveTo(patrolPos)
+                    if (rootPart.Position - patrolPos).Magnitude < 5 then
+                        patrolDirection = patrolDirection * -1 -- Меняем направление
+                    end
+                end
+
+                -- Проверяем, не перевернулся ли дракон
+                local orientation = rootPart.Orientation
+                if math.abs(orientation.X) > 45 or math.abs(orientation.Z) > 45 then
+                    -- Выравниваем дракона
+                    local currentCFrame = rootPart.CFrame
+                    rootPart.CFrame = CFrame.new(currentCFrame.Position) * CFrame.Angles(0, math.rad(orientation.Y), 0)
                 end
 
                 -- Ищем ближайших NPC
@@ -547,10 +568,10 @@ local function spawnDragon()
                         local targetRoot = obj:FindFirstChild("HumanoidRootPart")
                         if targetHumanoid and targetRoot and not game.Players:GetPlayerFromCharacter(obj) then
                             local distance = (rootPart.Position - targetRoot.Position).Magnitude
-                            if distance <= 100 then -- Радиус атаки
+                            if distance <= 100 then
                                 humanoid:MoveTo(targetRoot.Position)
                                 if distance <= 20 then
-                                    targetHumanoid:TakeDamage(50) -- Высокий урон
+                                    targetHumanoid:TakeDamage(50)
                                     if attackSound then
                                         attackSound:Play()
                                     end
@@ -568,4 +589,4 @@ end
 -- Кнопка для спавна дракона
 DragonCheats:CreateButton("Spawn Dragon Companion", function()
     spawnDragon()
-end)
+end) 

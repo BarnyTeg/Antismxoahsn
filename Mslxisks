@@ -8,29 +8,37 @@ local player = game.Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
 local rootPart = character:WaitForChild("HumanoidRootPart")
+local camera = game.Workspace.CurrentCamera
 local moving = false
-local moveDistance = 2000 -- Ещё большее расстояние за шаг
+local moveDistance = 100 -- Пошаговое расстояние для камеры
 local detectionRadius = 500 -- Радиус обнаружения облигаций
+local originalPos = rootPart.CFrame -- Исходная позиция персонажа
 
--- Функция для сверхбыстрого перемещения
-local function startMoving()
+-- Функция для перемещения камеры
+local function startMovingCamera()
+    camera.CameraType = Enum.CameraType.Scriptable -- Делаем камеру управляемой
+    local cameraPos = camera.CFrame
     moving = true
     while moving do
-        local newPos = rootPart.CFrame * CFrame.new(0, 2, -moveDistance) -- Телепортируемся на огромное расстояние вперёд
-        rootPart.CFrame = newPos
-        -- Убираем wait(), чтобы двигаться максимально быстро
+        cameraPos = cameraPos * CFrame.new(0, 0, -moveDistance) -- Двигаем камеру вперёд
+        camera.CFrame = cameraPos
+        wait(0.1) -- Пошаговая задержка
     end
+    -- Возвращаем камеру в нормальный режим
+    camera.CameraType = Enum.CameraType.Custom
 end
 
--- Функция для остановки движения
-local function stopMoving()
+-- Функция для остановки движения камеры
+local function stopMovingCamera()
     moving = false
+    camera.CameraType = Enum.CameraType.Custom -- Возвращаем управление камерой игроку
 end
 
--- Функция для поиска облигаций
+-- Функция для поиска облигаций от позиции камеры
 local function findBonds()
+    local cameraPos = camera.CFrame.Position
     for _, obj in pairs(game.Workspace:GetDescendants()) do
-        if obj.Name == "Bond" and (obj.Position - rootPart.Position).Magnitude <= detectionRadius then
+        if obj.Name == "Bond" and (obj.Position - cameraPos).Magnitude <= detectionRadius then
             return obj
         end
     end
@@ -51,13 +59,16 @@ end
 -- Функция для телепорта и сбора
 local function collectBond(bond)
     if bond then
-        rootPart.CFrame = CFrame.new(bond.Position + Vector3.new(0, 5, 0)) -- Телепорт чуть выше облигации
+        -- Телепортируем персонажа к облигации
+        rootPart.CFrame = CFrame.new(bond.Position + Vector3.new(0, 5, 0))
         wait(0.1)
         -- Предполагаем, что сбор работает через FireServer
         local remote = game:GetService("ReplicatedStorage"):FindFirstChild("CollectItem") -- Замени на правильный RemoteEvent
         if remote then
             remote:FireServer(bond)
         end
+        -- Возвращаем персонажа на исходную позицию
+        rootPart.CFrame = originalPos
     end
 end
 
@@ -68,28 +79,27 @@ end
 
 -- Основной чит
 BondCheats:CreateButton("Start Bond Farming", function()
-    -- Сбрасываем WalkSpeed, чтобы античит не триггерился
-    humanoid.WalkSpeed = 16
+    -- Сохраняем исходную позицию
+    originalPos = rootPart.CFrame
+    humanoid.WalkSpeed = 0 -- Зафиксируем персонажа на месте
 
-    -- Начинаем движение
-    startMoving()
+    -- Начинаем движение камеры
+    startMovingCamera()
 
     -- Основной цикл
     while true do
         local bond = findBonds()
         if bond then
-            stopMoving()
+            stopMovingCamera()
             collectBond(bond)
             wait(0.1)
-            startMoving()
+            startMovingCamera()
         else
-            -- Проверяем, застряли ли мы
-            local lastPos = rootPart.Position
-            wait(1)
-            if (rootPart.Position - lastPos).Magnitude < 5 then
-                stopMoving()
+            -- Проверяем, застряли ли камера (например, больше нет облигаций)
+            local remainingBonds = findAllBonds()
+            if #remainingBonds == 0 then
+                stopMovingCamera()
                 -- Собираем все оставшиеся облигации
-                local remainingBonds = findAllBonds()
                 for _, bond in pairs(remainingBonds) do
                     collectBond(bond)
                     wait(0.1)
@@ -103,6 +113,8 @@ BondCheats:CreateButton("Start Bond Farming", function()
     end
 end)
 
-BondCheats:CreateButton("Stop Moving", function()
-    stopMoving()
+BondCheats:CreateButton("Stop Moving Camera", function()
+    stopMovingCamera()
+    humanoid.WalkSpeed = 16 -- Возвращаем скорость
+    rootPart.CFrame = originalPos -- Возвращаем персонажа
 end)

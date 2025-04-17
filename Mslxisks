@@ -8,28 +8,33 @@ local player = game.Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
 local rootPart = character:WaitForChild("HumanoidRootPart")
-local flying = false
-local speed = 200 -- Скорость полёта
+local moving = false
+local moveSpeed = 50 -- Скорость перемещения (будем двигаться шагами)
 local detectionRadius = 500 -- Радиус обнаружения облигаций
 
--- Функция для полёта
-local function startFlying()
-    local bodyVelocity = Instance.new("BodyVelocity")
-    bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-    bodyVelocity.Velocity = Vector3.new(0, 0, 0)
-    bodyVelocity.Parent = rootPart
-
-    flying = true
-    while flying do
-        bodyVelocity.Velocity = (rootPart.CFrame.LookVector * speed) + Vector3.new(0, 2, 0) -- Летим вперёд и немного вверх
-        wait()
+-- Попытка отключить античит
+local function disableAntiCheat()
+    for _, script in pairs(game:GetDescendants()) do
+        if script:IsA("LocalScript") and (string.find(string.lower(script.Name), "anti") or string.find(string.lower(script.Name), "cheat")) then
+            script.Disabled = true
+            print("Отключил возможный античит: " .. script.Name)
+        end
     end
-    bodyVelocity:Destroy()
 end
 
--- Функция для остановки полёта
-local function stopFlying()
-    flying = false
+-- Функция для перемещения вперёд через CFrame
+local function startMoving()
+    moving = true
+    while moving do
+        local newPos = rootPart.CFrame * CFrame.new(0, 2, -moveSpeed) -- Двигаемся вперёд маленькими шагами
+        rootPart.CFrame = newPos
+        wait(0.05) -- Задержка, чтобы античит не триггерился
+    end
+end
+
+-- Функция для остановки движения
+local function stopMoving()
+    moving = false
 end
 
 -- Функция для поиска облигаций
@@ -73,26 +78,29 @@ end
 
 -- Основной чит
 BondCheats:CreateButton("Start Bond Farming", function()
-    -- Увеличиваем скорость
-    humanoid.WalkSpeed = 100
+    -- Пытаемся отключить античит
+    disableAntiCheat()
 
-    -- Начинаем полёт
-    startFlying()
+    -- Сбрасываем WalkSpeed, чтобы античит не триггерился
+    humanoid.WalkSpeed = 16 -- Обычная скорость ходьбы
+
+    -- Начинаем движение
+    startMoving()
 
     -- Основной цикл
     while true do
         local bond = findBonds()
         if bond then
-            stopFlying()
+            stopMoving()
             collectBond(bond)
             wait(0.5)
-            startFlying()
+            startMoving()
         else
             -- Проверяем, застряли ли мы (например, не двигаемся)
             local lastPos = rootPart.Position
             wait(2)
             if (rootPart.Position - lastPos).Magnitude < 5 then
-                stopFlying()
+                stopMoving()
                 -- Собираем все оставшиеся облигации
                 local remainingBonds = findAllBonds()
                 for _, bond in pairs(remainingBonds) do
@@ -108,6 +116,6 @@ BondCheats:CreateButton("Start Bond Farming", function()
     end
 end)
 
-BondCheats:CreateButton("Stop Flying", function()
-    stopFlying()
+BondCheats:CreateButton("Stop Moving", function()
+    stopMoving()
 end)

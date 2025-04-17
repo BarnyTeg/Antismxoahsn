@@ -1,120 +1,109 @@
 local Library = loadstring(Game:HttpGet("https://raw.githubusercontent.com/bloodball/-back-ups-for-libs/main/wizard"))()
 
 local PhantomForcesWindow = Library:NewWindow("Dead Rails Cheats")
-local BondCheats = PhantomForcesWindow:NewSection("Bond Farming")
+local MonsterCheats = PhantomForcesWindow:NewSection("Monster Spawner")
 
 -- Переменные
 local player = game.Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
-local humanoid = character:WaitForChild("Humanoid")
 local rootPart = character:WaitForChild("HumanoidRootPart")
-local camera = game.Workspace.CurrentCamera
-local moving = false
-local moveDistance = 100 -- Пошаговое расстояние для камеры
-local detectionRadius = 500 -- Радиус обнаружения облигаций
-local originalPos = rootPart.CFrame -- Исходная позиция персонажа
+local workspace = game.Workspace
+local replicatedStorage = game:GetService("ReplicatedStorage")
 
--- Функция для перемещения камеры
-local function startMovingCamera()
-    camera.CameraType = Enum.CameraType.Scriptable -- Делаем камеру управляемой
-    local cameraPos = camera.CFrame
-    moving = true
-    while moving do
-        cameraPos = cameraPos * CFrame.new(0, 0, -moveDistance) -- Двигаем камеру вперёд
-        camera.CFrame = cameraPos
-        wait(0.1) -- Пошаговая задержка
+-- Функция для создания монстра
+local function spawnMonster()
+    -- Ищем модель оборотня в игре (предположим, что она есть в ReplicatedStorage или Workspace)
+    local werewolfModel = replicatedStorage:FindFirstChild("Werewolf") or workspace:FindFirstChild("Werewolf")
+    if not werewolfModel then
+        print("Модель Werewolf не найдена! Попробуй заспавнить оборотня в игре сначала.")
+        return
     end
-    -- Возвращаем камеру в нормальный режим
-    camera.CameraType = Enum.CameraType.Custom
-end
 
--- Функция для остановки движения камеры
-local function stopMovingCamera()
-    moving = false
-    camera.CameraType = Enum.CameraType.Custom -- Возвращаем управление камерой игроку
-end
-
--- Функция для поиска облигаций от позиции камеры
-local function findBonds()
-    local cameraPos = camera.CFrame.Position
-    for _, obj in pairs(game.Workspace:GetDescendants()) do
-        if obj.Name == "Bond" and (obj.Position - cameraPos).Magnitude <= detectionRadius then
-            return obj
-        end
-    end
-    return nil
-end
-
--- Функция для поиска всех облигаций в мире
-local function findAllBonds()
-    local bonds = {}
-    for _, obj in pairs(game.Workspace:GetDescendants()) do
-        if obj.Name == "Bond" then
-            table.insert(bonds, obj)
-        end
-    end
-    return bonds
-end
-
--- Функция для телепорта и сбора
-local function collectBond(bond)
-    if bond then
-        -- Телепортируем персонажа к облигации
-        rootPart.CFrame = CFrame.new(bond.Position + Vector3.new(0, 5, 0))
-        wait(0.1)
-        -- Предполагаем, что сбор работает через FireServer
-        local remote = game:GetService("ReplicatedStorage"):FindFirstChild("CollectItem") -- Замени на правильный RemoteEvent
-        if remote then
-            remote:FireServer(bond)
-        end
-        -- Возвращаем персонажа на исходную позицию
-        rootPart.CFrame = originalPos
-    end
-end
-
--- Функция для смерти
-local function killSelf()
-    humanoid.Health = 0
-end
-
--- Основной чит
-BondCheats:CreateButton("Start Bond Farming", function()
-    -- Сохраняем исходную позицию
-    originalPos = rootPart.CFrame
-    humanoid.WalkSpeed = 0 -- Зафиксируем персонажа на месте
-
-    -- Начинаем движение камеры
-    startMovingCamera()
-
-    -- Основной цикл
-    while true do
-        local bond = findBonds()
-        if bond then
-            stopMovingCamera()
-            collectBond(bond)
-            wait(0.1)
-            startMovingCamera()
-        else
-            -- Проверяем, застряли ли камера (например, больше нет облигаций)
-            local remainingBonds = findAllBonds()
-            if #remainingBonds == 0 then
-                stopMovingCamera()
-                -- Собираем все оставшиеся облигации
-                for _, bond in pairs(remainingBonds) do
-                    collectBond(bond)
-                    wait(0.1)
-                end
-                -- Умираем
-                killSelf()
-                break
+    -- Клонируем модель
+    local monster = werewolfModel:Clone()
+    monster.Name = "CustomMonster"
+    
+    -- Настраиваем размер (2 метра в высоту)
+    local humanoid = monster:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        local originalHeight = humanoid.HipHeight
+        humanoid.HipHeight = 2 -- Примерно 2 метра
+        for _, part in pairs(monster:GetDescendants()) do
+            if part:IsA("BasePart") then
+                local scaleFactor = 2 / originalHeight
+                part.Size = part.Size * scaleFactor
             end
         end
-        wait()
     end
-end)
 
-BondCheats:CreateButton("Stop Moving Camera", function()
-    stopMovingCamera()
-    humanoid.WalkSpeed = 16 -- Возвращаем скорость
-    rootPart.CFrame = originalPos -- Возвращаем персонажа
+    -- Делаем монстра неуязвимым
+    if humanoid then
+        humanoid.MaxHealth = math.huge
+        humanoid.Health = math.huge
+    end
+
+    -- Позиция спавна (10-15 студс от игрока)
+    local spawnDistance = 15
+    local spawnPos = rootPart.CFrame * CFrame.new(0, 2, -spawnDistance)
+    monster:SetPrimaryPartCFrame(spawnPos)
+    monster.Parent = workspace
+
+    -- Настраиваем поведение (атакует NPC, игнорирует игроков)
+    local aggroScript = Instance.new("Script")
+    aggroScript.Name = "AggroScript"
+    aggroScript.Parent = monster
+    aggroScript.Source = [[
+        local monster = script.Parent
+        local humanoid = monster:FindFirstChildOfClass("Humanoid")
+        local rootPart = monster:FindFirstChild("HumanoidRootPart")
+
+        while true do
+            -- Ищем ближайших NPC
+            for _, obj in pairs(workspace:GetDescendants()) do
+                if obj:IsA("Model") and obj ~= monster and obj:FindFirstChildOfClass("Humanoid") then
+                    local targetHumanoid = obj:FindFirstChildOfClass("Humanoid")
+                    local targetRoot = obj:FindFirstChild("HumanoidRootPart")
+                    if targetHumanoid and targetRoot and not game.Players:GetPlayerFromCharacter(obj) then -- Игнорируем игроков
+                        local distance = (rootPart.Position - targetRoot.Position).Magnitude
+                        if distance <= 50 then
+                            -- Двигаемся к цели
+                            humanoid:MoveTo(targetRoot.Position)
+                            -- Сплеш-урон
+                            if distance <= 5 then
+                                targetHumanoid:TakeDamage(50) -- Высокий урон
+                                -- Сплеш-урон по ближайшим NPC
+                                for _, nearby in pairs(workspace:GetDescendants()) do
+                                    if nearby:IsA("Model") and nearby ~= obj and nearby ~= monster and nearby:FindFirstChildOfClass("Humanoid") then
+                                        local nearbyHumanoid = nearby:FindFirstChildOfClass("Humanoid")
+                                        local nearbyRoot = nearby:FindFirstChild("HumanoidRootPart")
+                                        if nearbyHumanoid and nearbyRoot then
+                                            local splashDistance = (nearbyRoot.Position - targetRoot.Position).Magnitude
+                                            if splashDistance <= 10 then
+                                                nearbyHumanoid:TakeDamage(30) -- Сплеш-урон
+                                            end
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+            wait(0.1)
+        end
+    ]]
+
+    -- Делаем так, чтобы другие монстры агрились на нашего
+    local aggroTag = Instance.new("ObjectValue")
+    aggroTag.Name = "AggroTarget"
+    aggroTag.Value = monster
+    aggroTag.Parent = monster
+
+    -- Делаем монстра видимым для всех (серверный объект)
+    monster.Parent = workspace
+end
+
+-- Кнопка для спавна монстра
+MonsterCheats:CreateButton("Spawn Custom Monster", function()
+    spawnMonster()
 end)

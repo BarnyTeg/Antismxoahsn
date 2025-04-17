@@ -7,6 +7,51 @@ local WeaponCheats = PhantomForcesWindow:NewSection("Super Weapon")
 local player = game.Players.LocalPlayer
 local workspace = game.Workspace
 
+-- Функция для стрельбы
+local function fireWeapon(shotgun)
+    local handle = shotgun:FindFirstChild("Handle")
+    local fireSound = handle:FindFirstChild("FireSound")
+    local mouse = player:GetMouse()
+    local lastFireTime = tick()
+    local cooldown = 0.2 -- 0.2 секунды
+
+    if tick() - lastFireTime >= cooldown then
+        lastFireTime = tick()
+
+        -- Проигрываем звук выстрела
+        fireSound:Play()
+
+        -- Создаём луч для определения точки попадания
+        local rayOrigin = handle.Position
+        local rayDirection = (mouse.Hit.Position - handle.Position).Unit * 300
+        local ray = Ray.new(rayOrigin, rayDirection)
+        local hit, position = workspace:FindPartOnRayWithIgnoreList(ray, {player.Character, shotgun})
+
+        -- Создаём взрыв в точке попадания
+        local explosion = Instance.new("Explosion")
+        explosion.Position = position
+        explosion.BlastRadius = 18 -- 5 метров ≈ 18 студс
+        explosion.BlastPressure = 0 -- Отключаем физику взрыва
+        explosion.DestroyJointRadiusPercent = 0
+        explosion.ExplosionType = Enum.ExplosionType.NoCraters
+        explosion.Parent = workspace
+
+        -- Наносим урон всем NPC в радиусе взрыва
+        for _, obj in pairs(workspace:GetDescendants()) do
+            if obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid") then
+                local targetHumanoid = obj:FindFirstChildOfClass("Humanoid")
+                local targetRoot = obj:FindFirstChild("HumanoidRootPart")
+                if targetHumanoid and targetRoot and not game.Players:GetPlayerFromCharacter(obj) then
+                    local distance = (position - targetRoot.Position).Magnitude
+                    if distance <= 18 then
+                        targetHumanoid:TakeDamage(50)
+                    end
+                end
+            end
+        end
+    end
+end
+
 -- Функция для создания оружия
 local function spawnWeapon()
     -- Создаём инструмент (дробовик)
@@ -14,26 +59,25 @@ local function spawnWeapon()
     shotgun.Name = "SplashShotgun"
     shotgun.RequiresHandle = true
 
-    -- Создаём рукоятку (визуальная часть дробовика)
+    -- Копируем модель Sawed-Off Shotgun из Dead Rails
     local handle = Instance.new("Part")
     handle.Name = "Handle"
-    handle.Size = Vector3.new(1, 0.5, 3)
+    handle.Size = Vector3.new(0.8, 0.4, 2) -- Размеры как у Sawed-Off Shotgun
     handle.BrickColor = BrickColor.new("Black")
     handle.Parent = shotgun
 
-    -- Добавляем визуальные детали (ствол, приклад)
     local barrel = Instance.new("Part")
     barrel.Name = "Barrel"
-    barrel.Size = Vector3.new(0.5, 0.5, 2)
+    barrel.Size = Vector3.new(0.4, 0.4, 1.5) -- Двойной ствол, как у Sawed-Off
     barrel.BrickColor = BrickColor.new("Dark gray")
-    barrel.Position = Vector3.new(0, 0, 2)
+    barrel.Position = Vector3.new(0, 0.2, 1.25)
     barrel.Parent = shotgun
 
     local stock = Instance.new("Part")
     stock.Name = "Stock"
-    stock.Size = Vector3.new(0.8, 0.8, 1)
+    stock.Size = Vector3.new(0.6, 0.6, 1)
     stock.BrickColor = BrickColor.new("Brown")
-    stock.Position = Vector3.new(0, 0, -1.5)
+    stock.Position = Vector3.new(0, 0, -1)
     stock.Parent = shotgun
 
     -- Прикрепляем детали к рукоятке
@@ -55,18 +99,18 @@ local function spawnWeapon()
     fireSound.Volume = 1
     fireSound.Parent = handle
 
-    -- Добавляем скрипт для стрельбы
+    -- Добавляем скрипт для стандартной стрельбы (как у обычного оружия)
     local fireScript = Instance.new("Script")
     fireScript.Name = "FireScript"
     fireScript.Parent = shotgun
     fireScript.Source = [[
         local tool = script.Parent
-        local handle = tool:WaitForChild("Handle")
+        local handle = toolBETTER:WaitForChild("Handle")
         local fireSound = handle:WaitForChild("FireSound")
         local player = game.Players.LocalPlayer
         local mouse = player:GetMouse()
         local lastFireTime = 0
-        local cooldown = 0.2 -- 0.2 секунды
+        local cooldown = 0.2
 
         tool.Activated:Connect(function()
             local currentTime = tick()
@@ -83,8 +127,8 @@ local function spawnWeapon()
                 -- Создаём взрыв в точке попадания
                 local explosion = Instance.new("Explosion")
                 explosion.Position = position
-                explosion.BlastRadius = 18 -- 5 метров ≈ 18 студс
-                explosion.BlastPressure = 0 -- Отключаем физику взрыва
+                explosion.BlastRadius = 18
+                explosion.BlastPressure = 0
                 explosion.DestroyJointRadiusPercent = 0
                 explosion.ExplosionType = Enum.ExplosionType.NoCraters
                 explosion.Parent = workspace
@@ -114,4 +158,14 @@ end
 -- Кнопка для добавления оружия
 WeaponCheats:CreateButton("Spawn Splash Shotgun", function()
     spawnWeapon()
+end)
+
+-- Кнопка для стрельбы (дополнительно через UI Delta)
+WeaponCheats:CreateButton("Fire Shotgun", function()
+    local shotgun = player.Backpack:FindFirstChild("SplashShotgun") or player.Character:FindFirstChild("SplashShotgun")
+    if shotgun then
+        fireWeapon(shotgun)
+    else
+        print("Сначала заспавнь дробовик!")
+    end
 end)

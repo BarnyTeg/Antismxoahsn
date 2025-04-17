@@ -9,20 +9,8 @@ local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
 local rootPart = character:WaitForChild("HumanoidRootPart")
 local moving = false
-local moveDistance = 1000 -- Огромное расстояние за шаг
+local moveDistance = 2000 -- Ещё большее расстояние за шаг
 local detectionRadius = 500 -- Радиус обнаружения облигаций
-
--- Попытка отключить античит
-local function disableAntiCheat()
-    for _, script in pairs(game:GetDescendants()) do
-        if script:IsA("LocalScript") and (string.find(string.lower(script.Name), "anti") or string.find(string.lower(script.Name), "cheat")) then
-            script.Disabled = true
-            print("Отключил возможный античит: " .. script.Name)
-        end
-    end
-    -- Отключаем проверки на Network Ownership, чтобы сервер не тпхал назад
-    rootPart:SetNetworkOwner(nil)
-end
 
 -- Функция для сверхбыстрого перемещения
 local function startMoving()
@@ -30,7 +18,7 @@ local function startMoving()
     while moving do
         local newPos = rootPart.CFrame * CFrame.new(0, 2, -moveDistance) -- Телепортируемся на огромное расстояние вперёд
         rootPart.CFrame = newPos
-        wait() -- Минимальная задержка, чтобы не крашнуть
+        -- Убираем wait(), чтобы двигаться максимально быстро
     end
 end
 
@@ -80,9 +68,6 @@ end
 
 -- Основной чит
 BondCheats:CreateButton("Start Bond Farming", function()
-    -- Пытаемся отключить античит
-    disableAntiCheat()
-
     -- Сбрасываем WalkSpeed, чтобы античит не триггерился
     humanoid.WalkSpeed = 16
 

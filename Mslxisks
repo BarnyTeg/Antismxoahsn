@@ -1,7 +1,7 @@
 local Library = loadstring(Game:HttpGet("https://raw.githubusercontent.com/bloodball/-back-ups-for-libs/main/wizard"))()
 
 local PhantomForcesWindow = Library:NewWindow("Dead Rails Cheats")
-local MonsterCheats = PhantomForcesWindow:NewSection("Reptile Companion")
+local DragonCheats = PhantomForcesWindow:NewSection("Dragon Companion")
 
 -- Переменные
 local player = game.Players.LocalPlayer
@@ -10,35 +10,66 @@ local rootPart = character:WaitForChild("HumanoidRootPart")
 local workspace = game.Workspace
 local replicatedStorage = game:GetService("ReplicatedStorage")
 
--- Функция для создания рептилии
-local function spawnReptile()
-    -- Ищем модель оборотня в игре (будем использовать её как основу)
-    local baseModel = replicatedStorage:FindFirstChild("Werewolf") or workspace:FindFirstChild("Werewolf")
+-- Функция для создания дракона
+local function spawnDragon()
+    -- Ищем модель зомби в игре (будем использовать её как основу)
+    local baseModel = workspace:FindFirstChild("Zombie") or replicatedStorage:FindFirstChild("Zombie")
     if not baseModel then
-        print("Модель Werewolf не найдена! Попробуй заспавнить оборотня в игре сначала.")
+        print("Модель Zombie не найдена! Попробуй найти зомби в игре.")
         return
     end
 
     -- Клонируем модель
-    local reptile = baseModel:Clone()
-    reptile.Name = "ReptileCompanion"
+    local dragon = baseModel:Clone()
+    dragon.Name = "DragonCompanion"
     
-    -- Настраиваем размер (3 метра в высоту)
-    local humanoid = reptile:FindFirstChildOfClass("Humanoid")
+    -- Настраиваем внешний вид дракона
+    local humanoid = dragon:FindFirstChildOfClass("Humanoid")
     if humanoid then
         local originalHeight = humanoid.HipHeight
-        humanoid.HipHeight = 3 -- Примерно 3 метра
-        for _, part in pairs(reptile:GetDescendants()) do
+        humanoid.HipHeight = 3 -- 3 метра в высоту
+        for _, part in pairs(dragon:GetDescendants()) do
             if part:IsA("BasePart") then
                 local scaleFactor = 3 / originalHeight
                 part.Size = part.Size * scaleFactor
-                -- Меняем цвет, чтобы выглядело как рептилия (зелёный оттенок)
-                part.BrickColor = BrickColor.new("Camo")
+                -- Тёмно-зелёный цвет с красными акцентами
+                part.BrickColor = BrickColor.new("Dark green")
+                if part.Name == "Head" then
+                    part.BrickColor = BrickColor.new("Crimson")
+                end
             end
         end
+
+        -- Добавляем "крылья" (имитация через части)
+        local leftWing = Instance.new("Part")
+        leftWing.Name = "LeftWing"
+        leftWing.Size = Vector3.new(2, 0.2, 3)
+        leftWing.BrickColor = BrickColor.new("Dark green")
+        leftWing.Position = dragon.PrimaryPart.Position + Vector3.new(-2, 2, 0)
+        leftWing.Parent = dragon
+
+        local rightWing = Instance.new("Part")
+        rightWing.Name = "RightWing"
+        rightWing.Size = Vector3.new(2, 0.2, 3)
+        rightWing.BrickColor = BrickColor.new("Dark green")
+        rightWing.Position = dragon.PrimaryPart.Position + Vector3.new(2, 2, 0)
+        rightWing.Parent = dragon
+
+        -- Прикрепляем крылья
+        local weldLeft = Instance.new("Weld")
+        weldLeft.Part0 = dragon.PrimaryPart
+        weldLeft.Part1 = leftWing
+        weldLeft.C0 = CFrame.new(-2, 2, 0)
+        weldLeft.Parent = leftWing
+
+        local weldRight = Instance.new("Weld")
+        weldRight.Part0 = dragon.PrimaryPart
+        weldRight.Part1 = rightWing
+        weldRight.C0 = CFrame.new(2, 2, 0)
+        weldRight.Parent = rightWing
     end
 
-    -- Делаем рептилию неуязвимой
+    -- Делаем дракона неуязвимым
     if humanoid then
         humanoid.MaxHealth = math.huge
         humanoid.Health = math.huge
@@ -47,27 +78,27 @@ local function spawnReptile()
     -- Позиция спавна (5-10 студс от игрока)
     local spawnDistance = 10
     local spawnPos = rootPart.CFrame * CFrame.new(0, 2, -spawnDistance)
-    reptile:SetPrimaryPartCFrame(spawnPos)
-    reptile.Parent = workspace
+    dragon:SetPrimaryPartCFrame(spawnPos)
+    dragon.Parent = workspace
 
-    -- Добавляем звук рычания
+    -- Добавляем звук рычания дракона
     local sound = Instance.new("Sound")
-    sound.Name = "Roar"
-    sound.SoundId = "rbxassetid://9120386436" -- Стандартный звук рычания в Roblox
+    sound.Name = "DragonRoar"
+    sound.SoundId = "rbxassetid://9120386436" -- Стандартный звук драконьего рёва в Roblox
     sound.Volume = 1
     sound.Looped = true
-    sound.PlaybackSpeed = 0.8
-    sound.Parent = reptile:FindFirstChild("Head") or reptile.PrimaryPart
+    sound.PlaybackSpeed = 0.7
+    sound.Parent = dragon:FindFirstChild("Head") or dragon.PrimaryPart
     sound:Play()
 
     -- Настраиваем поведение (следует за игроком, атакует мобов)
     local aggroScript = Instance.new("Script")
-    aggroScript.Name = "ReptileAI"
-    aggroScript.Parent = reptile
+    aggroScript.Name = "DragonAI"
+    aggroScript.Parent = dragon
     aggroScript.Source = [[
-        local reptile = script.Parent
-        local humanoid = reptile:FindFirstChildOfClass("Humanoid")
-        local rootPart = reptile:FindFirstChild("HumanoidRootPart")
+        local dragon = script.Parent
+        local humanoid = dragon:FindFirstChildOfClass("Humanoid")
+        local rootPart = dragon:FindFirstChild("HumanoidRootPart")
         local player = game.Players.LocalPlayer
         local playerRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 
@@ -81,7 +112,7 @@ local function spawnReptile()
 
                 -- Ищем ближайших NPC
                 for _, obj in pairs(workspace:GetDescendants()) do
-                    if obj:IsA("Model") and obj ~= reptile and obj:FindFirstChildOfClass("Humanoid") then
+                    if obj:IsA("Model") and obj ~= dragon and obj:FindFirstChildOfClass("Humanoid") then
                         local targetHumanoid = obj:FindFirstChildOfClass("Humanoid")
                         local targetRoot = obj:FindFirstChild("HumanoidRootPart")
                         if targetHumanoid and targetRoot and not game.Players:GetPlayerFromCharacter(obj) then
@@ -91,7 +122,7 @@ local function spawnReptile()
                                 humanoid:MoveTo(targetRoot.Position)
                                 -- Атака
                                 if distance <= 5 then
-                                    targetHumanoid:TakeDamage(40) -- Высокий урон
+                                    targetHumanoid:TakeDamage(50) -- Высокий урон
                                 end
                             end
                         end
@@ -102,11 +133,11 @@ local function spawnReptile()
         end
     ]]
 
-    -- Делаем рептилию видимой для всех (серверный объект)
-    reptile.Parent = workspace
+    -- Делаем дракона видимым для всех (серверный объект)
+    dragon.Parent = workspace
 end
 
--- Кнопка для спавна рептилии
-MonsterCheats:CreateButton("Spawn Reptile Companion", function()
-    spawnReptile()
+-- Кнопка для спавна дракона
+DragonCheats:CreateButton("Spawn Dragon Companion", function()
+    spawnDragon()
 end)

@@ -177,15 +177,63 @@ skidSupportRight.Anchored = true
 skidSupportRight.CanCollide = true
 skidSupportRight.Parent = helicopter
 
--- Сиденье (используем Seat вместо VehicleSeat)
-local seat = Instance.new("Seat")
+-- Заменяем старый код сиденья на этот:
+
+-- Создаем VehicleSeat вместо обычного Seat
+local seat = Instance.new("VehicleSeat")
 seat.Size = Vector3.new(2 * scale, 1 * scale, 2 * scale)
 seat.Position = spawnPos + Vector3.new(3 * scale, (0.5 + 1) * scale, 0)
 seat.BrickColor = BrickColor.new("Black")
 seat.Transparency = 0
-seat.Anchored = true
+seat.Anchored = false  -- Должно быть false для работы физики
 seat.CanCollide = true
+seat.MaxSpeed = 100
 seat.Parent = helicopter
+
+-- Соединяем сиденье с корпусом с помощью WeldConstraint
+local seatWeld = Instance.new("WeldConstraint")
+seatWeld.Part0 = body
+seatWeld.Part1 = seat
+seatWeld.Parent = seat
+
+-- Новая система посадки
+local function onSeatTouched(hit)
+    local humanoid = hit.Parent:FindFirstChildOfClass("Humanoid")
+    if humanoid and humanoid.Parent == LocalPlayer.Character then
+        humanoid.Sit = true
+        seat.Occupant = humanoid
+        notify("Helicopter", "Вы сели в вертолет!")
+        
+        -- Активируем управление
+        isFlying = true
+        controlGui.Enabled = true
+        
+        -- Отключаем якоря у всех частей
+        for _, part in pairs(helicopter:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.Anchored = false
+            end
+        end
+    end
+end
+
+seat.Touched:Connect(onSeatTouched)
+
+-- Новая система выхода
+exitButton.MouseButton1Click:Connect(function()
+    if seat.Occupant then
+        seat.Occupant.Jump = true
+        isFlying = false
+        controlGui.Enabled = false
+        
+        -- Фиксируем вертолет
+        for _, part in pairs(helicopter:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.Anchored = true
+            end
+        end
+    end
+end)
 
 -- Корневая часть
 local rootPart = Instance.new("Part")

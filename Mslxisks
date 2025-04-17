@@ -1,36 +1,50 @@
--- Простейший рабочий вертолет (только сиденье)
+-- Фиксированное сиденье вертолета (как обычные сиденья в Roblox)
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 
--- Ждем загрузку игрока
+-- Ожидаем загрузку игрока
 local player = Players.LocalPlayer
-while not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") do
+while not player.Character or not player.Character:FindFirstChild("Humanoid") do
     wait(0.1)
 end
 
--- Позиция перед игроком
-local spawnPos = player.Character.HumanoidRootPart.Position + player.Character.HumanoidRootPart.CFrame.LookVector * 5
+-- Позиция перед игроком (+2 метра вперед и 1.5 вверх)
+local spawnPos = player.Character.HumanoidRootPart.Position + 
+                 player.Character.HumanoidRootPart.CFrame.LookVector * 2 +
+                 Vector3.new(0, 1.5, 0)
 
--- Создаем сиденье
+-- Создаем сиденье с фиксированным положением
 local seat = Instance.new("Seat")
 seat.Name = "HelicopterSeat"
-seat.Size = Vector3.new(3, 1, 3) -- Достаточно большой размер
-seat.CFrame = CFrame.new(spawnPos + Vector3.new(0, 2, 0)) -- Чуть выше земли
-seat.Anchored = false -- Должно быть false!
+seat.Size = Vector3.new(3, 1.2, 3) -- Немного больше стандартного
+seat.CFrame = CFrame.new(spawnPos) * CFrame.Angles(0, math.rad(180), 0) -- Развернуто к игроку
+seat.Anchored = true -- Фиксируем позицию
 seat.CanCollide = true
+seat.TopSurface = Enum.SurfaceType.Smooth
+seat.BottomSurface = Enum.SurfaceType.Smooth
 seat.Parent = Workspace
 
--- Функция посадки
-local function onTouch(hit)
+-- Настройки сиденья
+seat:SetAttribute("SitOffset", Vector3.new(0, -0.5, 0)) -- Корректировка позиции сидения
+seat:SetAttribute("SitRotation", Vector3.new(0, 180, 0)) -- Разворот сидящего
+
+-- Автоматическая посадка при касании
+seat.Touched:Connect(function(hit)
     local humanoid = hit.Parent:FindFirstChildOfClass("Humanoid")
     if humanoid and humanoid == player.Character.Humanoid then
-        humanoid.Sit = true -- Принудительно сажаем
-        seat:Sit(humanoid) -- Альтернативный способ
-        print("Игрок сел в вертолет!")
+        -- Устанавливаем фиксированную позицию сидения
+        humanoid.Sit = true
+        wait(0.1) -- Небольшая задержка для надежности
+        if seat.Occupant == nil then -- Дублирующая проверка
+            seat:Sit(humanoid)
+        end
+        
+        -- Фиксируем камеру (опционально)
+        if humanoid.SeatPart == seat then
+            humanoid.CameraOffset = Vector3.new(0, 1, 2) -- Смещение камеры
+        end
     end
-end
-
-seat.Touched:Connect(onTouch)
+end)
 
 -- Уведомление
 game:GetService("StarterGui"):SetCore("SendNotification", {
@@ -38,3 +52,5 @@ game:GetService("StarterGui"):SetCore("SendNotification", {
     Text = "Подойдите к сиденью чтобы сесть",
     Duration = 5
 })
+
+print("Сиденье вертолета создано! Позиция: " .. tostring(spawnPos))

@@ -8,45 +8,83 @@ local player = game.Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local rootPart = character:WaitForChild("HumanoidRootPart")
 local workspace = game.Workspace
-local replicatedStorage = game:GetService("ReplicatedStorage")
 
 -- Функция для спавна дракона
 local function spawnDragon()
-    -- Предполагаем, что ты загрузил модель в ReplicatedStorage под именем "BlackDragon"
-    local dragonModel = replicatedStorage:FindFirstChild("BlackDragon")
-    if not dragonModel then
-        print("Модель BlackDragon не найдена! Убедись, что ты загрузил её в ReplicatedStorage.")
-        return
-    end
-
-    -- Клонируем модель
-    local dragon = dragonModel:Clone()
+    -- Создаём модель дракона
+    local dragon = Instance.new("Model")
     dragon.Name = "DragonCompanion"
 
-    -- Масштабируем до 20 метров (примерно 71 студс)
+    -- Масштаб для 20 метров (71 студс)
     local heightInStuds = 71 -- 20 метров / 0.28 = 71 студс
-    local humanoid = dragon:FindFirstChildOfClass("Humanoid")
-    if humanoid then
-        local originalHeight = humanoid.HipHeight
-        humanoid.HipHeight = heightInStuds
-        local scaleFactor = heightInStuds / originalHeight
-        for _, part in pairs(dragon:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.Size = part.Size * scaleFactor
-            end
-        end
-    else
-        -- Если хуманоида нет, масштабируем вручную
-        for _, part in pairs(dragon:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.Size = part.Size * (heightInStuds / 5) -- Предполагаем, что исходная высота ~5 студс
-            end
+    local scaleFactor = heightInStuds / 5 -- Предполагаем, что базовая высота ~5 студс
+
+    -- Создаём части дракона
+    local body = Instance.new("Part")
+    body.Name = "Body"
+    body.Size = Vector3.new(3, 2, 8) * scaleFactor -- Длинное тело
+    body.BrickColor = BrickColor.new("Dark green")
+    body.Position = Vector3.new(0, heightInStuds / 2, 0)
+    body.Parent = dragon
+    dragon.PrimaryPart = body
+
+    local head = Instance.new("Part")
+    head.Name = "Head"
+    head.Size = Vector3.new(2, 2, 3) * scaleFactor
+    head.BrickColor = BrickColor.new("Crimson")
+    head.Position = body.Position + Vector3.new(0, 0, (body.Size.Z / 2 + head.Size.Z / 2))
+    head.Parent = dragon
+
+    local leftWing = Instance.new("Part")
+    leftWing.Name = "LeftWing"
+    leftWing.Size = Vector3.new(5, 0.5, 4) * scaleFactor
+    leftWing.BrickColor = BrickColor.new("Dark green")
+    leftWing.Position = body.Position + Vector3.new(-(body.Size.X / 2 + leftWing.Size.X / 2), 0, 0)
+    leftWing.Parent = dragon
+
+    local rightWing = Instance.new("Part")
+    rightWing.Name = "RightWing"
+    rightWing.Size = Vector3.new(5, 0.5, 4) * scaleFactor
+    rightWing.BrickColor = BrickColor.new("Dark green")
+    rightWing.Position = body.Position + Vector3.new((body.Size.X / 2 + rightWing.Size.X / 2), 0, 0)
+    rightWing.Parent = dragon
+
+    local tail = Instance.new("Part")
+    tail.Name = "Tail"
+    tail.Size = Vector3.new(1, 1, 6) * scaleFactor
+    tail.BrickColor = BrickColor.new("Dark green")
+    tail.Position = body.Position + Vector3.new(0, 0, -(body.Size.Z / 2 + tail.Size.Z / 2))
+    tail.Parent = dragon
+
+    -- Добавляем лапы
+    for i = 1, 4 do
+        local leg = Instance.new("Part")
+        leg.Name = "Leg" .. i
+        leg.Size = Vector3.new(1, 3, 1) * scaleFactor
+        leg.BrickColor = BrickColor.new("Dark green")
+        leg.Position = body.Position + Vector3.new(
+            i % 2 == 0 and (body.Size.X / 3) or -(body.Size.X / 3),
+            -(body.Size.Y / 2 + leg.Size.Y / 2),
+            i <= 2 and (body.Size.Z / 3) or -(body.Size.Z / 3)
+        )
+        leg.Parent = dragon
+    end
+
+    -- Прикрепляем части
+    for _, part in pairs(dragon:GetChildren()) do
+        if part:IsA("BasePart") and part ~= body then
+            local weld = Instance.new("Weld")
+            weld.Part0 = body
+            weld.Part1 = part
+            weld.C0 = CFrame.new(body.Position)
+            weld.C1 = CFrame.new(part.Position)
+            weld.Parent = part
         end
     end
 
     -- Позиция спавна (10 студс от игрока)
     local spawnDistance = 10
-    local spawnPos = rootPart.CFrame * CFrame.new(0, heightInStuds / 2, -spawnDistance)
+    local spawnPos = rootPart.CFrame * CFrame.new(0, 0, -spawnDistance)
     dragon:SetPrimaryPartCFrame(spawnPos)
 
     -- Отключаем физику, чтобы дракон просто стоял
@@ -58,6 +96,15 @@ local function spawnDragon()
 
     -- Делаем дракона видимым для всех
     dragon.Parent = workspace
+    print("Дракон заспавнен!")
+
+    -- Выводим список частей и их размеры
+    print("Составляющие модели DragonCompanion:")
+    for _, part in pairs(dragon:GetChildren()) do
+        if part:IsA("BasePart") then
+            print(part.Name .. " | Размер: " .. tostring(part.Size) .. " | Цвет: " .. tostring(part.BrickColor))
+        end
+    end
 end
 
 -- Кнопка для спавна дракона

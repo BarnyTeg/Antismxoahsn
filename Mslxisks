@@ -1,7 +1,7 @@
 local Library = loadstring(Game:HttpGet("https://raw.githubusercontent.com/bloodball/-back-ups-for-libs/main/wizard"))()
 
 local PhantomForcesWindow = Library:NewWindow("Dead Rails Cheats")
-local MonsterCheats = PhantomForcesWindow:NewSection("Monster Spawner")
+local MonsterCheats = PhantomForcesWindow:NewSection("Reptile Companion")
 
 -- Переменные
 local player = game.Players.LocalPlayer
@@ -10,79 +10,88 @@ local rootPart = character:WaitForChild("HumanoidRootPart")
 local workspace = game.Workspace
 local replicatedStorage = game:GetService("ReplicatedStorage")
 
--- Функция для создания монстра
-local function spawnMonster()
-    -- Ищем модель оборотня в игре (предположим, что она есть в ReplicatedStorage или Workspace)
-    local werewolfModel = replicatedStorage:FindFirstChild("Werewolf") or workspace:FindFirstChild("Werewolf")
-    if not werewolfModel then
+-- Функция для создания рептилии
+local function spawnReptile()
+    -- Ищем модель оборотня в игре (будем использовать её как основу)
+    local baseModel = replicatedStorage:FindFirstChild("Werewolf") or workspace:FindFirstChild("Werewolf")
+    if not baseModel then
         print("Модель Werewolf не найдена! Попробуй заспавнить оборотня в игре сначала.")
         return
     end
 
     -- Клонируем модель
-    local monster = werewolfModel:Clone()
-    monster.Name = "CustomMonster"
+    local reptile = baseModel:Clone()
+    reptile.Name = "ReptileCompanion"
     
-    -- Настраиваем размер (2 метра в высоту)
-    local humanoid = monster:FindFirstChildOfClass("Humanoid")
+    -- Настраиваем размер (3 метра в высоту)
+    local humanoid = reptile:FindFirstChildOfClass("Humanoid")
     if humanoid then
         local originalHeight = humanoid.HipHeight
-        humanoid.HipHeight = 2 -- Примерно 2 метра
-        for _, part in pairs(monster:GetDescendants()) do
+        humanoid.HipHeight = 3 -- Примерно 3 метра
+        for _, part in pairs(reptile:GetDescendants()) do
             if part:IsA("BasePart") then
-                local scaleFactor = 2 / originalHeight
+                local scaleFactor = 3 / originalHeight
                 part.Size = part.Size * scaleFactor
+                -- Меняем цвет, чтобы выглядело как рептилия (зелёный оттенок)
+                part.BrickColor = BrickColor.new("Camo")
             end
         end
     end
 
-    -- Делаем монстра неуязвимым
+    -- Делаем рептилию неуязвимой
     if humanoid then
         humanoid.MaxHealth = math.huge
         humanoid.Health = math.huge
     end
 
-    -- Позиция спавна (10-15 студс от игрока)
-    local spawnDistance = 15
+    -- Позиция спавна (5-10 студс от игрока)
+    local spawnDistance = 10
     local spawnPos = rootPart.CFrame * CFrame.new(0, 2, -spawnDistance)
-    monster:SetPrimaryPartCFrame(spawnPos)
-    monster.Parent = workspace
+    reptile:SetPrimaryPartCFrame(spawnPos)
+    reptile.Parent = workspace
 
-    -- Настраиваем поведение (атакует NPC, игнорирует игроков)
+    -- Добавляем звук рычания
+    local sound = Instance.new("Sound")
+    sound.Name = "Roar"
+    sound.SoundId = "rbxassetid://9120386436" -- Стандартный звук рычания в Roblox
+    sound.Volume = 1
+    sound.Looped = true
+    sound.PlaybackSpeed = 0.8
+    sound.Parent = reptile:FindFirstChild("Head") or reptile.PrimaryPart
+    sound:Play()
+
+    -- Настраиваем поведение (следует за игроком, атакует мобов)
     local aggroScript = Instance.new("Script")
-    aggroScript.Name = "AggroScript"
-    aggroScript.Parent = monster
+    aggroScript.Name = "ReptileAI"
+    aggroScript.Parent = reptile
     aggroScript.Source = [[
-        local monster = script.Parent
-        local humanoid = monster:FindFirstChildOfClass("Humanoid")
-        local rootPart = monster:FindFirstChild("HumanoidRootPart")
+        local reptile = script.Parent
+        local humanoid = reptile:FindFirstChildOfClass("Humanoid")
+        local rootPart = reptile:FindFirstChild("HumanoidRootPart")
+        local player = game.Players.LocalPlayer
+        local playerRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 
         while true do
-            -- Ищем ближайших NPC
-            for _, obj in pairs(workspace:GetDescendants()) do
-                if obj:IsA("Model") and obj ~= monster and obj:FindFirstChildOfClass("Humanoid") then
-                    local targetHumanoid = obj:FindFirstChildOfClass("Humanoid")
-                    local targetRoot = obj:FindFirstChild("HumanoidRootPart")
-                    if targetHumanoid and targetRoot and not game.Players:GetPlayerFromCharacter(obj) then -- Игнорируем игроков
-                        local distance = (rootPart.Position - targetRoot.Position).Magnitude
-                        if distance <= 50 then
-                            -- Двигаемся к цели
-                            humanoid:MoveTo(targetRoot.Position)
-                            -- Сплеш-урон
-                            if distance <= 5 then
-                                targetHumanoid:TakeDamage(50) -- Высокий урон
-                                -- Сплеш-урон по ближайшим NPC
-                                for _, nearby in pairs(workspace:GetDescendants()) do
-                                    if nearby:IsA("Model") and nearby ~= obj and nearby ~= monster and nearby:FindFirstChildOfClass("Humanoid") then
-                                        local nearbyHumanoid = nearby:FindFirstChildOfClass("Humanoid")
-                                        local nearbyRoot = nearby:FindFirstChild("HumanoidRootPart")
-                                        if nearbyHumanoid and nearbyRoot then
-                                            local splashDistance = (nearbyRoot.Position - targetRoot.Position).Magnitude
-                                            if splashDistance <= 10 then
-                                                nearbyHumanoid:TakeDamage(30) -- Сплеш-урон
-                                            end
-                                        end
-                                    end
+            if playerRoot then
+                local distanceToPlayer = (rootPart.Position - playerRoot.Position).Magnitude
+                -- Следуем за игроком, если слишком далеко
+                if distanceToPlayer > 10 then
+                    humanoid:MoveTo(playerRoot.Position)
+                end
+
+                -- Ищем ближайших NPC
+                for _, obj in pairs(workspace:GetDescendants()) do
+                    if obj:IsA("Model") and obj ~= reptile and obj:FindFirstChildOfClass("Humanoid") then
+                        local targetHumanoid = obj:FindFirstChildOfClass("Humanoid")
+                        local targetRoot = obj:FindFirstChild("HumanoidRootPart")
+                        if targetHumanoid and targetRoot and not game.Players:GetPlayerFromCharacter(obj) then
+                            local distance = (rootPart.Position - targetRoot.Position).Magnitude
+                            if distance <= 30 then
+                                -- Двигаемся к цели
+                                humanoid:MoveTo(targetRoot.Position)
+                                -- Атака
+                                if distance <= 5 then
+                                    targetHumanoid:TakeDamage(40) -- Высокий урон
                                 end
                             end
                         end
@@ -93,17 +102,11 @@ local function spawnMonster()
         end
     ]]
 
-    -- Делаем так, чтобы другие монстры агрились на нашего
-    local aggroTag = Instance.new("ObjectValue")
-    aggroTag.Name = "AggroTarget"
-    aggroTag.Value = monster
-    aggroTag.Parent = monster
-
-    -- Делаем монстра видимым для всех (серверный объект)
-    monster.Parent = workspace
+    -- Делаем рептилию видимой для всех (серверный объект)
+    reptile.Parent = workspace
 end
 
--- Кнопка для спавна монстра
-MonsterCheats:CreateButton("Spawn Custom Monster", function()
-    spawnMonster()
+-- Кнопка для спавна рептилии
+MonsterCheats:CreateButton("Spawn Reptile Companion", function()
+    spawnReptile()
 end)

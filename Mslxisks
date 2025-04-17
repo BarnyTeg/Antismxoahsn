@@ -9,7 +9,7 @@ local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
 local rootPart = character:WaitForChild("HumanoidRootPart")
 local moving = false
-local moveSpeed = 50 -- Скорость перемещения (будем двигаться шагами)
+local moveDistance = 1000 -- Огромное расстояние за шаг
 local detectionRadius = 500 -- Радиус обнаружения облигаций
 
 -- Попытка отключить античит
@@ -20,15 +20,17 @@ local function disableAntiCheat()
             print("Отключил возможный античит: " .. script.Name)
         end
     end
+    -- Отключаем проверки на Network Ownership, чтобы сервер не тпхал назад
+    rootPart:SetNetworkOwner(nil)
 end
 
--- Функция для перемещения вперёд через CFrame
+-- Функция для сверхбыстрого перемещения
 local function startMoving()
     moving = true
     while moving do
-        local newPos = rootPart.CFrame * CFrame.new(0, 2, -moveSpeed) -- Двигаемся вперёд маленькими шагами
+        local newPos = rootPart.CFrame * CFrame.new(0, 2, -moveDistance) -- Телепортируемся на огромное расстояние вперёд
         rootPart.CFrame = newPos
-        wait(0.05) -- Задержка, чтобы античит не триггерился
+        wait() -- Минимальная задержка, чтобы не крашнуть
     end
 end
 
@@ -62,7 +64,7 @@ end
 local function collectBond(bond)
     if bond then
         rootPart.CFrame = CFrame.new(bond.Position + Vector3.new(0, 5, 0)) -- Телепорт чуть выше облигации
-        wait(0.5)
+        wait(0.1)
         -- Предполагаем, что сбор работает через FireServer
         local remote = game:GetService("ReplicatedStorage"):FindFirstChild("CollectItem") -- Замени на правильный RemoteEvent
         if remote then
@@ -82,7 +84,7 @@ BondCheats:CreateButton("Start Bond Farming", function()
     disableAntiCheat()
 
     -- Сбрасываем WalkSpeed, чтобы античит не триггерился
-    humanoid.WalkSpeed = 16 -- Обычная скорость ходьбы
+    humanoid.WalkSpeed = 16
 
     -- Начинаем движение
     startMoving()
@@ -93,19 +95,19 @@ BondCheats:CreateButton("Start Bond Farming", function()
         if bond then
             stopMoving()
             collectBond(bond)
-            wait(0.5)
+            wait(0.1)
             startMoving()
         else
-            -- Проверяем, застряли ли мы (например, не двигаемся)
+            -- Проверяем, застряли ли мы
             local lastPos = rootPart.Position
-            wait(2)
+            wait(1)
             if (rootPart.Position - lastPos).Magnitude < 5 then
                 stopMoving()
                 -- Собираем все оставшиеся облигации
                 local remainingBonds = findAllBonds()
                 for _, bond in pairs(remainingBonds) do
                     collectBond(bond)
-                    wait(0.5)
+                    wait(0.1)
                 end
                 -- Умираем
                 killSelf()

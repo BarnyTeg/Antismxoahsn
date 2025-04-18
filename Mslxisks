@@ -1,42 +1,15 @@
-local player = game.Players.LocalPlayer
-local char = player.Character or player.CharacterAdded:Wait()
-local hrp = char:WaitForChild("HumanoidRootPart")
+local found = nil
 
-local baseParts = {}
-
--- Найдём первые 3 пригодные части
-for _, obj in pairs(workspace:GetDescendants()) do
-    if obj:IsA("BasePart") and obj.Anchored and not obj:IsDescendantOf(char) then
-        table.insert(baseParts, obj)
-        if #baseParts >= 3 then
-            break
-        end
+for _, obj in ipairs(workspace:GetDescendants()) do
+    if obj:IsA("BasePart") and obj.Anchored then
+        found = obj
+        break
     end
 end
 
-if #baseParts < 3 then
-    warn("Недостаточно объектов.")
-    return
+if found then
+    found.CFrame = found.CFrame + Vector3.new(0, 5, 0)
+    print("Объект перемещён:", found:GetFullName())
+else
+    warn("Не найден подходящий объект.")
 end
-
--- Переиспользуем эти детали без клонирования
-local body = baseParts[1]
-local tail = baseParts[2]
-local rotor = baseParts[3]
-
--- Перемещаем части и окрашиваем
-body.BrickColor = BrickColor.new("Bright blue")
-tail.BrickColor = BrickColor.new("Dark stone grey")
-rotor.BrickColor = BrickColor.new("Black")
-
-body.CFrame = hrp.CFrame * CFrame.new(0, 5, 0)
-tail.CFrame = body.CFrame * CFrame.new(0, 0, -6)
-rotor.CFrame = body.CFrame * CFrame.new(0, 2, 0)
-
--- Сделаем вращение ротора
-local RunService = game:GetService("RunService")
-RunService.RenderStepped:Connect(function()
-    if rotor and rotor.Parent then
-        rotor.CFrame = rotor.CFrame * CFrame.Angles(0, math.rad(20), 0)
-    end
-end)

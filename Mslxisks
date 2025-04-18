@@ -1,22 +1,56 @@
+-- Создаёт вертолёт на сервере
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local SpawnHelicopterEvent = ReplicatedStorage:WaitForChild("SpawnHelicopterEvent")
-local player = game.Players.LocalPlayer
+local Players = game:GetService("Players")
 
--- Визуальная кнопка
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "HeliGUI"
-screenGui.Parent = player:WaitForChild("PlayerGui")
+local SpawnHelicopterEvent = Instance.new("RemoteEvent")
+SpawnHelicopterEvent.Name = "SpawnHelicopterEvent"
+SpawnHelicopterEvent.Parent = ReplicatedStorage
 
-local button = Instance.new("TextButton")
-button.Size = UDim2.new(0, 200, 0, 50)
-button.Position = UDim2.new(0.5, -100, 1, -60)
-button.Text = "СПАВН ВЕРТОЛЁТА"
-button.BackgroundColor3 = Color3.fromRGB(60, 180, 75)
-button.TextColor3 = Color3.new(1,1,1)
-button.Font = Enum.Font.GothamBlack
-button.TextSize = 20
-button.Parent = screenGui
+SpawnHelicopterEvent.OnServerEvent:Connect(function(player)
+    local helicopter = Instance.new("Model")
+    helicopter.Name = "Helicopter"
 
-button.MouseButton1Click:Connect(function()
-    SpawnHelicopterEvent:FireServer()
+    -- Тело
+    local body = Instance.new("Part")
+    body.Name = "Body"
+    body.Size = Vector3.new(6, 1, 12)
+    body.Position = Vector3.new(0, 10, 0)
+    body.Anchored = false
+    body.BrickColor = BrickColor.new("Really black")
+    body.Parent = helicopter
+
+    -- Сиденье
+    local seat = Instance.new("VehicleSeat")
+    seat.Name = "Seat"
+    seat.Size = Vector3.new(2, 1, 2)
+    seat.Position = body.Position + Vector3.new(0, 1, 0)
+    seat.Anchored = false
+    seat.MaxSpeed = 200
+    seat.Torque = 10000
+    seat.Parent = helicopter
+
+    -- Привязка сиденья к телу
+    local weld = Instance.new("WeldConstraint")
+    weld.Part0 = seat
+    weld.Part1 = body
+    weld.Parent = seat
+
+    -- Пропеллер
+    local rotor = Instance.new("Part")
+    rotor.Name = "Rotor"
+    rotor.Size = Vector3.new(1, 0.2, 10)
+    rotor.Position = body.Position + Vector3.new(0, 2, 0)
+    rotor.Anchored = false
+    rotor.BrickColor = BrickColor.new("Dark stone grey")
+    rotor.Parent = helicopter
+
+    local weld2 = Instance.new("WeldConstraint")
+    weld2.Part0 = rotor
+    weld2.Part1 = body
+    weld2.Parent = rotor
+
+    -- Собираем и спавним
+    helicopter.PrimaryPart = body
+    helicopter:SetPrimaryPartCFrame(CFrame.new(player.Character.HumanoidRootPart.Position + Vector3.new(0, 10, 0)))
+    helicopter.Parent = workspace
 end)

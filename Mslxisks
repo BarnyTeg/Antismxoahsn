@@ -1,122 +1,22 @@
-local Library = loadstring(Game:HttpGet("https://raw.githubusercontent.com/bloodball/-back-ups-for-libs/main/wizard"))()
-
-local PhantomForcesWindow = Library:NewWindow("Dead Rails Cheats")
-local WeaponCheats = PhantomForcesWindow:NewSection("Super Weapon")
-
--- Переменные
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SpawnHelicopterEvent = ReplicatedStorage:WaitForChild("SpawnHelicopterEvent")
 local player = game.Players.LocalPlayer
-local workspace = game.Workspace
 
--- Функция для создания оружия
-local function spawnWeapon()
-    -- Создаём инструмент (дробовик)
-    local shotgun = Instance.new("Tool")
-    shotgun.Name = "SplashShotgun"
-    shotgun.RequiresHandle = true
-    shotgun.Grip = CFrame.new(0, -0.5, 1, 1, 0, 0, 0, 0, 1, 0, -1, 0) -- Как у Sawed-Off Shotgun
-    shotgun.ToolTip = "Splash Shotgun" -- Подсказка, как в игре
+-- Визуальная кнопка
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "HeliGUI"
+screenGui.Parent = player:WaitForChild("PlayerGui")
 
-    -- Копируем модель Sawed-Off Shotgun из Dead Rails
-    local handle = Instance.new("Part")
-    handle.Name = "Handle"
-    handle.Size = Vector3.new(0.8, 0.4, 2) -- Размеры как у Sawed-Off Shotgun
-    handle.BrickColor = BrickColor.new("Black")
-    handle.Parent = shotgun
+local button = Instance.new("TextButton")
+button.Size = UDim2.new(0, 200, 0, 50)
+button.Position = UDim2.new(0.5, -100, 1, -60)
+button.Text = "СПАВН ВЕРТОЛЁТА"
+button.BackgroundColor3 = Color3.fromRGB(60, 180, 75)
+button.TextColor3 = Color3.new(1,1,1)
+button.Font = Enum.Font.GothamBlack
+button.TextSize = 20
+button.Parent = screenGui
 
-    local barrel = Instance.new("Part")
-    barrel.Name = "Barrel"
-    barrel.Size = Vector3.new(0.4, 0.4, 1.5) -- Двойной ствол
-    barrel.BrickColor = BrickColor.new("Dark gray")
-    barrel.Position = Vector3.new(0, 0.2, 1.25)
-    barrel.Parent = shotgun
-
-    local stock = Instance.new("Part")
-    stock.Name = "Stock"
-    stock.Size = Vector3.new(0.6, 0.6, 1)
-    stock.BrickColor = BrickColor.new("Brown")
-    stock.Position = Vector3.new(0, 0, -1)
-    stock.Parent = shotgun
-
-    -- Прикрепляем детали к рукоятке
-    for _, part in pairs(shotgun:GetChildren()) do
-        if part:IsA("BasePart") and part ~= handle then
-            local weld = Instance.new("Weld")
-            weld.Part0 = handle
-            weld.Part1 = part
-            weld.C0 = CFrame.new(handle.Position)
-            weld.C1 = CFrame.new(part.Position)
-            weld.Parent = part
-        end
-    end
-
-    -- Добавляем звук выстрела (как в Dead Rails)
-    local fireSound = Instance.new("Sound")
-    fireSound.Name = "FireSound"
-    fireSound.SoundId = "rbxassetid://165969964" -- Звук выстрела, как у Sawed-Off Shotgun
-    fireSound.Volume = 1
-    fireSound.Parent = handle
-
-    -- Добавляем скрипт для стрельбы (имитация механики Sawed-Off Shotgun)
-    local fireScript = Instance.new("Script")
-    fireScript.Name = "FireScript"
-    fireScript.Parent = shotgun
-    fireScript.Source = [[
-        local tool = script.Parent
-        local handle = tool:WaitForChild("Handle")
-        local fireSound = handle:WaitForChild("FireSound")
-        local player = game.Players.LocalPlayer
-        local lastFireTime = 0
-        local cooldown = 0.2
-
-        tool.Equipped:Connect(function(mouse)
-            mouse.Button1Down:Connect(function()
-                local currentTime = tick()
-                if currentTime - lastFireTime >= cooldown then
-                    lastFireTime = currentTime
-
-                    -- Проигрываем звук выстрела
-                    fireSound:Play()
-
-                    -- Используем направление камеры, как в Dead Rails
-                    local camera = workspace.CurrentCamera
-                    local rayOrigin = camera.CFrame.Position
-                    local rayDirection = camera.CFrame.LookVector * 300
-                    local ray = Ray.new(rayOrigin, rayDirection)
-                    local hit, position = workspace:FindPartOnRayWithIgnoreList(ray, {player.Character, tool})
-
-                    -- Создаём взрыв в точке попадания
-                    local explosion = Instance.new("Explosion")
-                    explosion.Position = position
-                    explosion.BlastRadius = 18
-                    explosion.BlastPressure = 0
-                    explosion.DestroyJointRadiusPercent = 0
-                    explosion.ExplosionType = Enum.ExplosionType.NoCraters
-                    explosion.Parent = workspace
-
-                    -- Наносим урон всем NPC в радиусе взрыва
-                    for _, obj in pairs(workspace:GetDescendants()) do
-                        if obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid") then
-                            local targetHumanoid = obj:FindFirstChildOfClass("Humanoid")
-                            local targetRoot = obj:FindFirstChild("HumanoidRootPart")
-                            if targetHumanoid and targetRoot and not game.Players:GetPlayerFromCharacter(obj) then
-                                local distance = (position - targetRoot.Position).Magnitude
-                                if distance <= 18 then
-                                    targetHumanoid:TakeDamage(50)
-                                end
-                            end
-                        end
-                    end
-                end
-            end)
-        end)
-    ]]
-
-    -- Добавляем оружие в инвентарь
-    shotgun.Parent = player.Backpack
-    print("Дробовик добавлен в инвентарь!")
-end
-
--- Кнопка для добавления оружия
-WeaponCheats:CreateButton("Spawn Splash Shotgun", function()
-    spawnWeapon()
+button.MouseButton1Click:Connect(function()
+    SpawnHelicopterEvent:FireServer()
 end)

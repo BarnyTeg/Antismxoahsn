@@ -1,44 +1,45 @@
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 local char = player.Character or player.CharacterAdded:Wait()
+local backpack = player:WaitForChild("Backpack")
 
--- Создание вертолёта
-local function createHelicopterModel()
-    local heli = Instance.new("Model")
-    heli.Name = "HeliToolModel"
+-- Следим за тем, что берёт игрок
+char.ChildAdded:Connect(function(child)
+    if child:IsA("Tool") and child:FindFirstChildWhichIsA("Model") then
+        local model = child:FindFirstChildWhichIsA("Model")
+        print("Взял в руку модель:", model.Name)
 
-    local body = Instance.new("Part")
-    body.Size = Vector3.new(10, 2, 20)
-    body.Color = Color3.new(0.2, 0.2, 0.2)
-    body.Anchored = false
-    body.CanCollide = true
-    body.Position = char.HumanoidRootPart.Position + Vector3.new(0, 5, 0)
-    body.Name = "Body"
-    body.Parent = heli
+        -- Забираем Tool и ставим модель на пол
+        child:Destroy()
 
-    -- Можно добавить больше деталей — пропеллеры, хвост и т.д.
-    return heli
-end
+        local placed = model:Clone()
+        placed.Parent = workspace
 
--- Создание предмета
-local function giveHelicopterTool()
-    local tool = Instance.new("Tool")
-    tool.Name = "Helicopter"
-    tool.RequiresHandle = false
+        -- Позиционируем перед игроком
+        if placed.PrimaryPart or placed:FindFirstChild("Body") then
+            placed.PrimaryPart = placed.PrimaryPart or placed:FindFirstChild("Body")
+            placed:SetPrimaryPartCFrame(char.HumanoidRootPart.CFrame * CFrame.new(0, -3, -10))
+        end
 
-    local model = createHelicopterModel()
-    model.Parent = tool
+        -- Добавляем сиденье
+        local seat = Instance.new("Seat")
+        seat.Size = Vector3.new(2, 1, 2)
+        seat.Position = placed:GetPrimaryPartCFrame().p + Vector3.new(0, 2, 0)
+        seat.Anchored = true
+        seat.Transparency = 1 -- Невидимка
+        seat.CanCollide = false
+        seat.Parent = placed
 
-    tool.Equipped:Connect(function()
-        -- Переместим вертолёт на землю, удалим Tool
-        local clone = model:Clone()
-        clone:SetPrimaryPartCFrame(char.HumanoidRootPart.CFrame * CFrame.new(0, -3, -10))
-        clone.Parent = workspace
-        tool:Destroy()
-    end)
-
-    tool.Parent = player.Backpack
-end
-
--- Запуск
-giveHelicopterTool()
+        -- Управление только для тебя
+        game:GetService("RunService").RenderStepped:Connect(function()
+            if seat.Occupant == char:FindFirstChildOfClass("Humanoid") then
+                local root = char:FindFirstChild("HumanoidRootPart")
+                if root then
+                    -- Примитивное управление (движение по направлению камеры)
+                    local moveDir = workspace.CurrentCamera.CFrame.LookVector
+                    placed:SetPrimaryPartCFrame(placed.PrimaryPart.CFrame + moveDir * 0.5)
+                end
+            end
+        end)
+    end
+end)

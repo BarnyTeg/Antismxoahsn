@@ -1,75 +1,42 @@
-local workspace = game:GetService("Workspace")
 local player = game.Players.LocalPlayer
 local char = player.Character or player.CharacterAdded:Wait()
 local hrp = char:WaitForChild("HumanoidRootPart")
 
--- Создаём модель для вертолёта
-local heli = Instance.new("Model", workspace)
-heli.Name = "Helicopter"
+local baseParts = {}
 
--- Получаем любые части, которые можно использовать
-local usableParts = {}
+-- Найдём первые 3 пригодные части
 for _, obj in pairs(workspace:GetDescendants()) do
-    if obj:IsA("BasePart") and obj:IsDescendantOf(workspace) and obj.Anchored and obj:IsDescendantOf(char) == false then
-        table.insert(usableParts, obj)
+    if obj:IsA("BasePart") and obj.Anchored and not obj:IsDescendantOf(char) then
+        table.insert(baseParts, obj)
+        if #baseParts >= 3 then
+            break
+        end
     end
 end
 
--- Проверка на наличие деталей
-if #usableParts < 3 then
-    warn("Недостаточно деталей в мире для сборки вертолёта.")
+if #baseParts < 3 then
+    warn("Недостаточно объектов.")
     return
 end
 
--- Берём три любых разных части
-local bodyPart = usableParts[1]:Clone()
-local tailPart = usableParts[2]:Clone()
-local rotorPart = usableParts[3]:Clone()
+-- Переиспользуем эти детали без клонирования
+local body = baseParts[1]
+local tail = baseParts[2]
+local rotor = baseParts[3]
 
--- Общая настройка для всех
-local function setupPart(part, posOffset, color)
-    part.Anchored = false
-    part.CanCollide = true
-    part.Size = part.Size * 0.5
-    part.BrickColor = BrickColor.new(color)
-    part.Position = hrp.Position + Vector3.new(0, 5, 0) + posOffset
-    part.Parent = heli
-    return part
-end
+-- Перемещаем части и окрашиваем
+body.BrickColor = BrickColor.new("Bright blue")
+tail.BrickColor = BrickColor.new("Dark stone grey")
+rotor.BrickColor = BrickColor.new("Black")
 
-setupPart(bodyPart, Vector3.new(0, 0, 0), "Bright blue")
-setupPart(tailPart, Vector3.new(0, 0, -7), "Dark stone grey")
-setupPart(rotorPart, Vector3.new(0, 2, 0), "Black")
+body.CFrame = hrp.CFrame * CFrame.new(0, 5, 0)
+tail.CFrame = body.CFrame * CFrame.new(0, 0, -6)
+rotor.CFrame = body.CFrame * CFrame.new(0, 2, 0)
 
--- Соединяем части
-local function weldParts(p0, p1)
-    local weld = Instance.new("WeldConstraint")
-    weld.Part0 = p0
-    weld.Part1 = p1
-    weld.Parent = p0
-end
-
-weldParts(bodyPart, tailPart)
-weldParts(bodyPart, rotorPart)
-
--- Пропеллер вращается
+-- Сделаем вращение ротора
 local RunService = game:GetService("RunService")
 RunService.RenderStepped:Connect(function()
-    if rotorPart and rotorPart.Parent then
-        rotorPart.CFrame = rotorPart.CFrame * CFrame.Angles(0, math.rad(20), 0)
+    if rotor and rotor.Parent then
+        rotor.CFrame = rotor.CFrame * CFrame.Angles(0, math.rad(20), 0)
     end
 end)
-
--- Добавим сиденье
-local seat = Instance.new("VehicleSeat")
-seat.Size = Vector3.new(2, 1, 2)
-seat.Position = bodyPart.Position + Vector3.new(0, 1.5, 0)
-seat.Anchored = false
-seat.BrickColor = BrickColor.new("Really black")
-seat.Parent = heli
-
-weldParts(seat, bodyPart)
-
--- Установка PrimaryPart
-heli.PrimaryPart = bodyPart
-heli:SetPrimaryPartCFrame(CFrame.new(hrp.Position + Vector3.new(0, 5, 0)))

@@ -1,56 +1,96 @@
--- Создаёт вертолёт на сервере
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Players = game:GetService("Players")
+-- Получаем доступ к нужным объектам
+local workspace = game:GetService("Workspace")
+local player = game.Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+local hrp = char:WaitForChild("HumanoidRootPart")
 
-local SpawnHelicopterEvent = Instance.new("RemoteEvent")
-SpawnHelicopterEvent.Name = "SpawnHelicopterEvent"
-SpawnHelicopterEvent.Parent = ReplicatedStorage
+-- Функция для клонирования кубов и создания вертолёта
+local function spawnHelicopter()
+    local heli = Instance.new("Model", workspace)
+    heli.Name = "Helicopter"
 
-SpawnHelicopterEvent.OnServerEvent:Connect(function(player)
-    local helicopter = Instance.new("Model")
-    helicopter.Name = "Helicopter"
+    -- Создание корпуса вертолёта
+    local bodyPart = nil
+    for _, part in pairs(workspace:GetChildren()) do
+        if part:IsA("Part") and part.Size == Vector3.new(4, 1, 8) then -- Ищем подходящий куб
+            bodyPart = part:Clone()
+            bodyPart.Position = hrp.Position + Vector3.new(0, 5, 0) -- Размещение над игроком
+            bodyPart.Anchored = false
+            bodyPart.BrickColor = BrickColor.new("Bright blue")
+            bodyPart.Parent = heli
+            break
+        end
+    end
 
-    -- Тело
-    local body = Instance.new("Part")
-    body.Name = "Body"
-    body.Size = Vector3.new(6, 1, 12)
-    body.Position = Vector3.new(0, 10, 0)
-    body.Anchored = false
-    body.BrickColor = BrickColor.new("Really black")
-    body.Parent = helicopter
+    if not bodyPart then
+        print("Не удалось найти нужный куб для корпуса!")
+        return
+    end
 
-    -- Сиденье
-    local seat = Instance.new("VehicleSeat")
-    seat.Name = "Seat"
+    -- Создание хвоста
+    local tailPart = nil
+    for _, part in pairs(workspace:GetChildren()) do
+        if part:IsA("Part") and part.Size == Vector3.new(2, 1, 6) then -- Ищем подходящий куб для хвоста
+            tailPart = part:Clone()
+            tailPart.Position = bodyPart.Position + Vector3.new(0, 0, -7)
+            tailPart.Anchored = false
+            tailPart.BrickColor = BrickColor.new("Dark stone grey")
+            tailPart.Parent = heli
+            break
+        end
+    end
+
+    -- Пропеллер
+    local rotorPart = nil
+    for _, part in pairs(workspace:GetChildren()) do
+        if part:IsA("Part") and part.Size == Vector3.new(1, 0.2, 10) then -- Ищем подходящий куб для пропеллера
+            rotorPart = part:Clone()
+            rotorPart.Position = bodyPart.Position + Vector3.new(0, 2, 0) -- Размещение на корпусе
+            rotorPart.Anchored = false
+            rotorPart.BrickColor = BrickColor.new("Black")
+            rotorPart.Parent = heli
+            break
+        end
+    end
+
+    -- Соединение всех частей (WeldConstraint)
+    local weld1 = Instance.new("WeldConstraint", bodyPart)
+    weld1.Part0 = bodyPart
+    weld1.Part1 = tailPart
+
+    local weld2 = Instance.new("WeldConstraint", bodyPart)
+    weld2.Part0 = bodyPart
+    weld2.Part1 = rotorPart
+
+    -- Установка PrimaryPart для модели
+    heli.PrimaryPart = bodyPart
+
+    -- Размещение вертолёта
+    heli:SetPrimaryPartCFrame(CFrame.new(hrp.Position + Vector3.new(0, 5, 0)))
+
+    -- Пропеллер будет вращаться
+    local RunService = game:GetService("RunService")
+    RunService.RenderStepped:Connect(function()
+        if rotorPart and rotorPart.Parent then
+            rotorPart.CFrame = rotorPart.CFrame * CFrame.Angles(0, math.rad(20), 0)
+        end
+    end)
+
+    -- Создание сиденья (VehicleSeat) для управления
+    local seat = Instance.new("VehicleSeat", heli)
+    seat.Name = "DriverSeat"
     seat.Size = Vector3.new(2, 1, 2)
-    seat.Position = body.Position + Vector3.new(0, 1, 0)
+    seat.Position = bodyPart.Position + Vector3.new(0, 1, 0)
     seat.Anchored = false
     seat.MaxSpeed = 200
     seat.Torque = 10000
-    seat.Parent = helicopter
+    seat.Parent = heli
 
-    -- Привязка сиденья к телу
-    local weld = Instance.new("WeldConstraint")
-    weld.Part0 = seat
-    weld.Part1 = body
-    weld.Parent = seat
+    -- Привязка сиденья к корпусу (Weld)
+    local seatWeld = Instance.new("WeldConstraint", seat)
+    seatWeld.Part0 = seat
+    seatWeld.Part1 = bodyPart
+end
 
-    -- Пропеллер
-    local rotor = Instance.new("Part")
-    rotor.Name = "Rotor"
-    rotor.Size = Vector3.new(1, 0.2, 10)
-    rotor.Position = body.Position + Vector3.new(0, 2, 0)
-    rotor.Anchored = false
-    rotor.BrickColor = BrickColor.new("Dark stone grey")
-    rotor.Parent = helicopter
-
-    local weld2 = Instance.new("WeldConstraint")
-    weld2.Part0 = rotor
-    weld2.Part1 = body
-    weld2.Parent = rotor
-
-    -- Собираем и спавним
-    helicopter.PrimaryPart = body
-    helicopter:SetPrimaryPartCFrame(CFrame.new(player.Character.HumanoidRootPart.Position + Vector3.new(0, 10, 0)))
-    helicopter.Parent = workspace
-end)
+-- Запуск функции спавна вертолёта
+spawnHelicopter()

@@ -1,1 +1,20 @@
-game:GetService("ReplicatedStorage").Shared.RemotePromise.Remotes.S_EquipClass:FireServer("Pilot")
+local function safeFire(remote, ...)
+    local success, err = pcall(function()
+        remote:FireServer(...)
+    end)
+    if success then
+        print("[OK]:", remote:GetFullName(), ...)
+    else
+        warn("[FAIL]:", remote:GetFullName(), "→", err)
+    end
+end
+
+for _, remote in ipairs(game:GetDescendants()) do
+    if remote:IsA("RemoteEvent") then
+        -- Пробуем разные варианты аргументов
+        safeFire(remote) -- пусто
+        safeFire(remote, "Test")
+        safeFire(remote, {}) -- таблица
+        safeFire(remote, 1)
+    end
+end

@@ -4,56 +4,65 @@ local player = game.Players.LocalPlayer
 local char = player.Character or player.CharacterAdded:Wait()
 local hrp = char:WaitForChild("HumanoidRootPart")
 
--- Функция для клонирования кубов и создания вертолёта
+-- Функция для клонирования и создания вертолёта
 local function spawnHelicopter()
     local heli = Instance.new("Model", workspace)
     heli.Name = "Helicopter"
 
-    -- Создание корпуса вертолёта
-    local bodyPart = nil
-    for _, part in pairs(workspace:GetChildren()) do
-        if part:IsA("Part") and part.Size == Vector3.new(4, 1, 8) then -- Ищем подходящий куб
-            bodyPart = part:Clone()
-            bodyPart.Position = hrp.Position + Vector3.new(0, 5, 0) -- Размещение над игроком
-            bodyPart.Anchored = false
-            bodyPart.BrickColor = BrickColor.new("Bright blue")
-            bodyPart.Parent = heli
-            break
+    -- Функция для поиска и клонирования части
+    local function findAndClonePart(partName, scaleFactor, color)
+        local part = nil
+        for _, object in pairs(workspace:GetChildren()) do
+            if object:IsA("Model") and object.Name == partName then
+                part = object:Clone()
+                part:SetPrimaryPartCFrame(CFrame.new(hrp.Position + Vector3.new(0, 5, 0)))
+                part.Parent = heli
+                part.PrimaryPart.Anchored = false
+                part.PrimaryPart.CanCollide = false
+                part:SetPrimaryPartCFrame(part.PrimaryPart.CFrame)
+                -- Уменьшаем модель и изменяем цвет
+                part:SetPrimaryPartCFrame(part.PrimaryPart.CFrame * CFrame.new(0, 5, 0))  -- Смещение по оси Y
+                part:SetPrimaryPartCFrame(part.PrimaryPart.CFrame * CFrame.Angles(math.rad(0), math.rad(0), math.rad(0)))  -- Оборот по осям
+                part.Parent = heli
+                -- Уменьшаем размер
+                part:SetPrimaryPartCFrame(part.PrimaryPart.CFrame)
+                part.Parent = heli
+                part.PrimaryPart.Anchored = false
+                part.PrimaryPart.CanCollide = false
+                part:BreakJoints() -- отключаем присоединение деталей
+                -- Применяем изменение размеров и окраски
+                for _, p in pairs(part:GetDescendants()) do
+                    if p:IsA("BasePart") then
+                        p.Size = p.Size * scaleFactor  -- изменяем размер
+                        p.BrickColor = BrickColor.new(color)  -- изменяем цвет
+                    end
+                end
+                break
+            end
         end
+        return part
     end
-
+    
+    -- Поиск частей и их клонирование
+    local bodyPart = findAndClonePart("HouseFrame", 0.5, "Bright blue")  -- Заменить на имя модели части
     if not bodyPart then
-        print("Не удалось найти нужный куб для корпуса!")
+        print("Не удалось найти нужную модель для корпуса!")
         return
     end
 
-    -- Создание хвоста
-    local tailPart = nil
-    for _, part in pairs(workspace:GetChildren()) do
-        if part:IsA("Part") and part.Size == Vector3.new(2, 1, 6) then -- Ищем подходящий куб для хвоста
-            tailPart = part:Clone()
-            tailPart.Position = bodyPart.Position + Vector3.new(0, 0, -7)
-            tailPart.Anchored = false
-            tailPart.BrickColor = BrickColor.new("Dark stone grey")
-            tailPart.Parent = heli
-            break
-        end
+    local tailPart = findAndClonePart("WoodBeam", 0.5, "Dark stone grey")  -- Заменить на имя модели для хвоста
+    if not tailPart then
+        print("Не удалось найти нужную модель для хвоста!")
+        return
     end
 
-    -- Пропеллер
-    local rotorPart = nil
-    for _, part in pairs(workspace:GetChildren()) do
-        if part:IsA("Part") and part.Size == Vector3.new(1, 0.2, 10) then -- Ищем подходящий куб для пропеллера
-            rotorPart = part:Clone()
-            rotorPart.Position = bodyPart.Position + Vector3.new(0, 2, 0) -- Размещение на корпусе
-            rotorPart.Anchored = false
-            rotorPart.BrickColor = BrickColor.new("Black")
-            rotorPart.Parent = heli
-            break
-        end
+    local rotorPart = findAndClonePart("WoodPlank", 0.3, "Black")  -- Заменить на имя модели для пропеллера
+    if not rotorPart then
+        print("Не удалось найти нужную модель для пропеллера!")
+        return
     end
 
-    -- Соединение всех частей (WeldConstraint)
+    -- Соединяем все части с помощью WeldConstraint
     local weld1 = Instance.new("WeldConstraint", bodyPart)
     weld1.Part0 = bodyPart
     weld1.Part1 = tailPart

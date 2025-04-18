@@ -1,105 +1,75 @@
--- Получаем доступ к нужным объектам
 local workspace = game:GetService("Workspace")
 local player = game.Players.LocalPlayer
 local char = player.Character or player.CharacterAdded:Wait()
 local hrp = char:WaitForChild("HumanoidRootPart")
 
--- Функция для клонирования и создания вертолёта
-local function spawnHelicopter()
-    local heli = Instance.new("Model", workspace)
-    heli.Name = "Helicopter"
+-- Создаём модель для вертолёта
+local heli = Instance.new("Model", workspace)
+heli.Name = "Helicopter"
 
-    -- Функция для поиска и клонирования части
-    local function findAndClonePart(partName, scaleFactor, color)
-        local part = nil
-        for _, object in pairs(workspace:GetChildren()) do
-            if object:IsA("Model") and object.Name == partName then
-                part = object:Clone()
-                part:SetPrimaryPartCFrame(CFrame.new(hrp.Position + Vector3.new(0, 5, 0)))
-                part.Parent = heli
-                part.PrimaryPart.Anchored = false
-                part.PrimaryPart.CanCollide = false
-                part:SetPrimaryPartCFrame(part.PrimaryPart.CFrame)
-                -- Уменьшаем модель и изменяем цвет
-                part:SetPrimaryPartCFrame(part.PrimaryPart.CFrame * CFrame.new(0, 5, 0))  -- Смещение по оси Y
-                part:SetPrimaryPartCFrame(part.PrimaryPart.CFrame * CFrame.Angles(math.rad(0), math.rad(0), math.rad(0)))  -- Оборот по осям
-                part.Parent = heli
-                -- Уменьшаем размер
-                part:SetPrimaryPartCFrame(part.PrimaryPart.CFrame)
-                part.Parent = heli
-                part.PrimaryPart.Anchored = false
-                part.PrimaryPart.CanCollide = false
-                part:BreakJoints() -- отключаем присоединение деталей
-                -- Применяем изменение размеров и окраски
-                for _, p in pairs(part:GetDescendants()) do
-                    if p:IsA("BasePart") then
-                        p.Size = p.Size * scaleFactor  -- изменяем размер
-                        p.BrickColor = BrickColor.new(color)  -- изменяем цвет
-                    end
-                end
-                break
-            end
-        end
-        return part
+-- Получаем любые части, которые можно использовать
+local usableParts = {}
+for _, obj in pairs(workspace:GetDescendants()) do
+    if obj:IsA("BasePart") and obj:IsDescendantOf(workspace) and obj.Anchored and obj:IsDescendantOf(char) == false then
+        table.insert(usableParts, obj)
     end
-    
-    -- Поиск частей и их клонирование
-    local bodyPart = findAndClonePart("HouseFrame", 0.5, "Bright blue")  -- Заменить на имя модели части
-    if not bodyPart then
-        print("Не удалось найти нужную модель для корпуса!")
-        return
-    end
-
-    local tailPart = findAndClonePart("WoodBeam", 0.5, "Dark stone grey")  -- Заменить на имя модели для хвоста
-    if not tailPart then
-        print("Не удалось найти нужную модель для хвоста!")
-        return
-    end
-
-    local rotorPart = findAndClonePart("WoodPlank", 0.3, "Black")  -- Заменить на имя модели для пропеллера
-    if not rotorPart then
-        print("Не удалось найти нужную модель для пропеллера!")
-        return
-    end
-
-    -- Соединяем все части с помощью WeldConstraint
-    local weld1 = Instance.new("WeldConstraint", bodyPart)
-    weld1.Part0 = bodyPart
-    weld1.Part1 = tailPart
-
-    local weld2 = Instance.new("WeldConstraint", bodyPart)
-    weld2.Part0 = bodyPart
-    weld2.Part1 = rotorPart
-
-    -- Установка PrimaryPart для модели
-    heli.PrimaryPart = bodyPart
-
-    -- Размещение вертолёта
-    heli:SetPrimaryPartCFrame(CFrame.new(hrp.Position + Vector3.new(0, 5, 0)))
-
-    -- Пропеллер будет вращаться
-    local RunService = game:GetService("RunService")
-    RunService.RenderStepped:Connect(function()
-        if rotorPart and rotorPart.Parent then
-            rotorPart.CFrame = rotorPart.CFrame * CFrame.Angles(0, math.rad(20), 0)
-        end
-    end)
-
-    -- Создание сиденья (VehicleSeat) для управления
-    local seat = Instance.new("VehicleSeat", heli)
-    seat.Name = "DriverSeat"
-    seat.Size = Vector3.new(2, 1, 2)
-    seat.Position = bodyPart.Position + Vector3.new(0, 1, 0)
-    seat.Anchored = false
-    seat.MaxSpeed = 200
-    seat.Torque = 10000
-    seat.Parent = heli
-
-    -- Привязка сиденья к корпусу (Weld)
-    local seatWeld = Instance.new("WeldConstraint", seat)
-    seatWeld.Part0 = seat
-    seatWeld.Part1 = bodyPart
 end
 
--- Запуск функции спавна вертолёта
-spawnHelicopter()
+-- Проверка на наличие деталей
+if #usableParts < 3 then
+    warn("Недостаточно деталей в мире для сборки вертолёта.")
+    return
+end
+
+-- Берём три любых разных части
+local bodyPart = usableParts[1]:Clone()
+local tailPart = usableParts[2]:Clone()
+local rotorPart = usableParts[3]:Clone()
+
+-- Общая настройка для всех
+local function setupPart(part, posOffset, color)
+    part.Anchored = false
+    part.CanCollide = true
+    part.Size = part.Size * 0.5
+    part.BrickColor = BrickColor.new(color)
+    part.Position = hrp.Position + Vector3.new(0, 5, 0) + posOffset
+    part.Parent = heli
+    return part
+end
+
+setupPart(bodyPart, Vector3.new(0, 0, 0), "Bright blue")
+setupPart(tailPart, Vector3.new(0, 0, -7), "Dark stone grey")
+setupPart(rotorPart, Vector3.new(0, 2, 0), "Black")
+
+-- Соединяем части
+local function weldParts(p0, p1)
+    local weld = Instance.new("WeldConstraint")
+    weld.Part0 = p0
+    weld.Part1 = p1
+    weld.Parent = p0
+end
+
+weldParts(bodyPart, tailPart)
+weldParts(bodyPart, rotorPart)
+
+-- Пропеллер вращается
+local RunService = game:GetService("RunService")
+RunService.RenderStepped:Connect(function()
+    if rotorPart and rotorPart.Parent then
+        rotorPart.CFrame = rotorPart.CFrame * CFrame.Angles(0, math.rad(20), 0)
+    end
+end)
+
+-- Добавим сиденье
+local seat = Instance.new("VehicleSeat")
+seat.Size = Vector3.new(2, 1, 2)
+seat.Position = bodyPart.Position + Vector3.new(0, 1.5, 0)
+seat.Anchored = false
+seat.BrickColor = BrickColor.new("Really black")
+seat.Parent = heli
+
+weldParts(seat, bodyPart)
+
+-- Установка PrimaryPart
+heli.PrimaryPart = bodyPart
+heli:SetPrimaryPartCFrame(CFrame.new(hrp.Position + Vector3.new(0, 5, 0)))

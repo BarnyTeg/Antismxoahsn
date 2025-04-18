@@ -1,20 +1,44 @@
-local function safeFire(remote, ...)
-    local success, err = pcall(function()
-        remote:FireServer(...)
-    end)
-    if success then
-        print("[OK]:", remote:GetFullName(), ...)
-    else
-        warn("[FAIL]:", remote:GetFullName(), "→", err)
-    end
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+
+-- Создание вертолёта
+local function createHelicopterModel()
+    local heli = Instance.new("Model")
+    heli.Name = "HeliToolModel"
+
+    local body = Instance.new("Part")
+    body.Size = Vector3.new(10, 2, 20)
+    body.Color = Color3.new(0.2, 0.2, 0.2)
+    body.Anchored = false
+    body.CanCollide = true
+    body.Position = char.HumanoidRootPart.Position + Vector3.new(0, 5, 0)
+    body.Name = "Body"
+    body.Parent = heli
+
+    -- Можно добавить больше деталей — пропеллеры, хвост и т.д.
+    return heli
 end
 
-for _, remote in ipairs(game:GetDescendants()) do
-    if remote:IsA("RemoteEvent") then
-        -- Пробуем разные варианты аргументов
-        safeFire(remote) -- пусто
-        safeFire(remote, "Test")
-        safeFire(remote, {}) -- таблица
-        safeFire(remote, 1)
-    end
+-- Создание предмета
+local function giveHelicopterTool()
+    local tool = Instance.new("Tool")
+    tool.Name = "Helicopter"
+    tool.RequiresHandle = false
+
+    local model = createHelicopterModel()
+    model.Parent = tool
+
+    tool.Equipped:Connect(function()
+        -- Переместим вертолёт на землю, удалим Tool
+        local clone = model:Clone()
+        clone:SetPrimaryPartCFrame(char.HumanoidRootPart.CFrame * CFrame.new(0, -3, -10))
+        clone.Parent = workspace
+        tool:Destroy()
+    end)
+
+    tool.Parent = player.Backpack
 end
+
+-- Запуск
+giveHelicopterTool()

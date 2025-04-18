@@ -1,15 +1,20 @@
+local player = game.Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+local hrp = char:WaitForChild("HumanoidRootPart")
+
 local found = nil
 
 for _, obj in ipairs(workspace:GetDescendants()) do
-    if obj:IsA("BasePart") and obj.Anchored then
+    if obj:IsA("BasePart") and obj.Anchored and not obj:IsDescendantOf(char) then
         found = obj
         break
     end
 end
 
 if found then
-    found.CFrame = found.CFrame + Vector3.new(0, 5, 0)
-    print("Объект перемещён:", found:GetFullName())
+    -- Телепортируем рядом с игроком
+    found.CFrame = CFrame.new(hrp.Position + Vector3.new(5, 0, 0))
+    print("Объект перемещён рядом с тобой:", found:GetFullName())
 else
     warn("Не найден подходящий объект.")
 end

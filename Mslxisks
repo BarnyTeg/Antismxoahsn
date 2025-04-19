@@ -1,45 +1,22 @@
-local Players = game:GetService("Players")
-local player = Players.LocalPlayer
-local char = player.Character or player.CharacterAdded:Wait()
-local backpack = player:WaitForChild("Backpack")
+local Library = loadstring(Game:HttpGet("https://raw.githubusercontent.com/bloodball/-back-ups-for-libs/main/wizard"))()
 
--- Следим за тем, что берёт игрок
-char.ChildAdded:Connect(function(child)
-    if child:IsA("Tool") and child:FindFirstChildWhichIsA("Model") then
-        local model = child:FindFirstChildWhichIsA("Model")
-        print("Взял в руку модель:", model.Name)
+local PhantomForcesWindow = Library:NewWindow("Dead Rails")
 
-        -- Забираем Tool и ставим модель на пол
-        child:Destroy()
+local KillingCheats = PhantomForcesWindow:NewSection("Main")
 
-        local placed = model:Clone()
-        placed.Parent = workspace
+KillingCheats:CreateButton("Night Vision", function()
+    local lighting = game:GetService("Lighting")
 
-        -- Позиционируем перед игроком
-        if placed.PrimaryPart or placed:FindFirstChild("Body") then
-            placed.PrimaryPart = placed.PrimaryPart or placed:FindFirstChild("Body")
-            placed:SetPrimaryPartCFrame(char.HumanoidRootPart.CFrame * CFrame.new(0, -3, -10))
-        end
+    lighting.Brightness = 5 -- Adjust this value for desired brightness
+    lighting.Ambient = Color3.new(1, 1, 1) -- Set ambient light to full white
+    lighting.FogEnd = 0 -- Remove fog (optional)
+    lighting.ShadowSoftness = 0 -- Remove shadows (optional)
+end)
 
-        -- Добавляем сиденье
-        local seat = Instance.new("Seat")
-        seat.Size = Vector3.new(2, 1, 2)
-        seat.Position = placed:GetPrimaryPartCFrame().p + Vector3.new(0, 2, 0)
-        seat.Anchored = true
-        seat.Transparency = 1 -- Невидимка
-        seat.CanCollide = false
-        seat.Parent = placed
+KillingCheats:CreateButton("Unlock Eggslinger Class", function()
+    local args = {
+        [1] = "Eggslinger" -- Изменили с "Horse" на "Eggslinger"
+    }
 
-        -- Управление только для тебя
-        game:GetService("RunService").RenderStepped:Connect(function()
-            if seat.Occupant == char:FindFirstChildOfClass("Humanoid") then
-                local root = char:FindFirstChild("HumanoidRootPart")
-                if root then
-                    -- Примитивное управление (движение по направлению камеры)
-                    local moveDir = workspace.CurrentCamera.CFrame.LookVector
-                    placed:SetPrimaryPartCFrame(placed.PrimaryPart.CFrame + moveDir * 0.5)
-                end
-            end
-        end)
-    end
+    game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("RemotePromise"):WaitForChild("Remotes"):WaitForChild("C_BuyClass"):FireServer(unpack(args))
 end)

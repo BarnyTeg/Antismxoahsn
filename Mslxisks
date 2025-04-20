@@ -1,22 +1,46 @@
-local Library = loadstring(Game:HttpGet("https://raw.githubusercontent.com/bloodball/-back-ups-for-libs/main/wizard"))()
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
 
-local PhantomForcesWindow = Library:NewWindow("Dead Rails")
+-- Создание оружия
+local tool = Instance.new("Tool")
+tool.Name = "DeathGun"
+tool.RequiresHandle = false
+tool.Parent = LocalPlayer.Backpack
 
-local KillingCheats = PhantomForcesWindow:NewSection("Main")
+local shooting = false
 
-KillingCheats:CreateButton("Night Vision", function()
-    local lighting = game:GetService("Lighting")
+local function shoot()
+	while shooting do
+		local target = Mouse.Target
+		if target and target.Parent then
+			local humanoid = target.Parent:FindFirstChildOfClass("Humanoid")
+			local player = Players:GetPlayerFromCharacter(target.Parent)
+			if humanoid and not player then
+				humanoid.Health = 0
+			elseif not humanoid then
+				target:Destroy()
+			end
+		end
+		task.wait(0.1)
+	end
+end
 
-    lighting.Brightness = 5 -- Adjust this value for desired brightness
-    lighting.Ambient = Color3.new(1, 1, 1) -- Set ambient light to full white
-    lighting.FogEnd = 0 -- Remove fog (optional)
-    lighting.ShadowSoftness = 0 -- Remove shadows (optional)
+-- Активация стрельбы при тапе
+tool.Equipped:Connect(function()
+	UserInputService.TouchTap:Connect(function(touchPositions, processed)
+		if processed then return end
+		shooting = true
+		shoot()
+	end)
+
+	UserInputService.TouchEnded:Connect(function()
+		shooting = false
+	end)
 end)
 
-KillingCheats:CreateButton("Unlock Eggslinger Class", function()
-    local args = {
-        [1] = "Eggslinger" -- Изменили с "Horse" на "Eggslinger"
-    }
-
-    game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("RemotePromise"):WaitForChild("Remotes"):WaitForChild("C_BuyClass"):FireServer(unpack(args))
+tool.Unequipped:Connect(function()
+	shooting = false
 end)

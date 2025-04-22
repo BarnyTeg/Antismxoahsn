@@ -1,46 +1,31 @@
-local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-local LocalPlayer = Players.LocalPlayer
-local Mouse = LocalPlayer:GetMouse()
+-- Dead Rails End TP Script for Delta Executor
+local player = game.Players.LocalPlayer
+local hrp = player.Character.HumanoidRootPart
+local teleportPos = CFrame.new(15000, 100, 0) -- Примерные координаты финала
 
--- Создание оружия
-local tool = Instance.new("Tool")
-tool.Name = "DeathGun"
-tool.RequiresHandle = false
-tool.Parent = LocalPlayer.Backpack
-
-local shooting = false
-
-local function shoot()
-	while shooting do
-		local target = Mouse.Target
-		if target and target.Parent then
-			local humanoid = target.Parent:FindFirstChildOfClass("Humanoid")
-			local player = Players:GetPlayerFromCharacter(target.Parent)
-			if humanoid and not player then
-				humanoid.Health = 0
-			elseif not humanoid then
-				target:Destroy()
-			end
-		end
-		task.wait(0.1)
-	end
+-- Функция телепорта
+local function teleportToEnd()
+    if hrp then
+        hrp.CFrame = teleportPos
+        print("Телепортнулся к финалу! GLHF!")
+    else
+        print("Персонаж не найден, попробуй снова.")
+    end
 end
 
--- Активация стрельбы при тапе
-tool.Equipped:Connect(function()
-	UserInputService.TouchTap:Connect(function(touchPositions, processed)
-		if processed then return end
-		shooting = true
-		shoot()
-	end)
+-- Выполняем тп
+teleportToEnd()
 
-	UserInputService.TouchEnded:Connect(function()
-		shooting = false
-	end)
-end)
+-- Опционально: NoClip, чтоб не застрять
+local RunService = game:GetService("RunService")
+local noclip = true
 
-tool.Unequipped:Connect(function()
-	shooting = false
+RunService.Stepped:Connect(function()
+    if noclip then
+        for _, v in pairs(player.Character:GetDescendants()) do
+            if v:IsA("BasePart") then
+                v.CanCollide = false
+            end
+        end
+    end
 end)

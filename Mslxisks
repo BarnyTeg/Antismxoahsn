@@ -1,31 +1,40 @@
--- Dead Rails End TP Script for Delta Executor
+-- Dead Rails Rail TP Spam Script for Delta Executor
 local player = game.Players.LocalPlayer
-local hrp = player.Character.HumanoidRootPart
-local teleportPos = CFrame.new(15000, 100, 0) -- Примерные координаты финала
+local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+local RunService = game:GetService("RunService")
+
+-- Настройки
+local distancePerTp = 1000 -- Дистанция каждого прыжка по рельсам (можно увеличить для лагов)
+local tpDelay = 0.05 -- Задержка между тп (чем меньше, тем больше лагов)
+local railY = 50 -- Высота рельс (примерная, подстрой, если надо)
+local railZ = 0 -- Z координата рельс (обычно 0, рельсы прямые)
+
+-- NoClip, чтоб не застрять
+local function enableNoClip()
+    RunService.Stepped:Connect(function()
+        for _, part in pairs(player.Character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
+        end
+    end)
+end
 
 -- Функция телепорта
-local function teleportToEnd()
-    if hrp then
-        hrp.CFrame = teleportPos
-        print("Телепортнулся к финалу! GLHF!")
-    else
-        print("Персонаж не найден, попробуй снова.")
+local function teleportAlongRails()
+    if not hrp then
+        print("Персонаж не найден, перезайди!")
+        return
+    end
+    enableNoClip()
+    while true do
+        local currentPos = hrp.Position
+        local newX = currentPos.X + distancePerTp
+        hrp.CFrame = CFrame.new(newX, railY, railZ)
+        print("Тп на X: " .. newX)
+        wait(tpDelay) -- Задержка для спама тп
     end
 end
 
--- Выполняем тп
-teleportToEnd()
-
--- Опционально: NoClip, чтоб не застрять
-local RunService = game:GetService("RunService")
-local noclip = true
-
-RunService.Stepped:Connect(function()
-    if noclip then
-        for _, v in pairs(player.Character:GetDescendants()) do
-            if v:IsA("BasePart") then
-                v.CanCollide = false
-            end
-        end
-    end
-end)
+-- Запуск
+teleportAlongRails()
